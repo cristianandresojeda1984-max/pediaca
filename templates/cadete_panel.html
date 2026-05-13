@@ -1,0 +1,499 @@
+{% extends "base.html" %}
+{% block title %}Mi Panel — Cadete PediAcá{% endblock %}
+
+{% block extra_styles %}
+/* ── HEADER CADETE ───────────────────────────────────────── */
+.cadete-hero {
+  background: linear-gradient(135deg, #1A1A2E 0%, #0F3460 100%);
+  padding: 28px 20px 32px;
+  position: relative;
+  overflow: hidden;
+}
+.cadete-hero::before {
+  content: '🛵';
+  position: absolute;
+  right: -10px;
+  top: -10px;
+  font-size: 8rem;
+  opacity: 0.06;
+  transform: rotate(-15deg);
+}
+.cadete-hero-top {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 20px;
+}
+.cadete-avatar {
+  width: 58px;
+  height: 58px;
+  border-radius: 16px;
+  background: linear-gradient(135deg, var(--azul), var(--azul-d));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: 'Paytone One', sans-serif;
+  font-size: 1.6rem;
+  color: #fff;
+  flex-shrink: 0;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.3);
+}
+.cadete-nombre {
+  font-family: 'Paytone One', sans-serif;
+  font-size: 1.3rem;
+  color: #fff;
+}
+.cadete-sub {
+  color: rgba(255,255,255,0.65);
+  font-size: 0.82rem;
+  font-weight: 600;
+  margin-top: 2px;
+}
+.cadete-logout {
+  margin-left: auto;
+  background: rgba(255,255,255,0.12);
+  border: none;
+  color: rgba(255,255,255,0.8);
+  padding: 7px 14px;
+  border-radius: 99px;
+  font-size: 0.8rem;
+  font-weight: 700;
+  cursor: pointer;
+  text-decoration: none;
+  font-family: 'Nunito', sans-serif;
+  flex-shrink: 0;
+}
+
+/* Stats del cadete */
+.cadete-stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+}
+.cadete-stat {
+  background: rgba(255,255,255,0.1);
+  backdrop-filter: blur(8px);
+  border-radius: 12px;
+  padding: 12px;
+  text-align: center;
+  border: 1px solid rgba(255,255,255,0.1);
+}
+.cadete-stat-num   { font-family:'Paytone One',sans-serif; font-size:1.5rem; color:#fff; }
+.cadete-stat-label { font-size:0.72rem; color:rgba(255,255,255,0.6); font-weight:700; margin-top:2px; }
+
+/* ── NAV TABS ────────────────────────────────────────────── */
+.tab-nav {
+  background: var(--blanco);
+  display: flex;
+  border-bottom: 2px solid var(--gris-1);
+  position: sticky;
+  top: 60px;
+  z-index: 100;
+}
+.tab-btn {
+  flex: 1;
+  padding: 14px 8px;
+  font-size: 0.82rem;
+  font-weight: 800;
+  font-family: 'Nunito', sans-serif;
+  color: var(--texto-s);
+  background: none;
+  border: none;
+  border-bottom: 3px solid transparent;
+  cursor: pointer;
+  transition: all 0.15s;
+  margin-bottom: -2px;
+}
+.tab-btn.activo { color: var(--azul); border-bottom-color: var(--azul); }
+
+/* ── CONTENIDO ───────────────────────────────────────────── */
+.container-sm { max-width: 640px; margin: 0 auto; padding: 20px 16px 80px; }
+.seccion { display: none; }
+.seccion.activo { display: block; }
+
+/* ── ESTADO PENDIENTE ────────────────────────────────────── */
+.pendiente-card {
+  background: var(--blanco);
+  border-radius: 16px;
+  padding: 40px 24px;
+  text-align: center;
+  box-shadow: var(--sombra-s);
+  margin-bottom: 16px;
+}
+.pendiente-icon { font-size: 4rem; margin-bottom: 16px; }
+.pendiente-titulo { font-family:'Paytone One',sans-serif; font-size:1.2rem; margin-bottom:8px; }
+.pendiente-texto { color:var(--texto-s); font-size:0.9rem; line-height:1.6; }
+
+/* ── CARD PEDIDO ─────────────────────────────────────────── */
+.pedido-card {
+  background: var(--blanco);
+  border-radius: 14px;
+  box-shadow: var(--sombra-s);
+  margin-bottom: 12px;
+  overflow: hidden;
+  border-left: 4px solid var(--azul);
+  transition: transform 0.15s, box-shadow 0.15s;
+}
+.pedido-card:hover { transform: translateY(-2px); box-shadow: var(--sombra-m); }
+.pedido-card-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 16px 10px;
+}
+.pedido-local-avatar {
+  width: 44px;
+  height: 44px;
+  border-radius: 10px;
+  background: linear-gradient(135deg, var(--azul-l), var(--azul));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.2rem;
+  flex-shrink: 0;
+}
+.pedido-local-nombre { font-weight: 800; font-size: 0.95rem; }
+.pedido-local-dir    { font-size: 0.78rem; color: var(--texto-s); margin-top: 2px; }
+.pedido-total {
+  margin-left: auto;
+  font-family: 'Paytone One', sans-serif;
+  font-size: 1.1rem;
+  color: var(--naranja-d);
+}
+.pedido-info-row {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  padding: 0 16px 14px;
+}
+.pedido-chip {
+  font-size: 0.75rem;
+  font-weight: 700;
+  padding: 4px 12px;
+  border-radius: 99px;
+  background: var(--gris-1);
+  color: var(--texto-s);
+}
+.pedido-chip-azul { background: var(--azul-l); color: var(--azul-d); }
+.pedido-wa-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 16px 14px;
+  padding: 11px 16px;
+  background: #25D366;
+  color: #fff;
+  border-radius: 99px;
+  font-weight: 800;
+  font-size: 0.85rem;
+  font-family: 'Nunito', sans-serif;
+  text-decoration: none;
+  justify-content: center;
+  transition: all 0.15s;
+  box-shadow: 0 4px 12px rgba(37,211,102,0.3);
+}
+.pedido-wa-btn:hover { background: #1ebe5d; }
+
+/* ── EMPTY ───────────────────────────────────────────────── */
+.empty-state {
+  background: var(--blanco);
+  border-radius: 14px;
+  padding: 60px 24px;
+  text-align: center;
+  box-shadow: var(--sombra-s);
+  color: var(--texto-s);
+}
+.empty-state-icon  { font-size: 4rem; margin-bottom: 16px; }
+.empty-state h4    { font-weight:800; color:var(--texto); margin-bottom:6px; }
+
+/* ── DISPONIBILIDAD TOGGLE ───────────────────────────────── */
+.disponibilidad-card {
+  background: var(--blanco);
+  border-radius: 14px;
+  padding: 18px;
+  box-shadow: var(--sombra-s);
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 16px;
+}
+.disp-info { flex: 1; }
+.disp-titulo { font-weight: 800; font-size: 0.95rem; }
+.disp-sub    { font-size: 0.8rem; color: var(--texto-s); margin-top: 2px; }
+.disp-toggle {
+  position: relative;
+  width: 52px;
+  height: 28px;
+  flex-shrink: 0;
+}
+.disp-toggle input { display: none; }
+.disp-track {
+  position: absolute;
+  inset: 0;
+  background: var(--gris-2);
+  border-radius: 99px;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+.disp-track::after {
+  content: '';
+  position: absolute;
+  left: 3px; top: 3px;
+  width: 22px; height: 22px;
+  background: #fff;
+  border-radius: 50%;
+  transition: transform 0.2s;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+}
+input:checked + .disp-track { background: var(--verde); }
+input:checked + .disp-track::after { transform: translateX(24px); }
+
+/* ── PERFIL FORM ─────────────────────────────────────────── */
+.perfil-card {
+  background: var(--blanco);
+  border-radius: 14px;
+  padding: 20px;
+  box-shadow: var(--sombra-s);
+  margin-bottom: 14px;
+}
+.perfil-titulo {
+  font-weight: 800;
+  font-size: 0.95rem;
+  margin-bottom: 16px;
+  color: var(--texto);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.form-group   { margin-bottom: 14px; }
+.form-label   { display:block; font-size:0.73rem; font-weight:800; text-transform:uppercase; letter-spacing:0.4px; color:var(--texto-s); margin-bottom:6px; }
+.form-control { width:100%; padding:11px 14px; border:2px solid var(--gris-2); border-radius:10px; font-size:0.92rem; font-family:'Nunito',sans-serif; font-weight:600; background:var(--gris-1); color:var(--texto); outline:none; transition:all 0.2s; }
+.form-control:focus { border-color:var(--azul); background:var(--blanco); box-shadow:0 0 0 3px rgba(41,128,185,0.1); }
+.btn-guardar {
+  width: 100%;
+  background: linear-gradient(135deg, var(--azul), var(--azul-d));
+  color: #fff;
+  border: none;
+  border-radius: 99px;
+  padding: 13px;
+  font-family: 'Nunito', sans-serif;
+  font-weight: 800;
+  font-size: 0.95rem;
+  cursor: pointer;
+  transition: all 0.2s;
+  box-shadow: 0 4px 16px rgba(41,128,185,0.3);
+}
+.btn-guardar:hover { transform: translateY(-1px); box-shadow: 0 6px 20px rgba(41,128,185,0.4); }
+
+/* vehiculo select visual */
+.vehiculo-row { display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin-bottom:14px; }
+.v-opt { border:2px solid var(--gris-2); border-radius:10px; padding:10px 6px; background:var(--gris-1); cursor:pointer; text-align:center; font-family:'Nunito',sans-serif; transition:all 0.15s; }
+.v-opt:hover, .v-opt.activo { border-color:var(--azul); background:var(--azul-l); }
+.v-opt input { display:none; }
+.v-emoji { font-size:1.4rem; display:block; margin-bottom:3px; }
+.v-label { font-size:0.75rem; font-weight:800; }
+{% endblock %}
+
+{% block content %}
+
+<!-- HERO -->
+<div class="cadete-hero">
+  <div class="cadete-hero-top">
+    <div class="cadete-avatar">{{ session.nombre[0]|upper }}</div>
+    <div>
+      <div class="cadete-nombre">{{ session.nombre }}</div>
+      <div class="cadete-sub">
+        {% if cadete and cadete.estado == 'aprobado' %}
+          🟢 Cadete activo · {{ cadete.vehiculo or 'moto' }}
+        {% elif cadete and cadete.estado == 'pendiente' %}
+          ⏳ Solicitud en revisión
+        {% else %}
+          🚫 Cuenta suspendida
+        {% endif %}
+      </div>
+    </div>
+    <a href="{{ url_for('logout') }}" class="cadete-logout">Salir</a>
+  </div>
+
+  {% if cadete and cadete.estado == 'aprobado' %}
+    <div class="cadete-stats">
+      <div class="cadete-stat">
+        <div class="cadete-stat-num">{{ pedidos|length }}</div>
+        <div class="cadete-stat-label">Disponibles</div>
+      </div>
+      <div class="cadete-stat">
+        <div class="cadete-stat-num">{{ cadete.vehiculo[0]|upper if cadete.vehiculo else '—' }}</div>
+        <div class="cadete-stat-label">Vehículo</div>
+      </div>
+      <div class="cadete-stat">
+        <div class="cadete-stat-num">{{ '🟢' if cadete.disponible else '🔴' }}</div>
+        <div class="cadete-stat-label">Estado</div>
+      </div>
+    </div>
+  {% endif %}
+</div>
+
+<!-- TABS -->
+<div class="tab-nav">
+  <button class="tab-btn activo" onclick="mostrar('pedidos', this)">📋 Pedidos</button>
+  <button class="tab-btn"        onclick="mostrar('perfil',  this)">👤 Mi perfil</button>
+</div>
+
+<div class="container-sm">
+
+  {% with msgs = get_flashed_messages(with_categories=true) %}
+    {% for cat, msg in msgs %}
+      <div class="alert alert-{{ cat }}" style="margin-bottom:12px;">{{ msg }}</div>
+    {% endfor %}
+  {% endwith %}
+
+  <!-- ── PEDIDOS ────────────────────────────────────────── -->
+  <div class="seccion activo" id="sec-pedidos">
+
+    {% if not cadete or cadete.estado == 'pendiente' %}
+      <div class="pendiente-card">
+        <div class="pendiente-icon">⏳</div>
+        <div class="pendiente-titulo">Tu solicitud está en revisión</div>
+        <div class="pendiente-texto">
+          Estamos revisando tu perfil. Te avisamos por WhatsApp cuando esté aprobado.<br>
+          Suele tardar menos de 24 horas.
+        </div>
+      </div>
+
+    {% elif cadete.estado == 'suspendido' %}
+      <div class="pendiente-card">
+        <div class="pendiente-icon">🚫</div>
+        <div class="pendiente-titulo">Cuenta suspendida</div>
+        <div class="pendiente-texto">
+          Tu cuenta fue suspendida. Contactanos para más información.
+        </div>
+        <a href="https://wa.me/5493417523674" style="display:inline-block;margin-top:16px;background:var(--azul);color:#fff;padding:10px 24px;border-radius:99px;text-decoration:none;font-weight:800;font-size:0.88rem;">
+          Contactar soporte
+        </a>
+      </div>
+
+    {% else %}
+      <!-- Toggle disponibilidad -->
+      <form method="POST" action="{{ url_for('cadete_toggle_disponibilidad') }}" id="form-disp">
+        <div class="disponibilidad-card">
+          <div class="disp-info">
+            <div class="disp-titulo">
+              {{ '🟢 Estoy disponible' if cadete.disponible else '🔴 No estoy disponible' }}
+            </div>
+            <div class="disp-sub">
+              {{ 'Vas a aparecer en los pedidos con delivery' if cadete.disponible else 'No vas a recibir pedidos por ahora' }}
+            </div>
+          </div>
+          <label class="disp-toggle">
+            <input type="checkbox" id="chk-disp"
+                   {% if cadete.disponible %}checked{% endif %}
+                   onchange="document.getElementById('form-disp').submit()">
+            <div class="disp-track"></div>
+          </label>
+        </div>
+      </form>
+
+      {% if pedidos %}
+        {% for p in pedidos %}
+          <div class="pedido-card">
+            <div class="pedido-card-header">
+              <div class="pedido-local-avatar">🏪</div>
+              <div>
+                <div class="pedido-local-nombre">{{ p.nombre_local }}</div>
+                <div class="pedido-local-dir">
+                  📍 {{ p.direccion_entrega or 'Sin dirección especificada' }}
+                </div>
+              </div>
+              <div class="pedido-total">${{ p.total|int }}</div>
+            </div>
+            <div class="pedido-info-row">
+              <span class="pedido-chip pedido-chip-azul">🛵 Delivery</span>
+              <span class="pedido-chip">⏱ {{ p.fecha_pedido[11:16] }}</span>
+              {% if p.notas %}
+                <span class="pedido-chip">💬 {{ p.notas[:30] }}{% if p.notas|length > 30 %}...{% endif %}</span>
+              {% endif %}
+            </div>
+            <a class="pedido-wa-btn"
+               href="https://wa.me/549{{ p.whatsapp|replace('+','') |replace('-','') |replace(' ','') }}?text={{ ('Hola! Soy cadete de PediAcá. Quiero tomar el pedido #' ~ p.id) | urlencode }}"
+               target="_blank">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/>
+                <path d="M12 0C5.373 0 0 5.373 0 12c0 2.127.557 4.122 1.529 5.856L.057 23.943l6.23-1.434C7.9 23.459 9.9 24 12 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 22c-1.89 0-3.663-.5-5.195-1.375l-.373-.217-3.844.885.916-3.739-.24-.389C2.516 15.607 2 13.867 2 12 2 6.477 6.477 2 12 2s10 4.477 10 10-4.477 10-10 10z"/>
+              </svg>
+              Contactar al local
+            </a>
+          </div>
+        {% endfor %}
+
+      {% else %}
+        <div class="empty-state">
+          <div class="empty-state-icon">📭</div>
+          <h4>Sin pedidos disponibles</h4>
+          <p>Cuando llegue un pedido con delivery vas a verlo acá.</p>
+          {% if not cadete.disponible %}
+            <p style="margin-top:8px;color:var(--rojo);font-weight:700;">
+              ⚠️ Activá tu disponibilidad para recibir pedidos
+            </p>
+          {% endif %}
+        </div>
+      {% endif %}
+    {% endif %}
+
+  </div>
+
+  <!-- ── PERFIL ─────────────────────────────────────────── -->
+  <div class="seccion" id="sec-perfil">
+    {% if cadete %}
+      <form method="POST" action="{{ url_for('cadete_editar_perfil') }}">
+        <div class="perfil-card">
+          <div class="perfil-titulo">🛵 Mi vehículo</div>
+          <div class="vehiculo-row">
+            {% for v, emoji, label in [('moto','🏍️','Moto'),('bici','🚲','Bici'),('auto','🚗','Auto')] %}
+              <label class="v-opt {% if cadete.vehiculo == v %}activo{% endif %}"
+                     onclick="this.parentElement.querySelectorAll('.v-opt').forEach(x=>x.classList.remove('activo')); this.classList.add('activo');">
+                <input type="radio" name="vehiculo" value="{{ v }}"
+                       {% if cadete.vehiculo == v %}checked{% endif %}>
+                <span class="v-emoji">{{ emoji }}</span>
+                <span class="v-label">{{ label }}</span>
+              </label>
+            {% endfor %}
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Zona donde trabajás</label>
+            <input class="form-control" name="zona"
+                   value="{{ cadete.zona or '' }}"
+                   placeholder="Ej: Centro, Pichincha, Fisherton">
+          </div>
+        </div>
+
+        <button class="btn-guardar" type="submit">💾 Guardar cambios</button>
+      </form>
+    {% endif %}
+
+    <div class="perfil-card" style="margin-top:14px;">
+      <div class="perfil-titulo">📞 Soporte</div>
+      <p style="font-size:0.85rem;color:var(--texto-s);margin-bottom:14px;line-height:1.6;">
+        ¿Tenés alguna duda o problema? Escribinos por WhatsApp.
+      </p>
+      <a href="https://wa.me/5493417523674"
+         style="display:flex;align-items:center;gap:8px;background:#25D366;color:#fff;padding:12px 20px;border-radius:99px;text-decoration:none;font-weight:800;font-size:0.88rem;justify-content:center;">
+        💬 Contactar soporte
+      </a>
+    </div>
+
+  </div>
+
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+function mostrar(nombre, btn) {
+  document.querySelectorAll('.seccion').forEach(s => s.classList.remove('activo'));
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('activo'));
+  document.getElementById('sec-' + nombre).classList.add('activo');
+  btn.classList.add('activo');
+}
+</script>
+{% endblock %}

@@ -1,0 +1,729 @@
+{% extends "base.html" %}
+{% block title %}Panel Admin — PediAcá{% endblock %}
+
+{% block extra_styles %}
+/* ── LAYOUT ──────────────────────────────────────────────── */
+.admin-wrap {
+  display: grid;
+  grid-template-columns: 220px 1fr;
+  min-height: calc(100vh - 60px);
+}
+@media (max-width: 700px) {
+  .admin-wrap { grid-template-columns: 1fr; }
+  .admin-sidebar { display: none; }
+  .admin-sidebar.open { display: flex; }
+}
+
+/* ── SIDEBAR ─────────────────────────────────────────────── */
+.admin-sidebar {
+  background: #1A1A2E;
+  padding: 24px 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  position: sticky;
+  top: 60px;
+  height: calc(100vh - 60px);
+  overflow-y: auto;
+}
+.sidebar-label {
+  font-size: 0.68rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: rgba(255,255,255,0.3);
+  padding: 16px 20px 6px;
+}
+.sidebar-link {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 11px 20px;
+  color: rgba(255,255,255,0.65);
+  text-decoration: none;
+  font-weight: 700;
+  font-size: 0.88rem;
+  border-left: 3px solid transparent;
+  cursor: pointer;
+  background: none;
+  border-top: none;
+  border-right: none;
+  border-bottom: none;
+  font-family: 'Nunito', sans-serif;
+  width: 100%;
+  text-align: left;
+  transition: all 0.15s;
+}
+.sidebar-link:hover { color: #fff; background: rgba(255,255,255,0.06); }
+.sidebar-link.activo {
+  color: var(--naranja);
+  border-left-color: var(--naranja);
+  background: rgba(243,156,18,0.08);
+}
+.sidebar-icon { font-size: 1.05rem; width: 20px; text-align: center; }
+
+/* ── MAIN CONTENT ────────────────────────────────────────── */
+.admin-main {
+  padding: 24px 20px;
+  max-width: 900px;
+}
+
+/* ── STATS GRID ──────────────────────────────────────────── */
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 14px;
+  margin-bottom: 28px;
+}
+@media (min-width: 600px) {
+  .stats-grid { grid-template-columns: repeat(4, 1fr); }
+}
+.stat-card {
+  background: var(--blanco);
+  border-radius: 14px;
+  padding: 18px 16px;
+  box-shadow: var(--sombra-s);
+  position: relative;
+  overflow: hidden;
+}
+.stat-card::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 3px;
+}
+.stat-naranja::before { background: var(--naranja); }
+.stat-azul::before    { background: var(--azul); }
+.stat-verde::before   { background: var(--verde); }
+.stat-rojo::before    { background: var(--rojo); }
+.stat-num   { font-family: 'Paytone One', sans-serif; font-size: 2rem; line-height: 1; }
+.stat-label { font-size: 0.78rem; font-weight: 700; color: var(--texto-s); margin-top: 4px; }
+.stat-icon  { position: absolute; right: 14px; top: 14px; font-size: 1.6rem; opacity: 0.15; }
+
+/* ── SECCIONES ───────────────────────────────────────────── */
+.admin-seccion { display: none; }
+.admin-seccion.activo { display: block; }
+
+.seccion-titulo {
+  font-family: 'Paytone One', sans-serif;
+  font-size: 1.2rem;
+  margin-bottom: 16px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--texto);
+}
+
+/* ── CARDS DE SOLICITUD ──────────────────────────────────── */
+.solicitud-card {
+  background: var(--blanco);
+  border-radius: 14px;
+  padding: 18px;
+  box-shadow: var(--sombra-s);
+  margin-bottom: 12px;
+  border-left: 4px solid var(--naranja);
+  display: flex;
+  gap: 16px;
+  align-items: flex-start;
+}
+.solicitud-card.cadete { border-left-color: var(--azul); }
+.solicitud-avatar {
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, var(--naranja-l), var(--naranja));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: 'Paytone One', sans-serif;
+  font-size: 1.3rem;
+  color: var(--blanco);
+  flex-shrink: 0;
+}
+.solicitud-avatar.cadete-av {
+  background: linear-gradient(135deg, var(--azul-l), var(--azul));
+}
+.solicitud-info { flex: 1; min-width: 0; }
+.solicitud-nombre {
+  font-weight: 800;
+  font-size: 1rem;
+  margin-bottom: 3px;
+}
+.solicitud-detalle {
+  font-size: 0.8rem;
+  color: var(--texto-s);
+  line-height: 1.5;
+}
+.solicitud-acciones {
+  display: flex;
+  gap: 8px;
+  margin-top: 12px;
+  flex-wrap: wrap;
+}
+.btn-aprobar, .btn-rechazar {
+  padding: 8px 18px;
+  border-radius: 99px;
+  border: none;
+  font-family: 'Nunito', sans-serif;
+  font-weight: 800;
+  font-size: 0.82rem;
+  cursor: pointer;
+  text-decoration: none;
+  transition: all 0.15s;
+  display: inline-block;
+}
+.btn-aprobar  { background: #D5F5E3; color: #1E8449; }
+.btn-aprobar:hover  { background: var(--verde); color: #fff; }
+.btn-rechazar { background: #FADBD8; color: #922B21; }
+.btn-rechazar:hover { background: var(--rojo); color: #fff; }
+
+/* ── TABLA DE LOCALES ────────────────────────────────────── */
+.tabla {
+  width: 100%;
+  border-collapse: collapse;
+  background: var(--blanco);
+  border-radius: 14px;
+  overflow: hidden;
+  box-shadow: var(--sombra-s);
+}
+.tabla th {
+  background: var(--gris-1);
+  padding: 12px 14px;
+  text-align: left;
+  font-size: 0.75rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  color: var(--texto-s);
+}
+.tabla td {
+  padding: 12px 14px;
+  border-top: 1px solid var(--gris-1);
+  font-size: 0.88rem;
+  font-weight: 600;
+  vertical-align: middle;
+}
+.tabla tr:hover td { background: var(--gris-1); }
+.badge {
+  display: inline-block;
+  padding: 3px 10px;
+  border-radius: 99px;
+  font-size: 0.72rem;
+  font-weight: 800;
+}
+.badge-ok   { background: #D5F5E3; color: #1E8449; }
+.badge-warn { background: #FEF3DC; color: #9A6000; }
+.badge-off  { background: #FADBD8; color: #922B21; }
+.badge-azul { background: var(--azul-l); color: var(--azul-d); }
+
+/* ── FILTRO TABLA ────────────────────────────────────────── */
+.tabla-toolbar {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 12px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+.tabla-search {
+  flex: 1;
+  min-width: 180px;
+  padding: 9px 14px;
+  border: 2px solid var(--gris-2);
+  border-radius: 99px;
+  font-family: 'Nunito', sans-serif;
+  font-weight: 600;
+  font-size: 0.88rem;
+  outline: none;
+  transition: border-color 0.2s;
+}
+.tabla-search:focus { border-color: var(--naranja); }
+
+/* ── EMPTY STATE ─────────────────────────────────────────── */
+.empty-admin {
+  background: var(--blanco);
+  border-radius: 14px;
+  padding: 48px 20px;
+  text-align: center;
+  color: var(--texto-s);
+  box-shadow: var(--sombra-s);
+}
+.empty-admin-icon { font-size: 3rem; margin-bottom: 12px; }
+.empty-admin h4 { font-weight: 800; color: var(--texto); margin-bottom: 4px; }
+
+/* ── ACCIÓN LINK ─────────────────────────────────────────── */
+.accion-link {
+  font-size: 0.78rem;
+  font-weight: 700;
+  padding: 4px 10px;
+  border-radius: 6px;
+  text-decoration: none;
+  transition: all 0.15s;
+  display: inline-block;
+  margin: 2px;
+}
+.al-verde { color: var(--verde); background: #D5F5E3; }
+.al-verde:hover { background: var(--verde); color: #fff; }
+.al-rojo  { color: var(--rojo); background: #FADBD8; }
+.al-rojo:hover { background: var(--rojo); color: #fff; }
+.al-gris  { color: var(--texto-s); background: var(--gris-1); }
+.al-gris:hover { background: var(--gris-2); }
+
+/* ── METRICAS ────────────────────────────────────────────── */
+.metrica-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+  margin-bottom: 14px;
+}
+.metrica-card {
+  background: var(--blanco);
+  border-radius: 14px;
+  padding: 20px;
+  box-shadow: var(--sombra-s);
+}
+.metrica-titulo {
+  font-size: 0.78rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  color: var(--texto-s);
+  margin-bottom: 12px;
+}
+
+/* ── MÓVIL HAMBURGER ─────────────────────────────────────── */
+.admin-mobile-bar {
+  display: none;
+  background: #1A1A2E;
+  padding: 10px 16px;
+  align-items: center;
+  gap: 12px;
+}
+@media (max-width: 700px) { .admin-mobile-bar { display: flex; } }
+.hamburger-btn {
+  background: rgba(255,255,255,0.1);
+  border: none;
+  color: #fff;
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 1.1rem;
+  display: flex; align-items: center; justify-content: center;
+}
+.admin-mobile-titulo {
+  font-family: 'Paytone One', sans-serif;
+  color: var(--naranja);
+  font-size: 1rem;
+}
+{% endblock %}
+
+{% block content %}
+
+<!-- BARRA MOBILE -->
+<div class="admin-mobile-bar">
+  <button class="hamburger-btn" onclick="toggleSidebar()">☰</button>
+  <span class="admin-mobile-titulo">Panel Admin</span>
+</div>
+
+<div class="admin-wrap">
+
+  <!-- ── SIDEBAR ────────────────────────────────────────── -->
+  <aside class="admin-sidebar" id="sidebar">
+    <div class="sidebar-label">Panel</div>
+    <button class="sidebar-link activo" onclick="mostrar('inicio')">
+      <span class="sidebar-icon">📊</span> Inicio
+    </button>
+
+    <div class="sidebar-label">Gestión</div>
+    <button class="sidebar-link" onclick="mostrar('solicitudes')">
+      <span class="sidebar-icon">⏳</span> Solicitudes
+      {% set n = pendientes_restaurantes|length + pendientes_cadetes|length %}
+      {% if n > 0 %}
+        <span style="background:var(--rojo);color:#fff;border-radius:99px;padding:1px 8px;font-size:0.72rem;margin-left:auto;">{{ n }}</span>
+      {% endif %}
+    </button>
+    <button class="sidebar-link" onclick="mostrar('locales')">
+      <span class="sidebar-icon">🏪</span> Locales
+    </button>
+    <button class="sidebar-link" onclick="mostrar('cadetes')">
+      <span class="sidebar-icon">🛵</span> Cadetes
+    </button>
+    <button class="sidebar-link" onclick="mostrar('pedidos')">
+      <span class="sidebar-icon">📋</span> Pedidos
+    </button>
+
+    <div class="sidebar-label">Sistema</div>
+    <a class="sidebar-link" href="{{ url_for('home') }}" target="_blank">
+      <span class="sidebar-icon">🌐</span> Ver sitio
+    </a>
+    <a class="sidebar-link" href="{{ url_for('logout') }}">
+      <span class="sidebar-icon">🚪</span> Salir
+    </a>
+  </aside>
+
+  <!-- ── CONTENIDO ──────────────────────────────────────── -->
+  <main class="admin-main">
+
+    <!-- INICIO -->
+    <section class="admin-seccion activo" id="sec-inicio">
+      <div class="seccion-titulo">📊 Resumen</div>
+
+      <div class="stats-grid">
+        <div class="stat-card stat-naranja">
+          <div class="stat-num">{{ stats.restaurantes_activos }}</div>
+          <div class="stat-label">Locales activos</div>
+          <div class="stat-icon">🏪</div>
+        </div>
+        <div class="stat-card stat-azul">
+          <div class="stat-num">{{ stats.cadetes_activos }}</div>
+          <div class="stat-label">Cadetes activos</div>
+          <div class="stat-icon">🛵</div>
+        </div>
+        <div class="stat-card stat-verde">
+          <div class="stat-num">{{ stats.clientes }}</div>
+          <div class="stat-label">Clientes registrados</div>
+          <div class="stat-icon">👥</div>
+        </div>
+        <div class="stat-card stat-rojo">
+          <div class="stat-num">{{ stats.pedidos_hoy }}</div>
+          <div class="stat-label">Pedidos hoy</div>
+          <div class="stat-icon">📋</div>
+        </div>
+      </div>
+
+      {% set n_pend = pendientes_restaurantes|length + pendientes_cadetes|length %}
+      {% if n_pend > 0 %}
+        <div style="background:#FEF3DC;border-radius:12px;padding:16px 20px;display:flex;align-items:center;gap:12px;margin-bottom:20px;cursor:pointer;" onclick="mostrar('solicitudes')">
+          <span style="font-size:1.5rem;">⏳</span>
+          <div>
+            <div style="font-weight:800;">Tenés {{ n_pend }} solicitud{{ 'es' if n_pend != 1 else '' }} pendiente{{ 's' if n_pend != 1 else '' }}</div>
+            <div style="font-size:0.82rem;color:var(--texto-s);">Tocá para revisar y aprobar</div>
+          </div>
+          <span style="margin-left:auto;font-size:1.2rem;">→</span>
+        </div>
+      {% endif %}
+
+      <div class="metrica-row">
+        <div class="metrica-card">
+          <div class="metrica-titulo">Locales por categoría</div>
+          {% for r in todos_restaurantes | groupby('categoria') %}
+            <div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--gris-1);font-size:0.85rem;font-weight:700;">
+              <span>{{ r.grouper or 'Sin categoría' }}</span>
+              <span style="color:var(--naranja-d);">{{ r.list|length }}</span>
+            </div>
+          {% else %}
+            <p style="color:var(--texto-s);font-size:0.85rem;">Sin datos aún.</p>
+          {% endfor %}
+        </div>
+        <div class="metrica-card">
+          <div class="metrica-titulo">Estado general</div>
+          {% set aprobados   = todos_restaurantes | selectattr('estado','equalto','aprobado')   | list | length %}
+          {% set pendientes  = todos_restaurantes | selectattr('estado','equalto','pendiente')  | list | length %}
+          {% set suspendidos = todos_restaurantes | selectattr('estado','equalto','suspendido') | list | length %}
+          <div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--gris-1);font-size:0.85rem;font-weight:700;">
+            <span>✅ Aprobados</span><span style="color:var(--verde);">{{ aprobados }}</span>
+          </div>
+          <div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--gris-1);font-size:0.85rem;font-weight:700;">
+            <span>⏳ Pendientes</span><span style="color:var(--naranja-d);">{{ pendientes }}</span>
+          </div>
+          <div style="display:flex;justify-content:space-between;padding:5px 0;font-size:0.85rem;font-weight:700;">
+            <span>🚫 Suspendidos</span><span style="color:var(--rojo);">{{ suspendidos }}</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- SOLICITUDES -->
+    <section class="admin-seccion" id="sec-solicitudes">
+      <div class="seccion-titulo">⏳ Solicitudes pendientes</div>
+
+      {% if pendientes_restaurantes %}
+        <h4 style="font-weight:800;margin-bottom:12px;color:var(--texto-s);font-size:0.85rem;text-transform:uppercase;letter-spacing:0.4px;">
+          🏪 Locales ({{ pendientes_restaurantes|length }})
+        </h4>
+        {% for r in pendientes_restaurantes %}
+          <div class="solicitud-card">
+            <div class="solicitud-avatar">{{ r.nombre_local[0]|upper }}</div>
+            <div class="solicitud-info">
+              <div class="solicitud-nombre">{{ r.nombre_local }}</div>
+              <div class="solicitud-detalle">
+                👤 {{ r.nombre }} {{ r.apellido }}<br>
+                📧 {{ r.email }}<br>
+                📱 {{ r.telefono or 'Sin teléfono' }}<br>
+                📍 {{ r.direccion or 'Sin dirección' }}<br>
+                📂 {{ r.categoria or 'Sin categoría' }}<br>
+                💬 WhatsApp: {{ r.whatsapp }}<br>
+                📅 {{ r.fecha_alta[:10] }}
+              </div>
+              <div class="solicitud-acciones">
+                <a href="{{ url_for('admin_restaurante_estado', restaurante_id=r.id, accion='aprobar') }}"
+                   class="btn-aprobar">✅ Aprobar</a>
+                <a href="{{ url_for('admin_restaurante_estado', restaurante_id=r.id, accion='suspender') }}"
+                   class="btn-rechazar">🚫 Rechazar</a>
+              </div>
+            </div>
+          </div>
+        {% endfor %}
+      {% endif %}
+
+      {% if pendientes_cadetes %}
+        <h4 style="font-weight:800;margin:16px 0 12px;color:var(--texto-s);font-size:0.85rem;text-transform:uppercase;letter-spacing:0.4px;">
+          🛵 Cadetes ({{ pendientes_cadetes|length }})
+        </h4>
+        {% for c in pendientes_cadetes %}
+          <div class="solicitud-card cadete">
+            <div class="solicitud-avatar cadete-av">{{ c.nombre[0]|upper }}</div>
+            <div class="solicitud-info">
+              <div class="solicitud-nombre">{{ c.nombre }} {{ c.apellido }}</div>
+              <div class="solicitud-detalle">
+                📧 {{ c.email }}<br>
+                📱 {{ c.telefono or 'Sin teléfono' }}<br>
+                🚗 Vehículo: {{ c.vehiculo or 'No especificado' }}<br>
+                📍 Zona: {{ c.zona or 'No especificada' }}
+              </div>
+              <div class="solicitud-acciones">
+                <a href="{{ url_for('admin_cadete_estado', cadete_id=c.id, accion='aprobar') }}"
+                   class="btn-aprobar">✅ Aprobar</a>
+                <a href="{{ url_for('admin_cadete_estado', cadete_id=c.id, accion='suspender') }}"
+                   class="btn-rechazar">🚫 Rechazar</a>
+              </div>
+            </div>
+          </div>
+        {% endfor %}
+      {% endif %}
+
+      {% if not pendientes_restaurantes and not pendientes_cadetes %}
+        <div class="empty-admin">
+          <div class="empty-admin-icon">🎉</div>
+          <h4>Todo al día</h4>
+          <p>No hay solicitudes pendientes por revisar.</p>
+        </div>
+      {% endif %}
+    </section>
+
+    <!-- LOCALES -->
+    <section class="admin-seccion" id="sec-locales">
+      <div class="seccion-titulo">🏪 Todos los locales</div>
+      <div class="tabla-toolbar">
+        <input class="tabla-search" type="text" id="buscar-local"
+               placeholder="🔍 Buscar local..." oninput="filtrarTabla('tabla-locales','buscar-local')">
+      </div>
+      {% if todos_restaurantes %}
+        <div style="overflow-x:auto;">
+          <table class="tabla" id="tabla-locales">
+            <thead>
+              <tr>
+                <th>Local</th>
+                <th>Categoría</th>
+                <th>WhatsApp</th>
+                <th>Estado</th>
+                <th>Acciones</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for r in todos_restaurantes %}
+                <tr>
+                  <td>
+                    <div style="font-weight:800;">{{ r.nombre_local }}</div>
+                    <div style="font-size:0.75rem;color:var(--texto-s);">{{ r.nombre }} {{ r.apellido }}</div>
+                  </td>
+                  <td>{{ r.categoria or '—' }}</td>
+                  <td style="font-size:0.82rem;">{{ r.whatsapp }}</td>
+                  <td>
+                    {% if r.estado == 'aprobado' %}
+                      <span class="badge badge-ok">✔ Aprobado</span>
+                    {% elif r.estado == 'pendiente' %}
+                      <span class="badge badge-warn">⏳ Pendiente</span>
+                    {% else %}
+                      <span class="badge badge-off">🚫 Suspendido</span>
+                    {% endif %}
+                  </td>
+                  <td>
+                    {% if r.estado != 'aprobado' %}
+                      <a class="accion-link al-verde"
+                         href="{{ url_for('admin_restaurante_estado', restaurante_id=r.id, accion='aprobar') }}">
+                        Aprobar
+                      </a>
+                    {% endif %}
+                    {% if r.estado == 'aprobado' %}
+                      <a class="accion-link al-rojo"
+                         href="{{ url_for('admin_restaurante_estado', restaurante_id=r.id, accion='suspender') }}">
+                        Suspender
+                      </a>
+                      <a class="accion-link al-gris"
+                         href="{{ url_for('ver_local', restaurante_id=r.id) }}" target="_blank">
+                        Ver menú
+                      </a>
+                    {% endif %}
+                  </td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      {% else %}
+        <div class="empty-admin">
+          <div class="empty-admin-icon">🏪</div>
+          <h4>Sin locales todavía</h4>
+          <p>Cuando se registren aparecerán acá.</p>
+        </div>
+      {% endif %}
+    </section>
+
+    <!-- CADETES -->
+    <section class="admin-seccion" id="sec-cadetes">
+      <div class="seccion-titulo">🛵 Cadetes</div>
+      <div class="tabla-toolbar">
+        <input class="tabla-search" type="text" id="buscar-cadete"
+               placeholder="🔍 Buscar cadete..." oninput="filtrarTabla('tabla-cadetes','buscar-cadete')">
+      </div>
+      {% if todos_cadetes %}
+        <div style="overflow-x:auto;">
+          <table class="tabla" id="tabla-cadetes">
+            <thead>
+              <tr>
+                <th>Nombre</th>
+                <th>Contacto</th>
+                <th>Vehículo</th>
+                <th>Zona</th>
+                <th>Estado</th>
+                <th>Acciones</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for c in todos_cadetes %}
+                <tr>
+                  <td style="font-weight:800;">{{ c.nombre }} {{ c.apellido }}</td>
+                  <td style="font-size:0.8rem;">
+                    {{ c.email }}<br>
+                    <span style="color:var(--texto-s);">{{ c.telefono or '—' }}</span>
+                  </td>
+                  <td>{{ c.vehiculo or '—' }}</td>
+                  <td>{{ c.zona or '—' }}</td>
+                  <td>
+                    {% if c.estado == 'aprobado' %}
+                      <span class="badge badge-ok">✔ Activo</span>
+                    {% elif c.estado == 'pendiente' %}
+                      <span class="badge badge-warn">⏳ Pendiente</span>
+                    {% else %}
+                      <span class="badge badge-off">🚫 Suspendido</span>
+                    {% endif %}
+                  </td>
+                  <td>
+                    {% if c.estado != 'aprobado' %}
+                      <a class="accion-link al-verde"
+                         href="{{ url_for('admin_cadete_estado', cadete_id=c.id, accion='aprobar') }}">
+                        Aprobar
+                      </a>
+                    {% endif %}
+                    {% if c.estado == 'aprobado' %}
+                      <a class="accion-link al-rojo"
+                         href="{{ url_for('admin_cadete_estado', cadete_id=c.id, accion='suspender') }}">
+                        Suspender
+                      </a>
+                    {% endif %}
+                  </td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      {% else %}
+        <div class="empty-admin">
+          <div class="empty-admin-icon">🛵</div>
+          <h4>Sin cadetes todavía</h4>
+          <p>Cuando se registren aparecerán acá.</p>
+        </div>
+      {% endif %}
+    </section>
+
+    <!-- PEDIDOS -->
+    <section class="admin-seccion" id="sec-pedidos">
+      <div class="seccion-titulo">📋 Últimos pedidos</div>
+      {% if ultimos_pedidos %}
+        <div style="overflow-x:auto;">
+          <table class="tabla">
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Local</th>
+                <th>Cliente</th>
+                <th>Total</th>
+                <th>Entrega</th>
+                <th>Estado</th>
+                <th>Fecha</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for p in ultimos_pedidos %}
+                <tr>
+                  <td style="color:var(--texto-s);font-size:0.8rem;">#{{ p.id }}</td>
+                  <td style="font-weight:700;">{{ p.nombre_local }}</td>
+                  <td style="font-size:0.82rem;">
+                    {{ p.nombre_cliente or p.nombre_cliente_anonimo or 'Anónimo' }}
+                  </td>
+                  <td style="font-weight:800;color:var(--naranja-d);">${{ p.total|int }}</td>
+                  <td>
+                    <span class="badge {{ 'badge-azul' if p.tipo_entrega == 'delivery' else 'badge-warn' }}">
+                      {{ '🛵 Delivery' if p.tipo_entrega == 'delivery' else '🏪 Retiro' }}
+                    </span>
+                  </td>
+                  <td>
+                    {% if p.estado == 'entregado' %}
+                      <span class="badge badge-ok">Entregado</span>
+                    {% elif p.estado == 'en_camino' %}
+                      <span class="badge badge-azul">En camino</span>
+                    {% elif p.estado == 'confirmado' %}
+                      <span class="badge badge-warn">Confirmado</span>
+                    {% elif p.estado == 'cancelado' %}
+                      <span class="badge badge-off">Cancelado</span>
+                    {% else %}
+                      <span class="badge badge-warn">Nuevo</span>
+                    {% endif %}
+                  </td>
+                  <td style="font-size:0.78rem;color:var(--texto-s);">
+                    {{ p.fecha_pedido[:16] }}
+                  </td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      {% else %}
+        <div class="empty-admin">
+          <div class="empty-admin-icon">📋</div>
+          <h4>Sin pedidos todavía</h4>
+          <p>Los pedidos aparecerán acá cuando los clientes empiecen a pedir.</p>
+        </div>
+      {% endif %}
+    </section>
+
+  </main>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+function mostrar(nombre) {
+  document.querySelectorAll('.admin-seccion').forEach(s => s.classList.remove('activo'));
+  document.querySelectorAll('.sidebar-link').forEach(l => l.classList.remove('activo'));
+  document.getElementById('sec-' + nombre).classList.add('activo');
+  event.currentTarget.classList.add('activo');
+  // cerrar sidebar mobile
+  if (window.innerWidth <= 700) {
+    document.getElementById('sidebar').classList.remove('open');
+  }
+}
+
+function filtrarTabla(tablaId, inputId) {
+  const q = document.getElementById(inputId).value.toLowerCase();
+  document.querySelectorAll('#' + tablaId + ' tbody tr').forEach(tr => {
+    tr.style.display = tr.textContent.toLowerCase().includes(q) ? '' : 'none';
+  });
+}
+
+function toggleSidebar() {
+  document.getElementById('sidebar').classList.toggle('open');
+}
+</script>
+{% endblock %}

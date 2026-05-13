@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<title>{% block title %}PediAcá — El sabor de tu barrio{% endblock %}</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&family=Paytone+One&display=swap" rel="stylesheet">
+<style>
+/* ── RESET ─────────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+
+:root {
+  --naranja:    #F39C12;
+  --naranja-d:  #D68910;
+  --naranja-l:  #FEF3DC;
+  --azul:       #2980B9;
+  --azul-d:     #1A5276;
+  --azul-l:     #D6EAF8;
+  --rojo:       #E74C3C;
+  --verde:      #27AE60;
+  --blanco:     #FFFFFF;
+  --fondo:      #F8F9FA;
+  --gris-1:     #F0F2F5;
+  --gris-2:     #DEE2E6;
+  --gris-3:     #ADB5BD;
+  --texto:      #1A1A2E;
+  --texto-s:    #6C757D;
+  --sombra-s:   0 2px 8px rgba(0,0,0,0.08);
+  --sombra-m:   0 4px 20px rgba(0,0,0,0.12);
+  --sombra-l:   0 8px 40px rgba(0,0,0,0.16);
+  --radio:      14px;
+  --radio-s:    8px;
+}
+
+body {
+  font-family: 'Nunito', sans-serif;
+  background: var(--fondo);
+  color: var(--texto);
+  min-height: 100vh;
+}
+
+/* ── NAVBAR ─────────────────────────────────────────────── */
+.navbar {
+  background: var(--blanco);
+  box-shadow: var(--sombra-s);
+  position: sticky;
+  top: 0;
+  z-index: 200;
+  height: 60px;
+  display: flex;
+  align-items: center;
+  padding: 0 20px;
+  gap: 12px;
+}
+.navbar-brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  text-decoration: none;
+}
+.navbar-logo {
+  height: 42px;
+  width: 42px;
+  object-fit: contain;
+}
+.navbar-brand-text {
+  font-family: 'Paytone One', sans-serif;
+  font-size: 1.4rem;
+  color: var(--naranja);
+  letter-spacing: -0.5px;
+  line-height: 1;
+}
+.navbar-brand-text span { color: var(--azul); }
+.navbar-spacer { flex: 1; }
+.navbar-btn {
+  padding: 8px 18px;
+  border-radius: 99px;
+  font-size: 0.85rem;
+  font-weight: 700;
+  font-family: 'Nunito', sans-serif;
+  text-decoration: none;
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.navbar-btn-outline {
+  background: transparent;
+  color: var(--naranja);
+  border: 2px solid var(--naranja);
+}
+.navbar-btn-outline:hover { background: var(--naranja-l); }
+.navbar-btn-filled {
+  background: var(--naranja);
+  color: var(--blanco);
+}
+.navbar-btn-filled:hover { background: var(--naranja-d); }
+
+/* ── ALERTAS ─────────────────────────────────────────────── */
+.alerts-container { padding: 12px 20px 0; max-width: 700px; margin: 0 auto; }
+.alert {
+  padding: 12px 16px;
+  border-radius: var(--radio-s);
+  font-weight: 700;
+  font-size: 0.88rem;
+  margin-bottom: 10px;
+  animation: slideDown 0.3s ease;
+}
+@keyframes slideDown {
+  from { opacity:0; transform:translateY(-8px); }
+  to   { opacity:1; transform:translateY(0); }
+}
+.alert-success { background: #D5F5E3; color: #1E8449; }
+.alert-danger  { background: #FADBD8; color: #922B21; }
+.alert-info    { background: #D6EAF8; color: #1A5276; }
+.alert-warning { background: #FDEBD0; color: #784212; }
+
+/* ── FOOTER ──────────────────────────────────────────────── */
+.footer {
+  background: var(--texto);
+  color: #aaa;
+  text-align: center;
+  padding: 28px 20px;
+  font-size: 0.82rem;
+  margin-top: 60px;
+}
+.footer a { color: var(--naranja); text-decoration: none; }
+.footer-logo {
+  font-family: 'Paytone One', sans-serif;
+  font-size: 1.3rem;
+  color: var(--naranja);
+  margin-bottom: 6px;
+}
+
+/* ── UTILITIES ───────────────────────────────────────────── */
+.container { max-width: 1000px; margin: 0 auto; padding: 0 16px; }
+.mt-1 { margin-top: 8px; }
+.mt-2 { margin-top: 16px; }
+.mt-3 { margin-top: 24px; }
+
+{% block extra_styles %}{% endblock %}
+</style>
+</head>
+<body>
+
+<!-- NAVBAR -->
+<nav class="navbar">
+  <a href="{{ url_for('home') }}" class="navbar-brand">
+    <img src="{{ url_for('static', filename='img/logo_pediaca.png') }}"
+         class="navbar-logo" alt="PediAcá"
+         onerror="this.style.display='none'">
+    <span class="navbar-brand-text">Pedi<span>Acá</span></span>
+  </a>
+  <div class="navbar-spacer"></div>
+  {% if session.get('user_id') %}
+    <a href="{{ url_for('dashboard') }}" class="navbar-btn navbar-btn-outline">Mi cuenta</a>
+    <a href="{{ url_for('logout') }}" class="navbar-btn navbar-btn-filled">Salir</a>
+  {% else %}
+    <a href="{{ url_for('login') }}" class="navbar-btn navbar-btn-outline">Ingresar</a>
+    <a href="{{ url_for('registro') }}" class="navbar-btn navbar-btn-filled">Registrarse</a>
+  {% endif %}
+</nav>
+
+<!-- ALERTAS -->
+{% with msgs = get_flashed_messages(with_categories=true) %}
+  {% if msgs %}
+    <div class="alerts-container">
+      {% for cat, msg in msgs %}
+        <div class="alert alert-{{ cat }}">{{ msg }}</div>
+      {% endfor %}
+    </div>
+  {% endif %}
+{% endwith %}
+
+<!-- CONTENIDO -->
+{% block content %}{% endblock %}
+
+<!-- FOOTER -->
+<footer class="footer">
+  <div class="footer-logo">PediAcá</div>
+  <p>El sabor de tu barrio · Rosario, Santa Fe</p>
+  <p style="margin-top:6px;">Sin comisiones · Sin letra chica · 100% Rosarino</p>
+  <p style="margin-top:12px; font-size:0.75rem; opacity:0.5;">© 2026 pediaca.ar</p>
+</footer>
+
+<script>
+// Auto-ocultar alertas
+setTimeout(() => {
+  document.querySelectorAll('.alert').forEach(a => {
+    a.style.transition = 'opacity 0.5s, transform 0.5s';
+    a.style.opacity = '0';
+    a.style.transform = 'translateY(-8px)';
+    setTimeout(() => a.remove(), 500);
+  });
+}, 3500);
+</script>
+{% block extra_scripts %}{% endblock %}
+</body>
+</html>

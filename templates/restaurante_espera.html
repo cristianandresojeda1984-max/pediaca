@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Registro en revisión — PediAcá</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Segoe UI', sans-serif;
+    background: #f5f5f5;
+    min-height: 100vh;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .card {
+    background: #fff;
+    border-radius: 16px;
+    padding: 48px 36px;
+    max-width: 480px;
+    width: 90%;
+    text-align: center;
+    box-shadow: 0 4px 24px rgba(0,0,0,0.08);
+  }
+  .icono { font-size: 64px; margin-bottom: 20px; }
+  h1 { font-size: 1.5rem; color: #1a1a2e; margin-bottom: 12px; }
+  p  { color: #666; line-height: 1.6; margin-bottom: 8px; }
+  .estado {
+    display: inline-block;
+    padding: 6px 18px;
+    border-radius: 99px;
+    font-weight: 700;
+    font-size: 0.85rem;
+    margin: 16px 0;
+  }
+  .pendiente  { background: #fff3cd; color: #856404; }
+  .suspendido { background: #f8d7da; color: #842029; }
+  .btn {
+    display: inline-block;
+    margin-top: 24px;
+    padding: 12px 28px;
+    background: #e74c3c;
+    color: #fff;
+    border-radius: 8px;
+    text-decoration: none;
+    font-weight: 600;
+  }
+</style>
+</head>
+<body>
+<div class="card">
+  {% if restaurante.estado == 'pendiente' %}
+    <div class="icono">⏳</div>
+    <h1>Tu local está en revisión</h1>
+    <span class="estado pendiente">PENDIENTE DE APROBACIÓN</span>
+    <p>Recibimos el registro de <strong>{{ restaurante.nombre_local }}</strong>.</p>
+    <p>En breve lo revisamos y te avisamos por WhatsApp cuando esté activo.</p>
+  {% else %}
+    <div class="icono">🚫</div>
+    <h1>Local suspendido</h1>
+    <span class="estado suspendido">SUSPENDIDO</span>
+    <p>Tu local <strong>{{ restaurante.nombre_local }}</strong> fue suspendido.</p>
+    <p>Contactanos por WhatsApp para más información.</p>
+  {% endif %}
+  <br>
+  <a href="https://wa.me/5493417523674" class="btn">Contactar soporte</a>
+  <br><br>
+  <a href="{{ url_for('logout') }}" style="color:#999; font-size:0.85rem;">Cerrar sesión</a>
+</div>
+</body>
+</html>

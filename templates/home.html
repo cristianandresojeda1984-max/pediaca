@@ -1,0 +1,465 @@
+{% extends "base.html" %}
+{% block title %}PediAcá — El sabor de tu barrio · Rosario{% endblock %}
+
+{% block extra_styles %}
+/* ── HERO ──────────────────────────────────────────────── */
+.hero {
+  background: linear-gradient(135deg, #1A1A2E 0%, #16213E 60%, #0F3460 100%);
+  padding: 48px 20px 56px;
+  text-align: center;
+  position: relative;
+  overflow: hidden;
+}
+.hero::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse at 30% 50%, rgba(243,156,18,0.15) 0%, transparent 60%),
+              radial-gradient(ellipse at 70% 30%, rgba(41,128,185,0.12) 0%, transparent 60%);
+}
+.hero-content { position: relative; z-index: 1; }
+.hero-titulo {
+  font-family: 'Paytone One', sans-serif;
+  font-size: clamp(2rem, 6vw, 3.2rem);
+  color: var(--blanco);
+  line-height: 1.1;
+  margin-bottom: 12px;
+}
+.hero-titulo span { color: var(--naranja); }
+.hero-sub {
+  color: rgba(255,255,255,0.7);
+  font-size: 1.05rem;
+  margin-bottom: 28px;
+  font-weight: 600;
+}
+.hero-chips {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 32px;
+}
+.hero-chip {
+  background: rgba(255,255,255,0.08);
+  border: 1px solid rgba(255,255,255,0.15);
+  color: rgba(255,255,255,0.85);
+  padding: 6px 16px;
+  border-radius: 99px;
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+.hero-chip span { margin-right: 4px; }
+
+/* ── BUSCADOR ────────────────────────────────────────────── */
+.search-wrap {
+  max-width: 520px;
+  margin: 0 auto;
+  position: relative;
+}
+.search-input {
+  width: 100%;
+  padding: 16px 56px 16px 20px;
+  border: none;
+  border-radius: 99px;
+  font-size: 1rem;
+  font-family: 'Nunito', sans-serif;
+  font-weight: 600;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+  outline: none;
+  color: var(--texto);
+}
+.search-icon {
+  position: absolute;
+  right: 18px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 1.3rem;
+  pointer-events: none;
+}
+
+/* ── CATEGORIAS ──────────────────────────────────────────── */
+.cats-scroll {
+  display: flex;
+  gap: 10px;
+  overflow-x: auto;
+  padding: 20px 0 8px;
+  scrollbar-width: none;
+}
+.cats-scroll::-webkit-scrollbar { display: none; }
+.cat-btn {
+  flex: none;
+  padding: 8px 18px;
+  border-radius: 99px;
+  border: 2px solid var(--gris-2);
+  background: var(--blanco);
+  font-family: 'Nunito', sans-serif;
+  font-weight: 700;
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: all 0.2s;
+  white-space: nowrap;
+  color: var(--texto-s);
+}
+.cat-btn:hover, .cat-btn.activo {
+  background: var(--naranja);
+  border-color: var(--naranja);
+  color: var(--blanco);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(243,156,18,0.3);
+}
+
+/* ── SECCIÓN LOCALES ─────────────────────────────────────── */
+.seccion-titulo {
+  font-family: 'Paytone One', sans-serif;
+  font-size: 1.3rem;
+  color: var(--texto);
+  margin: 28px 0 16px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.seccion-titulo::after {
+  content: '';
+  flex: 1;
+  height: 2px;
+  background: var(--gris-2);
+}
+.count-badge {
+  background: var(--naranja-l);
+  color: var(--naranja-d);
+  font-size: 0.78rem;
+  font-weight: 800;
+  padding: 2px 10px;
+  border-radius: 99px;
+  font-family: 'Nunito', sans-serif;
+}
+
+/* ── GRID DE LOCALES ─────────────────────────────────────── */
+.locales-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 18px;
+  margin-bottom: 20px;
+}
+@media (max-width: 600px) {
+  .locales-grid { grid-template-columns: 1fr; gap: 14px; }
+}
+
+/* ── CARD LOCAL ──────────────────────────────────────────── */
+.local-card {
+  background: var(--blanco);
+  border-radius: var(--radio);
+  overflow: hidden;
+  box-shadow: var(--sombra-s);
+  text-decoration: none;
+  color: inherit;
+  display: block;
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+.local-card:hover {
+  transform: translateY(-4px);
+  box-shadow: var(--sombra-m);
+}
+.local-banner {
+  height: 130px;
+  background: linear-gradient(135deg, var(--naranja-l), var(--azul-l));
+  position: relative;
+  overflow: hidden;
+}
+.local-banner img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.local-banner-placeholder {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 3.5rem;
+}
+.local-logo-wrap {
+  position: absolute;
+  bottom: -22px;
+  left: 16px;
+}
+.local-logo {
+  width: 52px;
+  height: 52px;
+  border-radius: 12px;
+  border: 3px solid var(--blanco);
+  object-fit: cover;
+  background: var(--blanco);
+  box-shadow: var(--sombra-s);
+}
+.local-logo-placeholder {
+  width: 52px;
+  height: 52px;
+  border-radius: 12px;
+  border: 3px solid var(--blanco);
+  background: var(--naranja);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.4rem;
+  font-weight: 900;
+  color: var(--blanco);
+  box-shadow: var(--sombra-s);
+  font-family: 'Paytone One', sans-serif;
+}
+.local-body {
+  padding: 30px 16px 16px;
+}
+.local-nombre {
+  font-weight: 800;
+  font-size: 1.05rem;
+  margin-bottom: 4px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.local-cat {
+  font-size: 0.8rem;
+  color: var(--texto-s);
+  margin-bottom: 10px;
+  font-weight: 600;
+}
+.local-tags {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.local-tag {
+  font-size: 0.75rem;
+  font-weight: 700;
+  padding: 3px 10px;
+  border-radius: 99px;
+}
+.tag-envio   { background: #D5F5E3; color: #1E8449; }
+.tag-retiro  { background: var(--gris-1); color: var(--texto-s); }
+.tag-tiempo  { background: var(--azul-l); color: var(--azul-d); }
+.local-footer {
+  padding: 10px 16px 14px;
+  border-top: 1px solid var(--gris-1);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.local-footer-ver {
+  font-size: 0.82rem;
+  font-weight: 800;
+  color: var(--naranja);
+}
+
+/* ── SIN RESULTADOS ──────────────────────────────────────── */
+.empty-state {
+  text-align: center;
+  padding: 60px 20px;
+  color: var(--texto-s);
+}
+.empty-icon { font-size: 3.5rem; margin-bottom: 12px; }
+.empty-titulo { font-weight: 800; font-size: 1.1rem; margin-bottom: 6px; color: var(--texto); }
+
+/* ── BANNER AUSPICIANTE ──────────────────────────────────── */
+.auspiciante-wrap {
+  background: linear-gradient(90deg, var(--naranja-l), var(--azul-l));
+  border-radius: var(--radio);
+  padding: 14px 20px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 20px;
+  text-decoration: none;
+}
+.auspiciante-wrap img { height: 40px; object-fit: contain; }
+.auspiciante-label {
+  font-size: 0.7rem;
+  font-weight: 800;
+  color: var(--texto-s);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 2px;
+}
+
+/* ── CTA LOCALES ─────────────────────────────────────────── */
+.cta-band {
+  background: linear-gradient(135deg, var(--naranja) 0%, var(--naranja-d) 100%);
+  border-radius: var(--radio);
+  padding: 28px 24px;
+  text-align: center;
+  margin: 28px 0;
+  color: var(--blanco);
+}
+.cta-band h3 { font-family:'Paytone One',sans-serif; font-size:1.4rem; margin-bottom:8px; }
+.cta-band p  { opacity:0.9; font-size:0.92rem; margin-bottom:18px; font-weight:600; }
+.cta-btn {
+  display: inline-block;
+  background: var(--blanco);
+  color: var(--naranja-d);
+  font-weight: 800;
+  font-family: 'Nunito', sans-serif;
+  padding: 12px 28px;
+  border-radius: 99px;
+  text-decoration: none;
+  font-size: 0.95rem;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.15);
+  transition: transform 0.2s;
+}
+.cta-btn:hover { transform: scale(1.04); }
+{% endblock %}
+
+{% block content %}
+<!-- HERO -->
+<section class="hero">
+  <div class="hero-content">
+    <h1 class="hero-titulo">Pedí a tu <span>local favorito</span><br>sin pagar de más</h1>
+    <p class="hero-sub">El menú llega directo a tu WhatsApp · Sin comisiones · Sin apps</p>
+    <div class="hero-chips">
+      <span class="hero-chip"><span>✅</span>Sin comisiones</span>
+      <span class="hero-chip"><span>📱</span>Directo al WhatsApp</span>
+      <span class="hero-chip"><span>🌮</span>Locales de Rosario</span>
+    </div>
+    <div class="search-wrap">
+      <input class="search-input" type="text" id="buscador"
+             placeholder="🔍  Buscá un local o tipo de comida..." autocomplete="off">
+    </div>
+  </div>
+</section>
+
+<div class="container">
+
+  <!-- CATEGORIAS -->
+  <div class="cats-scroll" id="cats">
+    <button class="cat-btn activo" onclick="filtrarCat(this, '')">🍽️ Todos</button>
+    {% set cats = ['Pizzería','Rotisería','Hamburguesería','Sushi','Empanadas','Panadería','Bar','Heladería','Vegano'] %}
+    {% for c in cats %}
+      <button class="cat-btn" onclick="filtrarCat(this, '{{ c }}')">{{ c }}</button>
+    {% endfor %}
+  </div>
+
+  <!-- AUSPICIANTES -->
+  {% for a in auspiciantes %}
+    {% if a.posicion == 'home' %}
+      <a href="{{ a.url_destino or '#' }}" class="auspiciante-wrap" target="_blank">
+        <div>
+          <div class="auspiciante-label">Auspiciante</div>
+          <strong>{{ a.nombre }}</strong>
+        </div>
+      </a>
+    {% endif %}
+  {% endfor %}
+
+  <!-- LOCALES -->
+  <h2 class="seccion-titulo">
+    Locales disponibles
+    <span class="count-badge" id="count-badge">{{ restaurantes|length }} locales</span>
+  </h2>
+
+  {% if restaurantes %}
+    <div class="locales-grid" id="grid-locales">
+      {% for r in restaurantes %}
+        <a href="{{ url_for('ver_local', restaurante_id=r.id) }}"
+           class="local-card"
+           data-nombre="{{ r.nombre_local | lower }}"
+           data-cat="{{ r.categoria or '' }}">
+
+          <div class="local-banner">
+            {% if r.banner_url %}
+              <img src="{{ url_for('static', filename=r.banner_url) }}" alt="">
+            {% else %}
+              <div class="local-banner-placeholder">
+                {% if r.categoria == 'Pizzería' %}🍕
+                {% elif r.categoria == 'Hamburguesería' %}🍔
+                {% elif r.categoria == 'Sushi' %}🍣
+                {% elif r.categoria == 'Heladería' %}🍦
+                {% elif r.categoria == 'Bar' %}🍺
+                {% elif r.categoria == 'Panadería' %}🥐
+                {% elif r.categoria == 'Empanadas' %}🥟
+                {% else %}🍽️{% endif %}
+              </div>
+            {% endif %}
+            <div class="local-logo-wrap">
+              {% if r.logo_url %}
+                <img class="local-logo" src="{{ url_for('static', filename=r.logo_url) }}" alt="">
+              {% else %}
+                <div class="local-logo-placeholder">{{ r.nombre_local[0] | upper }}</div>
+              {% endif %}
+            </div>
+          </div>
+
+          <div class="local-body">
+            <div class="local-nombre">{{ r.nombre_local }}</div>
+            <div class="local-cat">{{ r.categoria or 'Restaurante' }}{% if r.direccion %} · {{ r.direccion }}{% endif %}</div>
+            <div class="local-tags">
+              {% if r.hace_envio %}
+                <span class="local-tag tag-envio">🛵 Delivery{% if r.costo_envio == 0 %} gratis{% endif %}</span>
+                {% if r.tiempo_estimado %}
+                  <span class="local-tag tag-tiempo">⏱ ~{{ r.tiempo_estimado }} min</span>
+                {% endif %}
+              {% else %}
+                <span class="local-tag tag-retiro">🏪 Solo retiro</span>
+              {% endif %}
+            </div>
+          </div>
+
+          <div class="local-footer">
+            {% if r.horario %}
+              <span style="font-size:0.78rem;color:var(--texto-s);">🕐 {{ r.horario }}</span>
+            {% else %}
+              <span></span>
+            {% endif %}
+            <span class="local-footer-ver">Ver menú →</span>
+          </div>
+
+        </a>
+      {% endfor %}
+    </div>
+
+  {% else %}
+    <div class="empty-state">
+      <div class="empty-icon">🍽️</div>
+      <div class="empty-titulo">Todavía no hay locales disponibles</div>
+      <p>¡Pronto vas a poder pedir desde acá!</p>
+    </div>
+  {% endif %}
+
+  <!-- CTA PARA LOCALES -->
+  <div class="cta-band">
+    <h3>¿Tenés un local?</h3>
+    <p>Sumá tu negocio gratis. Tus clientes van a poder ver tu menú y pedirte directo por WhatsApp — sin que pagues ninguna comisión.</p>
+    <a href="{{ url_for('registro') }}?rol=restaurante" class="cta-btn">Sumar mi local gratis →</a>
+  </div>
+
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+const cards = document.querySelectorAll('.local-card');
+const badge = document.getElementById('count-badge');
+
+function actualizar() {
+  const q   = document.getElementById('buscador').value.toLowerCase().trim();
+  const cat = document.querySelector('.cat-btn.activo')?.dataset.cat || '';
+  let visible = 0;
+  cards.forEach(c => {
+    const matchNombre = c.dataset.nombre.includes(q);
+    const matchCat    = !cat || c.dataset.cat === cat;
+    const show        = matchNombre && matchCat;
+    c.style.display   = show ? '' : 'none';
+    if (show) visible++;
+  });
+  badge.textContent = visible + ' ' + (visible === 1 ? 'local' : 'locales');
+}
+
+function filtrarCat(btn, cat) {
+  document.querySelectorAll('.cat-btn').forEach(b => b.classList.remove('activo'));
+  btn.classList.add('activo');
+  btn.dataset.cat = cat;
+  actualizar();
+}
+
+document.getElementById('buscador').addEventListener('input', actualizar);
+</script>
+{% endblock %}

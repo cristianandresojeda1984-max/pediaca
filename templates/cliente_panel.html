@@ -1,0 +1,457 @@
+{% extends "base.html" %}
+{% block title %}Mi cuenta — PediAcá{% endblock %}
+
+{% block extra_styles %}
+/* ── HERO ────────────────────────────────────────────────── */
+.cliente-hero {
+  background: linear-gradient(135deg, #1A1A2E 0%, #0F3460 100%);
+  padding: 28px 20px 32px;
+  position: relative;
+  overflow: hidden;
+}
+.cliente-hero::before {
+  content: '🛒';
+  position: absolute;
+  right: -10px; top: -10px;
+  font-size: 8rem;
+  opacity: 0.06;
+  transform: rotate(-10deg);
+}
+.cliente-hero-top {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 20px;
+}
+.cliente-avatar {
+  width: 58px; height: 58px;
+  border-radius: 16px;
+  background: linear-gradient(135deg, var(--naranja), var(--naranja-d));
+  display: flex; align-items: center; justify-content: center;
+  font-family: 'Paytone One', sans-serif;
+  font-size: 1.6rem; color: #fff;
+  flex-shrink: 0;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.3);
+}
+.cliente-nombre {
+  font-family: 'Paytone One', sans-serif;
+  font-size: 1.3rem; color: #fff;
+}
+.cliente-sub { color: rgba(255,255,255,0.6); font-size:0.82rem; font-weight:600; margin-top:2px; }
+.cliente-logout {
+  margin-left: auto;
+  background: rgba(255,255,255,0.12);
+  border: none; color: rgba(255,255,255,0.8);
+  padding: 7px 14px; border-radius: 99px;
+  font-size: 0.8rem; font-weight: 700;
+  cursor: pointer; text-decoration: none;
+  font-family: 'Nunito', sans-serif; flex-shrink: 0;
+}
+
+/* Stats */
+.cliente-stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+}
+.cliente-stat {
+  background: rgba(255,255,255,0.1);
+  backdrop-filter: blur(8px);
+  border-radius: 12px;
+  padding: 12px; text-align: center;
+  border: 1px solid rgba(255,255,255,0.1);
+}
+.cs-num   { font-family:'Paytone One',sans-serif; font-size:1.5rem; color:#fff; }
+.cs-label { font-size:0.72rem; color:rgba(255,255,255,0.6); font-weight:700; margin-top:2px; }
+
+/* ── TABS ────────────────────────────────────────────────── */
+.tab-nav {
+  background: var(--blanco);
+  display: flex;
+  border-bottom: 2px solid var(--gris-1);
+  position: sticky; top: 60px; z-index: 100;
+}
+.tab-btn {
+  flex: 1; padding: 14px 8px;
+  font-size: 0.82rem; font-weight: 800;
+  font-family: 'Nunito', sans-serif;
+  color: var(--texto-s); background: none;
+  border: none; border-bottom: 3px solid transparent;
+  cursor: pointer; transition: all 0.15s; margin-bottom: -2px;
+}
+.tab-btn.activo { color: var(--naranja); border-bottom-color: var(--naranja); }
+
+/* ── LAYOUT ──────────────────────────────────────────────── */
+.container-sm { max-width: 640px; margin: 0 auto; padding: 20px 16px 80px; }
+.seccion { display: none; }
+.seccion.activo { display: block; }
+
+/* ── PEDIDO CARD ─────────────────────────────────────────── */
+.pedido-card {
+  background: var(--blanco);
+  border-radius: 14px;
+  box-shadow: var(--sombra-s);
+  margin-bottom: 12px;
+  overflow: hidden;
+  border-left: 4px solid var(--naranja);
+  animation: fadeUp 0.3s ease both;
+}
+@keyframes fadeUp {
+  from { opacity:0; transform:translateY(10px); }
+  to   { opacity:1; transform:translateY(0); }
+}
+.pedido-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 16px 10px;
+  gap: 10px;
+}
+.pedido-local {
+  display: flex; align-items: center; gap: 10px;
+}
+.pedido-local-ico {
+  width: 40px; height: 40px;
+  border-radius: 10px;
+  background: var(--naranja-l);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 1.2rem; flex-shrink: 0;
+}
+.pedido-local-nombre { font-weight:800; font-size:0.95rem; }
+.pedido-fecha        { font-size:0.75rem; color:var(--texto-s); margin-top:1px; }
+.pedido-total {
+  font-family: 'Paytone One', sans-serif;
+  font-size: 1.1rem; color: var(--naranja-d);
+  flex-shrink: 0;
+}
+.pedido-chips {
+  display: flex; gap: 6px; flex-wrap: wrap;
+  padding: 0 16px 14px;
+}
+.chip {
+  font-size: 0.73rem; font-weight: 700;
+  padding: 3px 10px; border-radius: 99px;
+}
+.chip-ok     { background:#D5F5E3; color:#1E8449; }
+.chip-warn   { background:#FEF3DC; color:#9A6000; }
+.chip-azul   { background:var(--azul-l); color:var(--azul-d); }
+.chip-gris   { background:var(--gris-1); color:var(--texto-s); }
+.chip-rojo   { background:#FADBD8; color:#922B21; }
+
+/* Repetir pedido btn */
+.btn-repetir {
+  display: flex; align-items: center; justify-content: center;
+  gap: 6px;
+  margin: 0 16px 14px;
+  padding: 10px;
+  background: var(--naranja-l);
+  color: var(--naranja-d);
+  border-radius: 10px;
+  font-weight: 800; font-size: 0.83rem;
+  font-family: 'Nunito', sans-serif;
+  text-decoration: none;
+  border: none; cursor: pointer; width: calc(100% - 32px);
+  transition: all 0.15s;
+}
+.btn-repetir:hover { background: var(--naranja); color: #fff; }
+
+/* ── EMPTY ───────────────────────────────────────────────── */
+.empty-state {
+  background: var(--blanco);
+  border-radius: 14px;
+  padding: 60px 24px;
+  text-align: center;
+  box-shadow: var(--sombra-s);
+  color: var(--texto-s);
+}
+.empty-icon { font-size:4rem; margin-bottom:16px; }
+.empty-state h4 { font-weight:800; color:var(--texto); margin-bottom:8px; }
+.btn-explorar {
+  display: inline-block;
+  margin-top: 16px;
+  background: var(--naranja);
+  color: #fff;
+  padding: 12px 28px;
+  border-radius: 99px;
+  font-weight: 800;
+  font-size: 0.9rem;
+  text-decoration: none;
+  box-shadow: 0 4px 14px rgba(243,156,18,0.35);
+  transition: all 0.15s;
+}
+.btn-explorar:hover { background: var(--naranja-d); transform: translateY(-1px); }
+
+/* ── PERFIL FORM ─────────────────────────────────────────── */
+.perfil-card {
+  background: var(--blanco);
+  border-radius: 14px;
+  padding: 20px;
+  box-shadow: var(--sombra-s);
+  margin-bottom: 14px;
+}
+.perfil-titulo { font-weight:800; font-size:0.95rem; margin-bottom:16px; display:flex; align-items:center; gap:8px; }
+.form-group   { margin-bottom:14px; }
+.form-label   { display:block; font-size:0.73rem; font-weight:800; text-transform:uppercase; letter-spacing:0.4px; color:var(--texto-s); margin-bottom:6px; }
+.form-control { width:100%; padding:11px 14px; border:2px solid var(--gris-2); border-radius:10px; font-size:0.92rem; font-family:'Nunito',sans-serif; font-weight:600; background:var(--gris-1); color:var(--texto); outline:none; transition:all 0.2s; }
+.form-control:focus { border-color:var(--naranja); background:var(--blanco); box-shadow:0 0 0 3px rgba(243,156,18,0.1); }
+.btn-guardar {
+  width:100%;
+  background: linear-gradient(135deg, var(--naranja), var(--naranja-d));
+  color:#fff; border:none; border-radius:99px;
+  padding:13px; font-family:'Nunito',sans-serif;
+  font-weight:800; font-size:0.95rem; cursor:pointer;
+  transition:all 0.2s;
+  box-shadow:0 4px 16px rgba(243,156,18,0.3);
+}
+.btn-guardar:hover { transform:translateY(-1px); box-shadow:0 6px 20px rgba(243,156,18,0.4); }
+
+/* ── LOCALES FAVORITOS ───────────────────────────────────── */
+.fav-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+.fav-card {
+  background: var(--blanco);
+  border-radius: 12px;
+  box-shadow: var(--sombra-s);
+  overflow: hidden;
+  text-decoration: none;
+  color: inherit;
+  transition: transform 0.15s, box-shadow 0.15s;
+}
+.fav-card:hover { transform:translateY(-2px); box-shadow:var(--sombra-m); }
+.fav-banner {
+  height: 70px;
+  background: linear-gradient(135deg, var(--naranja-l), var(--azul-l));
+  display: flex; align-items: center; justify-content: center;
+  font-size: 2rem;
+}
+.fav-body { padding: 10px 12px; }
+.fav-nombre { font-weight:800; font-size:0.85rem; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.fav-cat    { font-size:0.73rem; color:var(--texto-s); margin-top:2px; }
+
+/* ── SECCION TITULO ──────────────────────────────────────── */
+.sec-titulo {
+  font-family: 'Paytone One', sans-serif;
+  font-size: 1rem;
+  color: var(--texto);
+  margin-bottom: 14px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.sec-titulo::after { content:''; flex:1; height:1px; background:var(--gris-2); }
+{% endblock %}
+
+{% block content %}
+
+<!-- HERO -->
+<div class="cliente-hero">
+  <div class="cliente-hero-top">
+    <div class="cliente-avatar">{{ session.nombre[0]|upper }}</div>
+    <div>
+      <div class="cliente-nombre">{{ session.nombre }}</div>
+      <div class="cliente-sub">⭐ Cliente PediAcá · Rosario</div>
+    </div>
+    <a href="{{ url_for('logout') }}" class="cliente-logout">Salir</a>
+  </div>
+
+  <div class="cliente-stats">
+    <div class="cliente-stat">
+      <div class="cs-num">{{ pedidos|length }}</div>
+      <div class="cs-label">Pedidos</div>
+    </div>
+    <div class="cliente-stat">
+      <div class="cs-num">
+        {% set locales_unicos = pedidos|map(attribute='nombre_local')|unique|list|length %}
+        {{ locales_unicos }}
+      </div>
+      <div class="cs-label">Locales</div>
+    </div>
+    <div class="cliente-stat">
+      <div class="cs-num">
+        ${{ (pedidos|sum(attribute='total'))|int if pedidos else 0 }}
+      </div>
+      <div class="cs-label">Gastado</div>
+    </div>
+  </div>
+</div>
+
+<!-- TABS -->
+<div class="tab-nav">
+  <button class="tab-btn activo" onclick="mostrar('historial', this)">📋 Mis pedidos</button>
+  <button class="tab-btn"        onclick="mostrar('favoritos', this)">❤️ Favoritos</button>
+  <button class="tab-btn"        onclick="mostrar('perfil',    this)">👤 Mi perfil</button>
+</div>
+
+<div class="container-sm">
+
+  {% with msgs = get_flashed_messages(with_categories=true) %}
+    {% for cat, msg in msgs %}
+      <div class="alert alert-{{ cat }}" style="margin-bottom:12px;">{{ msg }}</div>
+    {% endfor %}
+  {% endwith %}
+
+  <!-- ── HISTORIAL ──────────────────────────────────────── -->
+  <div class="seccion activo" id="sec-historial">
+
+    {% if pedidos %}
+      {% for p in pedidos %}
+        <div class="pedido-card" style="animation-delay: {{ loop.index0 * 0.05 }}s">
+          <div class="pedido-header">
+            <div class="pedido-local">
+              <div class="pedido-local-ico">🍽️</div>
+              <div>
+                <div class="pedido-local-nombre">{{ p.nombre_local }}</div>
+                <div class="pedido-fecha">{{ p.fecha_pedido[:16].replace('T',' ') }}</div>
+              </div>
+            </div>
+            <div class="pedido-total">${{ p.total|int }}</div>
+          </div>
+
+          <div class="pedido-chips">
+            <!-- Estado -->
+            {% if p.estado == 'entregado' %}
+              <span class="chip chip-ok">✅ Entregado</span>
+            {% elif p.estado == 'en_camino' %}
+              <span class="chip chip-azul">🛵 En camino</span>
+            {% elif p.estado == 'confirmado' %}
+              <span class="chip chip-warn">✔ Confirmado</span>
+            {% elif p.estado == 'cancelado' %}
+              <span class="chip chip-rojo">✕ Cancelado</span>
+            {% else %}
+              <span class="chip chip-warn">⏳ Nuevo</span>
+            {% endif %}
+
+            <!-- Tipo entrega -->
+            <span class="chip chip-gris">
+              {{ '🛵 Delivery' if p.tipo_entrega == 'delivery' else '🏪 Retiro' }}
+            </span>
+          </div>
+
+          <!-- Repetir pedido: va al menú del mismo local -->
+          <a class="btn-repetir"
+             href="{{ url_for('ver_local', restaurante_id=p.restaurante_id) }}">
+            🔄 Volver a pedir acá
+          </a>
+        </div>
+      {% endfor %}
+
+    {% else %}
+      <div class="empty-state">
+        <div class="empty-icon">🛒</div>
+        <h4>Todavía no hiciste pedidos</h4>
+        <p>Explorá los locales disponibles y pedí directo por WhatsApp.</p>
+        <a href="{{ url_for('home') }}" class="btn-explorar">Ver locales →</a>
+      </div>
+    {% endif %}
+
+  </div>
+
+  <!-- ── FAVORITOS ──────────────────────────────────────── -->
+  <div class="seccion" id="sec-favoritos">
+    {% if locales_frecuentes %}
+      <div class="sec-titulo">🔥 Tus locales frecuentes</div>
+      <div class="fav-grid">
+        {% for local in locales_frecuentes %}
+          <a href="{{ url_for('ver_local', restaurante_id=local.id) }}" class="fav-card">
+            <div class="fav-banner">
+              {% if local.banner_url %}
+                <img src="{{ url_for('static', filename=local.banner_url) }}"
+                     style="width:100%;height:100%;object-fit:cover;" alt="">
+              {% else %}
+                {% if local.categoria == 'Pizzería' %}🍕
+                {% elif local.categoria == 'Hamburguesería' %}🍔
+                {% elif local.categoria == 'Sushi' %}🍣
+                {% elif local.categoria == 'Heladería' %}🍦
+                {% else %}🍽️{% endif %}
+              {% endif %}
+            </div>
+            <div class="fav-body">
+              <div class="fav-nombre">{{ local.nombre_local }}</div>
+              <div class="fav-cat">{{ local.categoria or 'Restaurante' }}</div>
+            </div>
+          </a>
+        {% endfor %}
+      </div>
+    {% else %}
+      <div class="empty-state">
+        <div class="empty-icon">❤️</div>
+        <h4>Todavía no tenés favoritos</h4>
+        <p>Cuando hagas pedidos en los mismos locales van a aparecer acá.</p>
+        <a href="{{ url_for('home') }}" class="btn-explorar">Explorar locales →</a>
+      </div>
+    {% endif %}
+  </div>
+
+  <!-- ── PERFIL ─────────────────────────────────────────── -->
+  <div class="seccion" id="sec-perfil">
+    <form method="POST" action="{{ url_for('cliente_editar_perfil') }}">
+      <div class="perfil-card">
+        <div class="perfil-titulo">👤 Mis datos</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+          <div class="form-group">
+            <label class="form-label">Nombre</label>
+            <input class="form-control" name="nombre" value="{{ usuario.nombre }}" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Apellido</label>
+            <input class="form-control" name="apellido" value="{{ usuario.apellido }}" required>
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Email</label>
+          <input class="form-control" type="email" name="email" value="{{ usuario.email }}" required>
+        </div>
+        <div class="form-group">
+          <label class="form-label">WhatsApp</label>
+          <input class="form-control" type="tel" name="telefono" value="{{ usuario.telefono or '' }}" placeholder="3412345678">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Dirección habitual de entrega</label>
+          <input class="form-control" name="direccion_default"
+                 value="{{ cliente.direccion_default or '' }}"
+                 placeholder="Ej: San Martín 1234, 3° B">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Aclaraciones de entrega</label>
+          <input class="form-control" name="notas_default"
+                 value="{{ cliente.notas_default or '' }}"
+                 placeholder="Ej: Timbre 3B, no tocar puerta">
+        </div>
+        <button class="btn-guardar" type="submit">💾 Guardar cambios</button>
+      </div>
+    </form>
+
+    <div class="perfil-card">
+      <div class="perfil-titulo">🔒 Cambiar contraseña</div>
+      <form method="POST" action="{{ url_for('cliente_cambiar_password') }}">
+        <div class="form-group">
+          <label class="form-label">Contraseña actual</label>
+          <input class="form-control" type="password" name="password_actual" required>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Nueva contraseña</label>
+          <input class="form-control" type="password" name="password_nueva" required minlength="6">
+        </div>
+        <button class="btn-guardar" type="submit">🔒 Cambiar contraseña</button>
+      </form>
+    </div>
+
+  </div>
+
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+function mostrar(nombre, btn) {
+  document.querySelectorAll('.seccion').forEach(s => s.classList.remove('activo'));
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('activo'));
+  document.getElementById('sec-' + nombre).classList.add('activo');
+  btn.classList.add('activo');
+}
+</script>
+{% endblock %}

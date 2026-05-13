@@ -1,0 +1,993 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<title>Mi Local — {{ restaurante.nombre_local }}</title>
+<style>
+/* ── RESET & BASE ─────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --rojo:    #e74c3c;
+  --rojo-d:  #c0392b;
+  --verde:   #27ae60;
+  --naranja: #f39c12;
+  --gris-1:  #f4f6f9;
+  --gris-2:  #e9ecef;
+  --gris-3:  #adb5bd;
+  --texto:   #2c3e50;
+  --blanco:  #ffffff;
+  --sombra:  0 2px 12px rgba(0,0,0,0.08);
+}
+
+body {
+  font-family: 'Segoe UI', system-ui, sans-serif;
+  background: var(--gris-1);
+  color: var(--texto);
+  min-height: 100vh;
+}
+
+/* ── HEADER ────────────────────────────────────────────────── */
+.header {
+  background: var(--rojo);
+  color: #fff;
+  padding: 0 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 56px;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+}
+.header-brand { font-weight: 800; font-size: 1.2rem; letter-spacing: -0.5px; }
+.header-brand span { opacity: 0.8; font-weight: 400; font-size: 0.85rem; display: block; line-height: 1; }
+.header-logout {
+  background: rgba(255,255,255,0.2);
+  border: none;
+  color: #fff;
+  padding: 6px 14px;
+  border-radius: 6px;
+  font-size: 0.82rem;
+  cursor: pointer;
+  text-decoration: none;
+}
+
+/* ── NAV TABS ──────────────────────────────────────────────── */
+.nav-tabs {
+  display: flex;
+  background: var(--blanco);
+  border-bottom: 1px solid var(--gris-2);
+  overflow-x: auto;
+  scrollbar-width: none;
+  position: sticky;
+  top: 56px;
+  z-index: 99;
+}
+.nav-tabs::-webkit-scrollbar { display: none; }
+.nav-tab {
+  flex: none;
+  padding: 14px 20px;
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: var(--gris-3);
+  cursor: pointer;
+  border-bottom: 3px solid transparent;
+  white-space: nowrap;
+  transition: all 0.2s;
+  user-select: none;
+}
+.nav-tab.activo {
+  color: var(--rojo);
+  border-bottom-color: var(--rojo);
+}
+
+/* ── LAYOUT PRINCIPAL ──────────────────────────────────────── */
+.container { max-width: 800px; margin: 0 auto; padding: 20px 16px 80px; }
+
+.seccion { display: none; }
+.seccion.activo { display: block; }
+
+/* ── CARDS ─────────────────────────────────────────────────── */
+.card {
+  background: var(--blanco);
+  border-radius: 12px;
+  padding: 20px;
+  box-shadow: var(--sombra);
+  margin-bottom: 16px;
+}
+.card-titulo {
+  font-size: 1rem;
+  font-weight: 700;
+  margin-bottom: 16px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* ── STATS ─────────────────────────────────────────────────── */
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+  margin-bottom: 16px;
+}
+.stat-card {
+  background: var(--blanco);
+  border-radius: 10px;
+  padding: 16px;
+  text-align: center;
+  box-shadow: var(--sombra);
+}
+.stat-num  { font-size: 1.8rem; font-weight: 800; color: var(--rojo); line-height: 1; }
+.stat-label{ font-size: 0.75rem; color: var(--gris-3); margin-top: 4px; }
+
+/* ── BADGE ESTADO ──────────────────────────────────────────── */
+.badge {
+  display: inline-block;
+  padding: 3px 10px;
+  border-radius: 99px;
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+.badge-ok       { background: #d4edda; color: #155724; }
+.badge-warn     { background: #fff3cd; color: #856404; }
+.badge-off      { background: #f8d7da; color: #721c24; }
+
+/* ── FORM ──────────────────────────────────────────────────── */
+.form-group { margin-bottom: 14px; }
+.form-group label {
+  display: block;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--gris-3);
+  margin-bottom: 5px;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+.form-control {
+  width: 100%;
+  padding: 10px 14px;
+  border: 1.5px solid var(--gris-2);
+  border-radius: 8px;
+  font-size: 0.95rem;
+  font-family: inherit;
+  background: var(--gris-1);
+  color: var(--texto);
+  transition: border-color 0.2s;
+}
+.form-control:focus {
+  outline: none;
+  border-color: var(--rojo);
+  background: var(--blanco);
+}
+textarea.form-control { resize: vertical; min-height: 80px; }
+
+.form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+
+/* ── BOTONES ───────────────────────────────────────────────── */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 20px;
+  border: none;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: inherit;
+  transition: all 0.15s;
+  text-decoration: none;
+}
+.btn-primary   { background: var(--rojo);   color: #fff; }
+.btn-primary:hover { background: var(--rojo-d); }
+.btn-success   { background: var(--verde);  color: #fff; }
+.btn-warning   { background: var(--naranja);color: #fff; }
+.btn-outline   { background: transparent; border: 1.5px solid var(--gris-2); color: var(--texto); }
+.btn-sm        { padding: 6px 12px; font-size: 0.8rem; }
+.btn-block     { width: 100%; justify-content: center; margin-top: 8px; }
+
+/* ── FOTOS ─────────────────────────────────────────────────── */
+.foto-upload-area {
+  border: 2px dashed var(--gris-2);
+  border-radius: 10px;
+  padding: 20px;
+  text-align: center;
+  cursor: pointer;
+  transition: border-color 0.2s;
+  position: relative;
+  overflow: hidden;
+}
+.foto-upload-area:hover { border-color: var(--rojo); }
+.foto-upload-area input { display: none; }
+.foto-actual {
+  width: 80px; height: 80px;
+  border-radius: 8px;
+  object-fit: cover;
+  margin-bottom: 8px;
+}
+.banner-actual {
+  width: 100%; height: 100px;
+  border-radius: 8px;
+  object-fit: cover;
+  margin-bottom: 8px;
+}
+.foto-hint { font-size: 0.82rem; color: var(--gris-3); }
+
+/* ── LISTA PRODUCTOS ───────────────────────────────────────── */
+.producto-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--gris-2);
+}
+.producto-item:last-child { border-bottom: none; }
+.producto-foto {
+  width: 52px; height: 52px;
+  border-radius: 8px;
+  object-fit: cover;
+  background: var(--gris-2);
+  flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 1.4rem;
+  overflow: hidden;
+}
+.producto-foto img { width: 100%; height: 100%; object-fit: cover; }
+.producto-info { flex: 1; min-width: 0; }
+.producto-nombre {
+  font-weight: 700;
+  font-size: 0.95rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.producto-desc {
+  font-size: 0.8rem;
+  color: var(--gris-3);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.producto-precio { font-weight: 800; color: var(--rojo); }
+.producto-acciones { display: flex; gap: 6px; flex-shrink: 0; }
+
+/* ── TOGGLE ────────────────────────────────────────────────── */
+.toggle-switch {
+  position: relative;
+  width: 42px; height: 24px;
+  flex-shrink: 0;
+}
+.toggle-switch input { display: none; }
+.toggle-slider {
+  position: absolute; inset: 0;
+  background: var(--gris-2);
+  border-radius: 99px;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+.toggle-slider::after {
+  content: '';
+  position: absolute;
+  left: 3px; top: 3px;
+  width: 18px; height: 18px;
+  background: #fff;
+  border-radius: 50%;
+  transition: transform 0.2s;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.2);
+}
+input:checked + .toggle-slider { background: var(--verde); }
+input:checked + .toggle-slider::after { transform: translateX(18px); }
+
+/* ── PROMO CARD ────────────────────────────────────────────── */
+.promo-card {
+  background: var(--blanco);
+  border-radius: 10px;
+  overflow: hidden;
+  box-shadow: var(--sombra);
+  margin-bottom: 12px;
+  border-left: 4px solid var(--naranja);
+}
+.promo-card.inactiva { border-left-color: var(--gris-2); opacity: 0.7; }
+.promo-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  gap: 10px;
+}
+.promo-titulo { font-weight: 700; }
+.promo-desc   { font-size: 0.85rem; color: var(--gris-3); padding: 0 16px 12px; }
+.promo-img { width: 100%; height: 120px; object-fit: cover; }
+.descuento-badge {
+  background: var(--naranja);
+  color: #fff;
+  font-weight: 800;
+  font-size: 0.8rem;
+  padding: 3px 10px;
+  border-radius: 99px;
+  flex-shrink: 0;
+}
+
+/* ── MODAL ─────────────────────────────────────────────────── */
+.modal-overlay {
+  display: none;
+  position: fixed; inset: 0;
+  background: rgba(0,0,0,0.5);
+  z-index: 200;
+  align-items: flex-end;
+  justify-content: center;
+}
+.modal-overlay.open { display: flex; }
+.modal {
+  background: var(--blanco);
+  border-radius: 16px 16px 0 0;
+  padding: 24px 20px;
+  width: 100%;
+  max-width: 600px;
+  max-height: 92vh;
+  overflow-y: auto;
+}
+.modal-titulo {
+  font-size: 1.1rem;
+  font-weight: 700;
+  margin-bottom: 20px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.modal-close {
+  background: var(--gris-2);
+  border: none;
+  width: 30px; height: 30px;
+  border-radius: 50%;
+  font-size: 1rem;
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+}
+
+/* ── ALERTAS ───────────────────────────────────────────────── */
+.alert {
+  padding: 12px 16px;
+  border-radius: 8px;
+  margin-bottom: 16px;
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+.alert-success { background: #d4edda; color: #155724; }
+.alert-danger  { background: #f8d7da; color: #721c24; }
+.alert-info    { background: #d1ecf1; color: #0c5460; }
+.alert-warning { background: #fff3cd; color: #856404; }
+
+/* ── SELECT ────────────────────────────────────────────────── */
+select.form-control { appearance: none; cursor: pointer; }
+
+/* ── CHECKBOX ──────────────────────────────────────────────── */
+.check-row {
+  display: flex; align-items: center; gap: 10px;
+  padding: 4px 0;
+}
+.check-row input[type=checkbox] {
+  width: 18px; height: 18px; cursor: pointer;
+  accent-color: var(--rojo);
+}
+
+/* ── EMPTY STATE ───────────────────────────────────────────── */
+.empty {
+  text-align: center;
+  padding: 40px 20px;
+  color: var(--gris-3);
+}
+.empty-icon { font-size: 3rem; margin-bottom: 12px; }
+
+/* ── CATEGORIA HEADER ──────────────────────────────────────── */
+.categoria-header {
+  background: var(--gris-1);
+  border-radius: 8px;
+  padding: 8px 14px;
+  margin: 16px 0 8px;
+  font-weight: 700;
+  font-size: 0.85rem;
+  color: var(--gris-3);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<div class="header">
+  <div class="header-brand">
+    🍽️ {{ restaurante.nombre_local }}
+    <span>Panel del local</span>
+  </div>
+  <a href="{{ url_for('logout') }}" class="header-logout">Salir</a>
+</div>
+
+<!-- NAV TABS -->
+<div class="nav-tabs">
+  <div class="nav-tab activo" onclick="mostrarSeccion('inicio')">📊 Inicio</div>
+  <div class="nav-tab" onclick="mostrarSeccion('perfil')">🏪 Mi Local</div>
+  <div class="nav-tab" onclick="mostrarSeccion('fotos')">📷 Fotos</div>
+  <div class="nav-tab" onclick="mostrarSeccion('menu')">🍕 Menú</div>
+  <div class="nav-tab" onclick="mostrarSeccion('promociones')">🎉 Promociones</div>
+</div>
+
+<div class="container">
+
+  <!-- FLASH MESSAGES -->
+  {% with msgs = get_flashed_messages(with_categories=true) %}
+    {% for cat, msg in msgs %}
+      <div class="alert alert-{{ cat }}">{{ msg }}</div>
+    {% endfor %}
+  {% endwith %}
+
+  <!-- ══ INICIO ══════════════════════════════════════════════ -->
+  <div class="seccion activo" id="sec-inicio">
+
+    <div class="stats-grid">
+      <div class="stat-card">
+        <div class="stat-num">{{ productos | length }}</div>
+        <div class="stat-label">Productos</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-num">{{ categorias | length }}</div>
+        <div class="stat-label">Categorías</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-num">{{ productos | selectattr('disponible', 'equalto', 1) | list | length }}</div>
+        <div class="stat-label">Disponibles</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-titulo">📋 Estado del local</div>
+      <div style="display:flex; gap:12px; align-items:center; margin-bottom:12px;">
+        {% if restaurante.logo_url %}
+          <img src="{{ url_for('static', filename=restaurante.logo_url) }}" style="width:52px;height:52px;border-radius:8px;object-fit:cover;">
+        {% else %}
+          <div style="width:52px;height:52px;border-radius:8px;background:#f4f6f9;display:flex;align-items:center;justify-content:center;font-size:1.5rem;">🏪</div>
+        {% endif %}
+        <div>
+          <div style="font-weight:700;">{{ restaurante.nombre_local }}</div>
+          <div style="font-size:0.82rem;color:#adb5bd;">{{ restaurante.categoria or 'Sin categoría' }}</div>
+          <span class="badge badge-ok">✔ Aprobado</span>
+        </div>
+      </div>
+      {% if restaurante.horario %}
+        <div style="font-size:0.85rem;color:#666;">🕐 {{ restaurante.horario }}</div>
+      {% endif %}
+      {% if restaurante.hace_envio %}
+        <div style="font-size:0.85rem;color:#666;margin-top:4px;">
+          🛵 Hace delivery
+          {% if restaurante.costo_envio > 0 %} — ${{ restaurante.costo_envio | int }}{% else %} gratis{% endif %}
+          {% if restaurante.tiempo_estimado %} · ~{{ restaurante.tiempo_estimado }} min{% endif %}
+        </div>
+      {% endif %}
+    </div>
+
+    <div class="card">
+      <div class="card-titulo">🔗 Tu link de menú</div>
+      <div style="background:#f4f6f9; padding:12px; border-radius:8px; font-family:monospace; font-size:0.85rem; word-break:break-all;">
+        pediaca.ar/local/{{ restaurante.id }}
+      </div>
+      <button class="btn btn-outline btn-sm" style="margin-top:10px;" onclick="copiarLink()">
+        📋 Copiar link
+      </button>
+    </div>
+
+    <div class="card">
+      <div class="card-titulo">📄 Flyer para tu local</div>
+      <p style="font-size:0.88rem;color:#666;margin-bottom:14px;line-height:1.5;">
+        Descargá tu flyer personalizado con QR. Ponelo en la mesa, la vidriera o compartilo en tus redes. Tus clientes van a poder ver tu menú y pedirte directo al WhatsApp.
+      </p>
+      <a href="{{ url_for('descargar_flyer') }}" class="btn btn-success btn-block">
+        📥 Descargar mi flyer con QR
+      </a>
+    </div>
+
+  </div><!-- /inicio -->
+
+  <!-- ══ PERFIL ═══════════════════════════════════════════════ -->
+  <div class="seccion" id="sec-perfil">
+    <div class="card">
+      <div class="card-titulo">🏪 Datos del local</div>
+      <form method="POST" action="{{ url_for('restaurante_editar') }}">
+        <div class="form-group">
+          <label>Nombre del local *</label>
+          <input class="form-control" name="nombre_local" value="{{ restaurante.nombre_local }}" required>
+        </div>
+        <div class="form-group">
+          <label>Descripción corta</label>
+          <textarea class="form-control" name="descripcion">{{ restaurante.descripcion or '' }}</textarea>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Categoría</label>
+            <select class="form-control" name="categoria">
+              {% for cat in ['Pizzería','Rotisería','Hamburguesería','Sushi','Empanadas','Panadería','Bar','Heladería','Vegano','Otro'] %}
+                <option value="{{ cat }}" {% if restaurante.categoria == cat %}selected{% endif %}>{{ cat }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="form-group">
+            <label>WhatsApp *</label>
+            <input class="form-control" name="whatsapp" value="{{ restaurante.whatsapp }}" placeholder="3414000000" required>
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Dirección</label>
+          <input class="form-control" name="direccion" value="{{ restaurante.direccion or '' }}">
+        </div>
+        <div class="form-group">
+          <label>Horario</label>
+          <input class="form-control" name="horario" value="{{ restaurante.horario or '' }}" placeholder="Lun-Vie 12:00 a 23:00">
+        </div>
+        <div class="form-group">
+          <div class="check-row">
+            <input type="checkbox" name="hace_envio" id="chk_envio" {% if restaurante.hace_envio %}checked{% endif %} onchange="toggleEnvio()">
+            <label for="chk_envio" style="font-size:0.9rem;font-weight:600;">Hacemos delivery</label>
+          </div>
+        </div>
+        <div id="campos-envio" style="{% if not restaurante.hace_envio %}display:none{% endif %}">
+          <div class="form-row">
+            <div class="form-group">
+              <label>Costo de envío ($)</label>
+              <input class="form-control" type="number" name="costo_envio" value="{{ restaurante.costo_envio | int }}" min="0" placeholder="0 = gratis">
+            </div>
+            <div class="form-group">
+              <label>Tiempo estimado (min)</label>
+              <input class="form-control" type="number" name="tiempo_estimado" value="{{ restaurante.tiempo_estimado or '' }}" placeholder="45">
+            </div>
+          </div>
+        </div>
+        <button class="btn btn-primary btn-block" type="submit">💾 Guardar cambios</button>
+      </form>
+    </div>
+  </div><!-- /perfil -->
+
+  <!-- ══ FOTOS ════════════════════════════════════════════════ -->
+  <div class="seccion" id="sec-fotos">
+
+    <div class="card">
+      <div class="card-titulo">🖼️ Logo del local</div>
+      <form method="POST" action="{{ url_for('subir_logo') }}" enctype="multipart/form-data">
+        <div class="foto-upload-area" onclick="document.getElementById('inp-logo').click()">
+          {% if restaurante.logo_url %}
+            <img class="foto-actual" src="{{ url_for('static', filename=restaurante.logo_url) }}" alt="Logo">
+          {% else %}
+            <div style="font-size:2.5rem;margin-bottom:8px;">📷</div>
+          {% endif %}
+          <div class="foto-hint">Tocá para subir logo (PNG/JPG, cuadrado)</div>
+          <input type="file" id="inp-logo" name="logo" accept="image/*" onchange="previewFoto(this,'prev-logo')">
+          <img id="prev-logo" style="display:none;width:80px;height:80px;border-radius:8px;object-fit:cover;margin:8px auto 0;display:block;">
+        </div>
+        <button class="btn btn-primary btn-block" type="submit">📤 Subir logo</button>
+      </form>
+    </div>
+
+    <div class="card">
+      <div class="card-titulo">🖼️ Banner del local</div>
+      <form method="POST" action="{{ url_for('subir_banner') }}" enctype="multipart/form-data">
+        <div class="foto-upload-area" onclick="document.getElementById('inp-banner').click()">
+          {% if restaurante.banner_url %}
+            <img class="banner-actual" src="{{ url_for('static', filename=restaurante.banner_url) }}" alt="Banner">
+          {% else %}
+            <div style="font-size:2.5rem;margin-bottom:8px;">🏞️</div>
+          {% endif %}
+          <div class="foto-hint">Tocá para subir banner (ancho, 3:1 recomendado)</div>
+          <input type="file" id="inp-banner" name="banner" accept="image/*" onchange="previewFoto(this,'prev-banner')">
+          <img id="prev-banner" style="display:none;width:100%;height:100px;border-radius:8px;object-fit:cover;margin:8px 0 0;">
+        </div>
+        <button class="btn btn-primary btn-block" type="submit">📤 Subir banner</button>
+      </form>
+    </div>
+
+    <!-- Fotos de productos -->
+    <div class="card">
+      <div class="card-titulo">🍕 Fotos de productos</div>
+      {% if productos %}
+        {% for p in productos %}
+          <div class="producto-item">
+            <div class="producto-foto">
+              {% if p.foto_url %}
+                <img src="{{ url_for('static', filename=p.foto_url) }}" alt="{{ p.nombre }}">
+              {% else %}
+                🍽️
+              {% endif %}
+            </div>
+            <div class="producto-info">
+              <div class="producto-nombre">{{ p.nombre }}</div>
+              <div class="producto-desc">{{ p.precio | pesos }}</div>
+            </div>
+            <form method="POST" action="{{ url_for('subir_foto_producto', prod_id=p.id) }}" enctype="multipart/form-data">
+              <label class="btn btn-outline btn-sm" style="cursor:pointer;">
+                📷
+                <input type="file" name="foto" accept="image/*" style="display:none;" onchange="this.form.submit()">
+              </label>
+            </form>
+          </div>
+        {% endfor %}
+      {% else %}
+        <div class="empty">
+          <div class="empty-icon">🍽️</div>
+          Primero agregá productos en la pestaña Menú.
+        </div>
+      {% endif %}
+    </div>
+
+  </div><!-- /fotos -->
+
+  <!-- ══ MENÚ ═════════════════════════════════════════════════ -->
+  <div class="seccion" id="sec-menu">
+
+    <!-- Nueva categoría -->
+    <div class="card">
+      <div class="card-titulo">📂 Categorías del menú</div>
+      <form method="POST" action="{{ url_for('categoria_nueva') }}" style="display:flex;gap:10px;">
+        <input class="form-control" name="nombre" placeholder="Ej: Pizzas, Bebidas, Postres" required>
+        <button class="btn btn-primary" type="submit">+ Agregar</button>
+      </form>
+      {% if categorias %}
+        <div style="margin-top:14px;display:flex;flex-wrap:wrap;gap:8px;">
+          {% for c in categorias %}
+            <span style="background:#f4f6f9;padding:5px 14px;border-radius:99px;font-size:0.85rem;font-weight:600;">
+              {{ c.nombre }}
+              <span style="color:#adb5bd;">({{ c.total_productos }})</span>
+            </span>
+          {% endfor %}
+        </div>
+      {% endif %}
+    </div>
+
+    <!-- Nuevo producto -->
+    <div class="card">
+      <div class="card-titulo">➕ Agregar producto</div>
+      <form method="POST" action="{{ url_for('producto_nuevo') }}">
+        <div class="form-row">
+          <div class="form-group">
+            <label>Nombre *</label>
+            <input class="form-control" name="nombre" placeholder="Ej: Milanesa napolitana" required>
+          </div>
+          <div class="form-group">
+            <label>Precio *</label>
+            <input class="form-control" type="number" name="precio" placeholder="0" min="0" required>
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Descripción</label>
+          <input class="form-control" name="descripcion" placeholder="Ingredientes, tamaños, aclaraciones...">
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Categoría</label>
+            <select class="form-control" name="categoria_id">
+              <option value="">Sin categoría</option>
+              {% for c in categorias %}
+                <option value="{{ c.id }}">{{ c.nombre }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="form-group" style="display:flex;align-items:flex-end;padding-bottom:2px;">
+            <div class="check-row">
+              <input type="checkbox" name="disponible" id="chk_disp" checked>
+              <label for="chk_disp" style="font-size:0.9rem;font-weight:600;">Disponible</label>
+            </div>
+          </div>
+        </div>
+        <button class="btn btn-primary btn-block" type="submit">➕ Agregar producto</button>
+      </form>
+    </div>
+
+    <!-- Lista de productos -->
+    <div class="card">
+      <div class="card-titulo">📋 Mis productos ({{ productos | length }})</div>
+      {% if productos %}
+        {% set ns = namespace(cat_actual=None) %}
+        {% for p in productos %}
+          {% if p.categoria_nombre != ns.cat_actual %}
+            {% set ns.cat_actual = p.categoria_nombre %}
+            <div class="categoria-header">{{ p.categoria_nombre or 'Sin categoría' }}</div>
+          {% endif %}
+          <div class="producto-item">
+            <div class="producto-foto">
+              {% if p.foto_url %}
+                <img src="{{ url_for('static', filename=p.foto_url) }}" alt="{{ p.nombre }}">
+              {% else %}
+                🍽️
+              {% endif %}
+            </div>
+            <div class="producto-info">
+              <div class="producto-nombre">{{ p.nombre }}</div>
+              {% if p.descripcion %}
+                <div class="producto-desc">{{ p.descripcion }}</div>
+              {% endif %}
+              <div class="producto-precio">{{ p.precio | pesos }}</div>
+            </div>
+            <div class="producto-acciones">
+              <!-- Toggle disponible -->
+              <a href="{{ url_for('producto_toggle', prod_id=p.id) }}" title="{{ 'Desactivar' if p.disponible else 'Activar' }}">
+                <label class="toggle-switch">
+                  <input type="checkbox" {% if p.disponible %}checked{% endif %} disabled>
+                  <span class="toggle-slider"></span>
+                </label>
+              </a>
+              <!-- Editar -->
+              <button class="btn btn-outline btn-sm"
+                onclick="abrirEditarProducto({{ p.id }}, '{{ p.nombre|e }}', {{ p.precio }}, '{{ p.descripcion|e }}', {{ p.categoria_id or 'null' }}, {{ p.disponible }})">
+                ✏️
+              </button>
+              <!-- Eliminar -->
+              <form method="POST" action="{{ url_for('producto_eliminar', prod_id=p.id) }}"
+                    onsubmit="return confirm('¿Eliminar {{ p.nombre }}?')">
+                <button class="btn btn-outline btn-sm" type="submit">🗑️</button>
+              </form>
+            </div>
+          </div>
+        {% endfor %}
+      {% else %}
+        <div class="empty">
+          <div class="empty-icon">🍽️</div>
+          Todavía no agregaste productos.
+        </div>
+      {% endif %}
+    </div>
+
+  </div><!-- /menu -->
+
+  <!-- ══ PROMOCIONES ══════════════════════════════════════════ -->
+  <div class="seccion" id="sec-promociones">
+
+    <div class="card">
+      <div class="card-titulo">🎉 Nueva promoción</div>
+      <form method="POST" action="{{ url_for('promocion_nueva') }}" enctype="multipart/form-data">
+        <div class="form-group">
+          <label>Título *</label>
+          <input class="form-control" name="titulo" placeholder="Ej: 2x1 en pizzas los martes" required>
+        </div>
+        <div class="form-group">
+          <label>Descripción</label>
+          <textarea class="form-control" name="descripcion" placeholder="Detallá las condiciones..."></textarea>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Descuento %</label>
+            <input class="form-control" type="number" name="descuento_pct" min="0" max="100" value="0" placeholder="0">
+          </div>
+          <div class="form-group">
+            <label>Imagen</label>
+            <input class="form-control" type="file" name="imagen" accept="image/*">
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Válida desde</label>
+            <input class="form-control" type="date" name="fecha_inicio">
+          </div>
+          <div class="form-group">
+            <label>Válida hasta</label>
+            <input class="form-control" type="date" name="fecha_fin">
+          </div>
+        </div>
+        <button class="btn btn-warning btn-block" type="submit">🎉 Crear promoción</button>
+      </form>
+    </div>
+
+    <!-- Lista de promociones -->
+    {% if promociones %}
+      {% for promo in promociones %}
+        <div class="promo-card {{ '' if promo.activa else 'inactiva' }}">
+          {% if promo.imagen_url %}
+            <img class="promo-img" src="{{ url_for('static', filename=promo.imagen_url) }}" alt="{{ promo.titulo }}">
+          {% endif %}
+          <div class="promo-header">
+            <div>
+              <div class="promo-titulo">{{ promo.titulo }}</div>
+              {% if promo.fecha_inicio or promo.fecha_fin %}
+                <div style="font-size:0.78rem;color:#adb5bd;">
+                  {% if promo.fecha_inicio %}Desde {{ promo.fecha_inicio }}{% endif %}
+                  {% if promo.fecha_fin %} hasta {{ promo.fecha_fin }}{% endif %}
+                </div>
+              {% endif %}
+            </div>
+            <div style="display:flex;align-items:center;gap:8px;">
+              {% if promo.descuento_pct > 0 %}
+                <span class="descuento-badge">-{{ promo.descuento_pct }}%</span>
+              {% endif %}
+              <span class="badge {{ 'badge-ok' if promo.activa else 'badge-off' }}">
+                {{ '✔ Activa' if promo.activa else 'Inactiva' }}
+              </span>
+            </div>
+          </div>
+          {% if promo.descripcion %}
+            <div class="promo-desc">{{ promo.descripcion }}</div>
+          {% endif %}
+          <div style="display:flex;gap:8px;padding:0 16px 12px;">
+            <a href="{{ url_for('promocion_toggle', promo_id=promo.id) }}"
+               class="btn btn-outline btn-sm">
+              {{ '⏸ Desactivar' if promo.activa else '▶ Activar' }}
+            </a>
+            <button class="btn btn-outline btn-sm"
+              onclick="abrirEditarPromo({{ promo.id }}, '{{ promo.titulo|e }}', '{{ promo.descripcion|e }}', {{ promo.descuento_pct }}, '{{ promo.fecha_inicio or '' }}', '{{ promo.fecha_fin or '' }}')">
+              ✏️ Editar
+            </button>
+            <form method="POST" action="{{ url_for('promocion_eliminar', promo_id=promo.id) }}"
+                  onsubmit="return confirm('¿Eliminar esta promoción?')">
+              <button class="btn btn-outline btn-sm" type="submit">🗑️</button>
+            </form>
+          </div>
+        </div>
+      {% endfor %}
+    {% else %}
+      <div class="empty">
+        <div class="empty-icon">🎉</div>
+        No tenés promociones activas.
+      </div>
+    {% endif %}
+
+  </div><!-- /promociones -->
+
+</div><!-- /container -->
+
+<!-- MODAL: EDITAR PRODUCTO -->
+<div class="modal-overlay" id="modal-producto">
+  <div class="modal">
+    <div class="modal-titulo">
+      ✏️ Editar producto
+      <button class="modal-close" onclick="cerrarModal('modal-producto')">✕</button>
+    </div>
+    <form method="POST" id="form-editar-producto">
+      <div class="form-group">
+        <label>Nombre *</label>
+        <input class="form-control" name="nombre" id="ep-nombre" required>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Precio *</label>
+          <input class="form-control" type="number" name="precio" id="ep-precio" required>
+        </div>
+        <div class="form-group">
+          <label>Categoría</label>
+          <select class="form-control" name="categoria_id" id="ep-categoria">
+            <option value="">Sin categoría</option>
+            {% for c in categorias %}
+              <option value="{{ c.id }}">{{ c.nombre }}</option>
+            {% endfor %}
+          </select>
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Descripción</label>
+        <input class="form-control" name="descripcion" id="ep-descripcion">
+      </div>
+      <div class="form-group">
+        <div class="check-row">
+          <input type="checkbox" name="disponible" id="ep-disponible">
+          <label for="ep-disponible" style="font-size:0.9rem;font-weight:600;">Disponible</label>
+        </div>
+      </div>
+      <button class="btn btn-primary btn-block" type="submit">💾 Guardar</button>
+    </form>
+  </div>
+</div>
+
+<!-- MODAL: EDITAR PROMO -->
+<div class="modal-overlay" id="modal-promo">
+  <div class="modal">
+    <div class="modal-titulo">
+      ✏️ Editar promoción
+      <button class="modal-close" onclick="cerrarModal('modal-promo')">✕</button>
+    </div>
+    <form method="POST" id="form-editar-promo" enctype="multipart/form-data">
+      <div class="form-group">
+        <label>Título *</label>
+        <input class="form-control" name="titulo" id="ep2-titulo" required>
+      </div>
+      <div class="form-group">
+        <label>Descripción</label>
+        <textarea class="form-control" name="descripcion" id="ep2-descripcion"></textarea>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Descuento %</label>
+          <input class="form-control" type="number" name="descuento_pct" id="ep2-descuento" min="0" max="100">
+        </div>
+        <div class="form-group">
+          <label>Nueva imagen (opcional)</label>
+          <input class="form-control" type="file" name="imagen" accept="image/*">
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Desde</label>
+          <input class="form-control" type="date" name="fecha_inicio" id="ep2-inicio">
+        </div>
+        <div class="form-group">
+          <label>Hasta</label>
+          <input class="form-control" type="date" name="fecha_fin" id="ep2-fin">
+        </div>
+      </div>
+      <button class="btn btn-warning btn-block" type="submit">💾 Guardar</button>
+    </form>
+  </div>
+</div>
+
+<script>
+// ── TABS ───────────────────────────────────────────────────────
+function mostrarSeccion(nombre) {
+  document.querySelectorAll('.seccion').forEach(s => s.classList.remove('activo'));
+  document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('activo'));
+  document.getElementById('sec-' + nombre).classList.add('activo');
+  event.currentTarget.classList.add('activo');
+}
+
+// ── DELIVERY TOGGLE ────────────────────────────────────────────
+function toggleEnvio() {
+  const chk = document.getElementById('chk_envio');
+  document.getElementById('campos-envio').style.display = chk.checked ? '' : 'none';
+}
+
+// ── COPIAR LINK ────────────────────────────────────────────────
+function copiarLink() {
+  navigator.clipboard.writeText('https://pediaca.ar/local/{{ restaurante.id }}')
+    .then(() => alert('¡Link copiado!'));
+}
+
+// ── PREVIEW FOTO ───────────────────────────────────────────────
+function previewFoto(input, previewId) {
+  const prev = document.getElementById(previewId);
+  if (input.files && input.files[0]) {
+    const reader = new FileReader();
+    reader.onload = e => {
+      prev.src = e.target.result;
+      prev.style.display = 'block';
+    };
+    reader.readAsDataURL(input.files[0]);
+  }
+}
+
+// ── MODALES ────────────────────────────────────────────────────
+function cerrarModal(id) {
+  document.getElementById(id).classList.remove('open');
+}
+document.querySelectorAll('.modal-overlay').forEach(m => {
+  m.addEventListener('click', e => { if (e.target === m) m.classList.remove('open'); });
+});
+
+function abrirEditarProducto(id, nombre, precio, desc, catId, disponible) {
+  document.getElementById('form-editar-producto').action = '/mi-local/producto/' + id + '/editar';
+  document.getElementById('ep-nombre').value     = nombre;
+  document.getElementById('ep-precio').value     = precio;
+  document.getElementById('ep-descripcion').value= desc || '';
+  document.getElementById('ep-disponible').checked = !!disponible;
+  const sel = document.getElementById('ep-categoria');
+  sel.value = catId || '';
+  document.getElementById('modal-producto').classList.add('open');
+}
+
+function abrirEditarPromo(id, titulo, desc, descPct, inicio, fin) {
+  document.getElementById('form-editar-promo').action = '/mi-local/promocion/' + id + '/editar';
+  document.getElementById('ep2-titulo').value     = titulo;
+  document.getElementById('ep2-descripcion').value= desc || '';
+  document.getElementById('ep2-descuento').value  = descPct;
+  document.getElementById('ep2-inicio').value     = inicio || '';
+  document.getElementById('ep2-fin').value        = fin || '';
+  document.getElementById('modal-promo').classList.add('open');
+}
+
+// Auto-ocultar alertas
+setTimeout(() => {
+  document.querySelectorAll('.alert').forEach(a => {
+    a.style.transition = 'opacity 0.5s';
+    a.style.opacity = '0';
+    setTimeout(() => a.remove(), 500);
+  });
+}, 3500);
+</script>
+
+</body>
+</html>
