@@ -1,0 +1,245 @@
+{% extends "base.html" %}
+{% block title %}Política de Privacidad — PediAcá{% endblock %}
+
+{% block extra_styles %}
+.legal-page { max-width: 720px; margin: 0 auto; padding: 40px 20px 80px; }
+.legal-hero {
+  background: linear-gradient(135deg, #1A1A2E, #0F3460);
+  padding: 40px 20px;
+  text-align: center;
+}
+.legal-hero h1 {
+  font-family: 'Paytone One', sans-serif;
+  color: #fff;
+  font-size: 1.8rem;
+  margin-bottom: 8px;
+}
+.legal-hero p { color: rgba(255,255,255,0.65); font-size: 0.88rem; font-weight: 600; }
+.legal-card {
+  background: var(--blanco);
+  border-radius: 14px;
+  padding: 28px 24px;
+  box-shadow: var(--sombra-s);
+  margin-bottom: 16px;
+}
+.legal-card h2 {
+  font-family: 'Paytone One', sans-serif;
+  font-size: 1.05rem;
+  color: var(--texto);
+  margin-bottom: 14px;
+  padding-bottom: 10px;
+  border-bottom: 2px solid var(--azul);
+}
+.legal-card h3 { font-weight:800; font-size:0.92rem; margin:16px 0 6px; color:var(--texto); }
+.legal-card p, .legal-card li { font-size:0.88rem; color:var(--texto-s); line-height:1.7; margin-bottom:8px; }
+.legal-card ul { padding-left:18px; }
+.legal-card li { margin-bottom:4px; }
+.update-date { font-size:0.75rem; color:var(--gris-3); text-align:right; margin-bottom:16px; }
+.nav-legales {
+  background: var(--blanco);
+  display: flex;
+  border-bottom: 2px solid var(--gris-1);
+  overflow-x: auto;
+  scrollbar-width: none;
+  position: sticky;
+  top: 60px;
+  z-index: 100;
+}
+.nav-legales a {
+  flex: none;
+  padding: 13px 20px;
+  font-size: 0.83rem;
+  font-weight: 800;
+  color: var(--texto-s);
+  text-decoration: none;
+  border-bottom: 3px solid transparent;
+  transition: all 0.15s;
+  white-space: nowrap;
+}
+.nav-legales a:hover, .nav-legales a.activo { color:var(--naranja); border-bottom-color:var(--naranja); }
+.destaque {
+  background: var(--azul-l);
+  border-radius: 10px;
+  padding: 14px 16px;
+  font-size: 0.85rem;
+  color: var(--azul-d);
+  font-weight: 700;
+  margin-bottom: 14px;
+  line-height: 1.5;
+}
+{% endblock %}
+
+{% block content %}
+<div class="legal-hero">
+  <h1>🔒 Privacidad</h1>
+  <p>Cómo tratamos tus datos en PediAcá</p>
+</div>
+
+<div class="nav-legales">
+  <a href="{{ url_for('terminos') }}">Términos y Condiciones</a>
+  <a href="{{ url_for('privacidad') }}" class="activo">Política de Privacidad</a>
+</div>
+
+<div class="legal-page">
+  <div class="update-date">Última actualización: Enero 2026</div>
+
+  <div class="destaque">
+    🛡️ En PediAcá no vendemos tus datos, no los cedemos a terceros con fines comerciales
+    y no usamos publicidad comportamental. Tu información solo se usa para que la plataforma funcione.
+  </div>
+
+  <div class="legal-card">
+    <h2>1. Responsable del tratamiento</h2>
+    <p>
+      El responsable del tratamiento de los datos personales recolectados a través de
+      pediaca.ar es <strong>PediAcá</strong>, con domicilio en la ciudad de Rosario,
+      Provincia de Santa Fe, República Argentina.
+    </p>
+    <p>
+      Esta Política de Privacidad se enmarca en la
+      <strong>Ley N° 25.326 de Protección de los Datos Personales</strong> de la
+      República Argentina y su normativa complementaria.
+    </p>
+  </div>
+
+  <div class="legal-card">
+    <h2>2. Datos que recolectamos</h2>
+
+    <h3>Usuarios registrados</h3>
+    <ul>
+      <li>Nombre y apellido</li>
+      <li>Dirección de correo electrónico</li>
+      <li>Número de teléfono / WhatsApp</li>
+      <li>Dirección de entrega (opcional)</li>
+      <li>Historial de pedidos realizados en la plataforma</li>
+    </ul>
+
+    <h3>Comercios adheridos</h3>
+    <ul>
+      <li>Datos del titular o responsable del comercio</li>
+      <li>Nombre, dirección y WhatsApp del establecimiento</li>
+      <li>Menú, precios e imágenes publicadas voluntariamente</li>
+    </ul>
+
+    <h3>Usuarios no registrados</h3>
+    <p>
+      Si realizás un pedido sin registrarte, solo almacenamos el nombre y teléfono
+      que vos mismo ingresás para completar el pedido, junto con el detalle del mismo.
+    </p>
+
+    <h3>Datos técnicos</h3>
+    <p>
+      Como cualquier sitio web, registramos datos de acceso (IP, navegador, dispositivo)
+      para fines de seguridad y funcionamiento técnico. No los usamos para identificarte
+      personalmente.
+    </p>
+  </div>
+
+  <div class="legal-card">
+    <h2>3. Para qué usamos tus datos</h2>
+    <ul>
+      <li>Gestionar tu cuenta y permitirte acceder a la plataforma</li>
+      <li>Registrar y mostrar tu historial de pedidos</li>
+      <li>Mostrarte tus locales frecuentes</li>
+      <li>Enviarte comunicaciones relacionadas con tu cuenta (si las solicitás)</li>
+      <li>Mejorar el funcionamiento de la plataforma</li>
+      <li>Cumplir con obligaciones legales</li>
+    </ul>
+    <p>
+      <strong>No usamos tus datos para publicidad de terceros.</strong>
+      El modelo de negocio de PediAcá se basa en auspiciantes que contratan espacios
+      fijos en la plataforma, no en publicidad dirigida basada en tu comportamiento.
+    </p>
+  </div>
+
+  <div class="legal-card">
+    <h2>4. Compartir datos con terceros</h2>
+    <p>
+      PediAcá <strong>no vende ni cede tus datos personales</strong> a terceros
+      con fines comerciales. Los únicos casos en que podemos compartir información son:
+    </p>
+    <ul>
+      <li>
+        <strong>Con el comercio al que pedís:</strong> cuando generás un pedido,
+        el nombre y teléfono que proporcionás se incluyen en el mensaje de WhatsApp
+        dirigido al local. Esto es necesario para que el pedido funcione.
+      </li>
+      <li>
+        <strong>Por obligación legal:</strong> si una autoridad competente lo requiere
+        mediante orden judicial o requerimiento legal válido.
+      </li>
+    </ul>
+  </div>
+
+  <div class="legal-card">
+    <h2>5. Tus derechos (Ley 25.326)</h2>
+    <p>
+      De acuerdo con la Ley N° 25.326, tenés derecho a:
+    </p>
+    <ul>
+      <li><strong>Acceso:</strong> conocer qué datos tuyos tenemos almacenados</li>
+      <li><strong>Rectificación:</strong> corregir datos incorrectos o incompletos</li>
+      <li><strong>Supresión:</strong> solicitar la eliminación de tus datos ("derecho al olvido")</li>
+      <li><strong>Confidencialidad:</strong> exigir que tus datos no sean cedidos sin tu consentimiento</li>
+    </ul>
+    <p>
+      Para ejercer cualquiera de estos derechos, escribinos por WhatsApp al
+      <a href="https://wa.me/5493417523674" style="color:var(--naranja);font-weight:700;">+54 9 341 752-3674</a>
+      o por email a <strong>contacto@pediaca.ar</strong>.
+      Respondemos en un plazo máximo de 5 días hábiles.
+    </p>
+    <p style="font-size:0.8rem;color:var(--gris-3);">
+      La DIRECCIÓN NACIONAL DE PROTECCIÓN DE DATOS PERSONALES, Órgano de Control de la
+      Ley N° 25.326, tiene la atribución de atender las denuncias y reclamos que se
+      interpongan con relación al incumplimiento de las normas sobre protección de datos personales.
+    </p>
+  </div>
+
+  <div class="legal-card">
+    <h2>6. Seguridad</h2>
+    <p>
+      Tomamos medidas técnicas razonables para proteger tus datos:
+    </p>
+    <ul>
+      <li>Contraseñas almacenadas con hash (no en texto plano)</li>
+      <li>Conexión HTTPS en todo el sitio</li>
+      <li>Acceso restringido a los datos según el rol de cada usuario</li>
+    </ul>
+    <p>
+      Sin embargo, ningún sistema es 100% seguro. Ante cualquier incidente de seguridad
+      que afecte tus datos, te notificaremos en el menor tiempo posible.
+    </p>
+  </div>
+
+  <div class="legal-card">
+    <h2>7. Cookies</h2>
+    <p>
+      PediAcá usa únicamente una cookie de sesión técnica necesaria para que puedas
+      iniciar sesión y navegar autenticado. No usamos cookies de rastreo, analítica
+      de terceros ni redes publicitarias.
+    </p>
+  </div>
+
+  <div class="legal-card">
+    <h2>8. Retención de datos</h2>
+    <p>
+      Conservamos tus datos mientras tu cuenta esté activa. Si solicitás la eliminación
+      de tu cuenta, borramos tus datos personales en un plazo de 30 días, excepto aquellos
+      que debamos conservar por obligación legal.
+    </p>
+  </div>
+
+  <div class="legal-card" style="border-left: 4px solid var(--azul);">
+    <h2>📞 Contacto</h2>
+    <p>
+      <strong>WhatsApp:</strong>
+      <a href="https://wa.me/5493417523674" style="color:var(--naranja);font-weight:700;">
+        +54 9 341 752-3674
+      </a><br>
+      <strong>Email:</strong> contacto@pediaca.ar<br>
+      <strong>Plataforma:</strong> pediaca.ar · Rosario, Santa Fe, Argentina
+    </p>
+  </div>
+
+</div>
+{% endblock %}

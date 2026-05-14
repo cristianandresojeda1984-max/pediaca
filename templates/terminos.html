@@ -1,0 +1,215 @@
+{% extends "base.html" %}
+{% block title %}Términos y Condiciones — PediAcá{% endblock %}
+
+{% block extra_styles %}
+.legal-page { max-width: 720px; margin: 0 auto; padding: 40px 20px 80px; }
+.legal-hero {
+  background: linear-gradient(135deg, #1A1A2E, #0F3460);
+  padding: 40px 20px;
+  text-align: center;
+  margin-bottom: 0;
+}
+.legal-hero h1 {
+  font-family: 'Paytone One', sans-serif;
+  color: #fff;
+  font-size: 1.8rem;
+  margin-bottom: 8px;
+}
+.legal-hero p { color: rgba(255,255,255,0.65); font-size: 0.88rem; font-weight: 600; }
+.legal-card {
+  background: var(--blanco);
+  border-radius: 14px;
+  padding: 28px 24px;
+  box-shadow: var(--sombra-s);
+  margin-bottom: 16px;
+}
+.legal-card h2 {
+  font-family: 'Paytone One', sans-serif;
+  font-size: 1.05rem;
+  color: var(--texto);
+  margin-bottom: 14px;
+  padding-bottom: 10px;
+  border-bottom: 2px solid var(--naranja);
+}
+.legal-card h3 {
+  font-weight: 800;
+  font-size: 0.92rem;
+  margin: 16px 0 6px;
+  color: var(--texto);
+}
+.legal-card p, .legal-card li {
+  font-size: 0.88rem;
+  color: var(--texto-s);
+  line-height: 1.7;
+  margin-bottom: 8px;
+}
+.legal-card ul { padding-left: 18px; }
+.legal-card li { margin-bottom: 4px; }
+.update-date {
+  font-size: 0.75rem;
+  color: var(--gris-3);
+  text-align: right;
+  margin-bottom: 16px;
+}
+.nav-legales {
+  background: var(--blanco);
+  display: flex;
+  gap: 0;
+  border-bottom: 2px solid var(--gris-1);
+  overflow-x: auto;
+  scrollbar-width: none;
+  position: sticky;
+  top: 60px;
+  z-index: 100;
+}
+.nav-legales a {
+  flex: none;
+  padding: 13px 20px;
+  font-size: 0.83rem;
+  font-weight: 800;
+  color: var(--texto-s);
+  text-decoration: none;
+  border-bottom: 3px solid transparent;
+  transition: all 0.15s;
+  white-space: nowrap;
+}
+.nav-legales a:hover, .nav-legales a.activo {
+  color: var(--naranja);
+  border-bottom-color: var(--naranja);
+}
+{% endblock %}
+
+{% block content %}
+<div class="legal-hero">
+  <h1>📋 Legales</h1>
+  <p>Términos, condiciones y política de privacidad de PediAcá</p>
+</div>
+
+<div class="nav-legales">
+  <a href="{{ url_for('terminos') }}" class="activo">Términos y Condiciones</a>
+  <a href="{{ url_for('privacidad') }}">Política de Privacidad</a>
+</div>
+
+<div class="legal-page">
+  <div class="update-date">Última actualización: Enero 2026</div>
+
+  <div class="legal-card">
+    <h2>1. Naturaleza del servicio</h2>
+    <p>
+      PediAcá (en adelante "la Plataforma") es un <strong>directorio digital gratuito</strong>
+      que facilita la visualización de menús de establecimientos gastronómicos y conecta
+      a usuarios con dichos comercios a través de WhatsApp u otros medios de comunicación
+      directa.
+    </p>
+    <p>
+      PediAcá <strong>no es parte de ninguna transacción comercial</strong> entre el usuario
+      y el comercio. No procesa pagos, no recibe dinero, no garantiza la calidad de los
+      productos ni los tiempos de entrega, y no tiene ninguna injerencia en el acuerdo
+      entre las partes.
+    </p>
+  </div>
+
+  <div class="legal-card">
+    <h2>2. Exclusión de responsabilidad</h2>
+
+    <h3>2.1 Sobre los pedidos y entregas</h3>
+    <p>
+      PediAcá actúa exclusivamente como intermediario informativo. La relación contractual
+      por la compra de productos se establece <strong>directamente entre el usuario y el
+      comercio adherido</strong>. PediAcá no asume responsabilidad alguna por:
+    </p>
+    <ul>
+      <li>Demoras, errores u omisiones en la entrega de pedidos</li>
+      <li>Calidad, estado o presentación de los productos</li>
+      <li>Diferencias entre los precios publicados y los cobrados por el comercio</li>
+      <li>Cancelaciones unilaterales por parte del comercio</li>
+      <li>Problemas derivados del uso de servicios de cadetes o repartidores</li>
+    </ul>
+
+    <h3>2.2 Sobre los cadetes</h3>
+    <p>
+      Los cadetes registrados en la Plataforma son <strong>trabajadores independientes
+      que no tienen relación de dependencia</strong> con PediAcá. La Plataforma solo
+      facilita el contacto entre el comercio y el cadete. PediAcá no es responsable
+      de accidentes, daños, pérdidas o inconvenientes que pudieran ocurrir durante
+      el proceso de entrega.
+    </p>
+
+    <h3>2.3 Sobre la información de los comercios</h3>
+    <p>
+      Los datos, precios, horarios, fotografías y menús publicados son <strong>responsabilidad
+      exclusiva de cada comercio adherido</strong>. PediAcá no verifica la exactitud
+      de dicha información y no se responsabiliza por su desactualización o inexactitud.
+    </p>
+  </div>
+
+  <div class="legal-card">
+    <h2>3. Condiciones para comercios adheridos</h2>
+    <p>Al registrar un comercio en la Plataforma, el titular declara y acepta que:</p>
+    <ul>
+      <li>Es el responsable legal del establecimiento o tiene autorización para representarlo</li>
+      <li>La información publicada es veraz y se compromete a mantenerla actualizada</li>
+      <li>Cumple con toda la normativa vigente aplicable a su actividad (habilitaciones, bromatología, impositiva, etc.)</li>
+      <li>Los precios publicados incluyen IVA y son los efectivamente cobrados al consumidor</li>
+      <li>No publicará contenido engañoso, ofensivo o que viole derechos de terceros</li>
+      <li>PediAcá puede dar de baja el perfil del comercio sin expresión de causa</li>
+    </ul>
+  </div>
+
+  <div class="legal-card">
+    <h2>4. Condiciones para usuarios</h2>
+    <p>Al utilizar la Plataforma, el usuario acepta que:</p>
+    <ul>
+      <li>El pedido se concreta únicamente cuando el comercio lo confirma directamente</li>
+      <li>PediAcá no garantiza la disponibilidad de ningún producto ni la atención del comercio</li>
+      <li>Cualquier reclamo por productos defectuosos, incompletos o no entregados debe dirigirse al comercio</li>
+      <li>El uso de la Plataforma es bajo su exclusiva responsabilidad</li>
+    </ul>
+  </div>
+
+  <div class="legal-card">
+    <h2>5. Propiedad intelectual</h2>
+    <p>
+      El diseño, código, marca y contenidos propios de PediAcá son propiedad de sus
+      desarrolladores. Los logos, fotografías y contenidos de cada comercio son propiedad
+      de los respectivos titulares, quienes autorizan su publicación al registrarse en
+      la Plataforma.
+    </p>
+  </div>
+
+  <div class="legal-card">
+    <h2>6. Modificaciones</h2>
+    <p>
+      PediAcá se reserva el derecho de modificar estos Términos en cualquier momento.
+      Los cambios serán publicados en esta página con la fecha de actualización.
+      El uso continuado de la Plataforma implica la aceptación de los términos vigentes.
+    </p>
+  </div>
+
+  <div class="legal-card">
+    <h2>7. Jurisdicción</h2>
+    <p>
+      Ante cualquier controversia, las partes se someten a la jurisdicción de los
+      Tribunales Ordinarios de la ciudad de <strong>Rosario, Provincia de Santa Fe,
+      República Argentina</strong>, renunciando a cualquier otro fuero que pudiera
+      corresponderles.
+    </p>
+  </div>
+
+  <div class="legal-card" style="border-left: 4px solid var(--naranja);">
+    <h2>📞 Contacto</h2>
+    <p>
+      Para consultas, reclamos o solicitudes relacionadas con estos Términos:
+    </p>
+    <p>
+      <strong>WhatsApp:</strong>
+      <a href="https://wa.me/5493417523674" style="color:var(--naranja);font-weight:700;">
+        +54 9 341 752-3674
+      </a><br>
+      <strong>Email:</strong> contacto@pediaca.ar<br>
+      <strong>Plataforma:</strong> pediaca.ar · Rosario, Santa Fe, Argentina
+    </p>
+  </div>
+
+</div>
+{% endblock %}
