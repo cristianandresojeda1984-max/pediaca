@@ -157,6 +157,16 @@ def init_db():
         )
     """)
 
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS sabores_producto (
+            id          INTEGER PRIMARY KEY AUTOINCREMENT,
+            producto_id INTEGER NOT NULL REFERENCES productos(id) ON DELETE CASCADE,
+            nombre      TEXT NOT NULL,
+            disponible  INTEGER NOT NULL DEFAULT 1,
+            orden       INTEGER NOT NULL DEFAULT 0
+        )
+    """)
+
     conn.commit()
     conn.close()
     print(f"✅ Base de datos '{DB_PATH}' creada con todas las tablas.")

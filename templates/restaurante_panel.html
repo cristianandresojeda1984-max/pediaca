@@ -395,6 +395,41 @@ select.form-control { appearance: none; cursor: pointer; }
   text-transform: uppercase;
   letter-spacing: 0.5px;
 }
+
+/* ── MENU TABS ───────────────────────────────────────────── */
+.menu-tab {
+  flex:1; padding:9px; border:none; border-radius:8px;
+  background:none; font-family:'Segoe UI',sans-serif;
+  font-weight:700; font-size:0.83rem; cursor:pointer;
+  color:var(--gris-3); transition:all 0.15s;
+}
+.menu-tab.activo { background:var(--blanco); color:var(--rojo); box-shadow:var(--sombra-s); }
+
+/* ── FOTO INLINE ─────────────────────────────────────────── */
+.foto-inline-wrap {
+  border:2px dashed var(--gris-2); border-radius:10px;
+  padding:12px; text-align:center; cursor:pointer;
+  transition:border-color 0.2s;
+}
+.foto-inline-wrap:hover { border-color:var(--rojo); }
+.foto-inline-hint { font-size:0.78rem; color:var(--gris-3); }
+
+/* ── RENGLONES MASIVOS ───────────────────────────────────── */
+.renglon-input {
+  width:100%; padding:8px 10px; border:none;
+  border-right:1px solid var(--gris-2);
+  border-bottom:1px solid var(--gris-2);
+  font-family:'Segoe UI',sans-serif; font-size:0.85rem;
+  background:var(--blanco); outline:none;
+}
+.renglon-input:focus { background:#FEFAF3; }
+.renglon-del {
+  padding:8px; border:none; border-bottom:1px solid var(--gris-2);
+  background:none; cursor:pointer; color:var(--gris-3);
+  font-size:0.9rem; width:36px;
+}
+.renglon-del:hover { color:var(--rojo); background:#FADBD8; }
+
 </style>
 </head>
 <body>
@@ -415,6 +450,7 @@ select.form-control { appearance: none; cursor: pointer; }
   <div class="nav-tab" onclick="mostrarSeccion('fotos')">📷 Fotos</div>
   <div class="nav-tab" onclick="mostrarSeccion('menu')">🍕 Menú</div>
   <div class="nav-tab" onclick="mostrarSeccion('promociones')">🎉 Promociones</div>
+  <a class="nav-tab" href="/mi-local/pedidos" style="text-decoration:none;">📋 Pedidos</a>
 </div>
 
 <div class="container">
@@ -644,43 +680,104 @@ select.form-control { appearance: none; cursor: pointer; }
       {% endif %}
     </div>
 
-    <!-- Nuevo producto -->
+    <!-- Agregar producto + Carga masiva (tabs) -->
     <div class="card">
-      <div class="card-titulo">➕ Agregar producto</div>
-      <form method="POST" action="{{ url_for('producto_nuevo') }}">
-        <div class="form-row">
-          <div class="form-group">
-            <label>Nombre *</label>
-            <input class="form-control" name="nombre" placeholder="Ej: Milanesa napolitana" required>
-          </div>
-          <div class="form-group">
-            <label>Precio *</label>
-            <input class="form-control" type="number" name="precio" placeholder="0" min="0" required>
-          </div>
-        </div>
-        <div class="form-group">
-          <label>Descripción</label>
-          <input class="form-control" name="descripcion" placeholder="Ingredientes, tamaños, aclaraciones...">
-        </div>
-        <div class="form-row">
-          <div class="form-group">
-            <label>Categoría</label>
-            <select class="form-control" name="categoria_id">
-              <option value="">Sin categoría</option>
-              {% for c in categorias %}
-                <option value="{{ c.id }}">{{ c.nombre }}</option>
-              {% endfor %}
-            </select>
-          </div>
-          <div class="form-group" style="display:flex;align-items:flex-end;padding-bottom:2px;">
-            <div class="check-row">
-              <input type="checkbox" name="disponible" id="chk_disp" checked>
-              <label for="chk_disp" style="font-size:0.9rem;font-weight:600;">Disponible</label>
+      <div style="display:flex;gap:0;margin-bottom:16px;background:var(--gris-1);border-radius:10px;padding:4px;">
+        <button class="menu-tab activo" id="tab-uno" onclick="switchMenuTab('uno')">➕ Un producto</button>
+        <button class="menu-tab" id="tab-masivo" onclick="switchMenuTab('masivo')">📋 Carga masiva</button>
+      </div>
+
+      <!-- TAB: UN PRODUCTO -->
+      <div id="panel-uno">
+        <form method="POST" action="{{ url_for('producto_nuevo') }}" enctype="multipart/form-data">
+          <div class="form-row">
+            <div class="form-group">
+              <label>Nombre *</label>
+              <input class="form-control" name="nombre" placeholder="Ej: Milanesa napolitana" required>
+            </div>
+            <div class="form-group">
+              <label>Precio *</label>
+              <input class="form-control" type="number" name="precio" placeholder="0" min="0" required>
             </div>
           </div>
+          <div class="form-group">
+            <label>Descripción</label>
+            <input class="form-control" name="descripcion" placeholder="Ingredientes, tamaños, aclaraciones...">
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label>Categoría</label>
+              <select class="form-control" name="categoria_id">
+                <option value="">Sin categoría</option>
+                {% for c in categorias %}
+                  <option value="{{ c.id }}">{{ c.nombre }}</option>
+                {% endfor %}
+              </select>
+            </div>
+            <div class="form-group" style="display:flex;align-items:flex-end;padding-bottom:2px;">
+              <div class="check-row">
+                <input type="checkbox" name="disponible" id="chk_disp" checked>
+                <label for="chk_disp" style="font-size:0.9rem;font-weight:600;">Disponible</label>
+              </div>
+            </div>
+          </div>
+          <!-- FOTO INLINE -->
+          <div class="form-group">
+            <label>Foto del producto</label>
+            <div class="foto-inline-wrap" onclick="document.getElementById('inp-foto-nuevo').click()">
+              <img id="prev-foto-nuevo" style="display:none;width:80px;height:80px;border-radius:10px;object-fit:cover;margin-bottom:6px;">
+              <div class="foto-inline-hint" id="hint-foto-nuevo">📷 Tocá para agregar foto</div>
+              <input type="file" id="inp-foto-nuevo" name="foto" accept="image/*"
+                     onchange="previewInline(this,'prev-foto-nuevo','hint-foto-nuevo')" style="display:none;">
+            </div>
+          </div>
+          <button class="btn btn-primary btn-block" type="submit">➕ Agregar producto</button>
+        </form>
+      </div>
+
+      <!-- TAB: CARGA MASIVA -->
+      <div id="panel-masivo" style="display:none;">
+
+        <!-- Renglones manuales -->
+        <div style="font-size:0.82rem;font-weight:700;color:var(--gris-3);margin-bottom:8px;text-transform:uppercase;letter-spacing:0.4px;">
+          Escribí de a uno — presioná Enter para agregar renglón
         </div>
-        <button class="btn btn-primary btn-block" type="submit">➕ Agregar producto</button>
-      </form>
+        <div id="renglones-wrap" style="border:1.5px solid var(--gris-2);border-radius:10px;overflow:hidden;margin-bottom:12px;">
+          <div style="display:grid;grid-template-columns:2fr 3fr 1fr 1.5fr;background:var(--gris-1);border-bottom:1px solid var(--gris-2);">
+            <div style="padding:7px 10px;font-size:0.75rem;font-weight:800;color:var(--gris-3);">NOMBRE</div>
+            <div style="padding:7px 10px;font-size:0.75rem;font-weight:800;color:var(--gris-3);">DESCRIPCIÓN</div>
+            <div style="padding:7px 10px;font-size:0.75rem;font-weight:800;color:var(--gris-3);">PRECIO</div>
+            <div style="padding:7px 10px;font-size:0.75rem;font-weight:800;color:var(--gris-3);">CATEGORÍA</div>
+          </div>
+          <div id="renglones-body"></div>
+        </div>
+        <button class="btn btn-outline btn-sm" onclick="agregarRenglon()" style="margin-bottom:16px;">
+          + Agregar renglón
+        </button>
+        <button class="btn btn-primary btn-block" id="btn-guardar-masivo" onclick="guardarMasivo()" style="margin-bottom:20px;">
+          💾 Guardar todos los productos
+        </button>
+
+        <!-- Separador -->
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px;">
+          <div style="flex:1;height:1px;background:var(--gris-2);"></div>
+          <span style="font-size:0.78rem;font-weight:700;color:var(--gris-3);">O subí un archivo</span>
+          <div style="flex:1;height:1px;background:var(--gris-2);"></div>
+        </div>
+
+        <!-- Upload archivo -->
+        <div class="foto-upload-area" onclick="document.getElementById('inp-archivo-masivo').click()" style="margin-bottom:10px;">
+          <div style="font-size:2rem;margin-bottom:6px;">📂</div>
+          <div style="font-weight:700;font-size:0.88rem;">Subí tu Excel o CSV</div>
+          <div class="foto-hint" id="hint-archivo">CSV o XLSX · Primera fila = encabezados (nombre, descripcion, precio, categoria)</div>
+          <input type="file" id="inp-archivo-masivo" accept=".csv,.xlsx,.xls" style="display:none;"
+                 onchange="cargarArchivo(this)">
+        </div>
+        <a href="{{ url_for('descargar_plantilla') }}" class="btn btn-outline btn-sm" style="margin-bottom:6px;">
+          📥 Descargar plantilla Excel
+        </a>
+        <div id="resultado-masivo" style="display:none;"></div>
+      </div>
     </div>
 
     <!-- Lista de productos -->
@@ -693,35 +790,63 @@ select.form-control { appearance: none; cursor: pointer; }
             {% set ns.cat_actual = p.categoria_nombre %}
             <div class="categoria-header">{{ p.categoria_nombre or 'Sin categoría' }}</div>
           {% endif %}
-          <div class="producto-item">
-            <div class="producto-foto">
+          <div class="producto-item" id="prod-{{ p.id }}">
+            <!-- Foto con upload inline -->
+            <div class="producto-foto" style="cursor:pointer;" onclick="document.getElementById('inp-foto-{{ p.id }}').click()" title="Cambiar foto">
               {% if p.foto_url %}
                 <img src="{{ url_for('static', filename=p.foto_url) }}" alt="{{ p.nombre }}">
               {% else %}
                 🍽️
               {% endif %}
+              <div style="position:absolute;bottom:-4px;right:-4px;background:var(--naranja);border-radius:50%;width:18px;height:18px;display:flex;align-items:center;justify-content:center;font-size:0.6rem;">📷</div>
             </div>
+            <form method="POST" action="{{ url_for('subir_foto_producto', prod_id=p.id) }}" enctype="multipart/form-data" id="form-foto-{{ p.id }}" style="display:none;">
+              <input type="file" id="inp-foto-{{ p.id }}" name="foto" accept="image/*"
+                     onchange="document.getElementById('form-foto-{{ p.id }}').submit()">
+            </form>
             <div class="producto-info">
               <div class="producto-nombre">{{ p.nombre }}</div>
               {% if p.descripcion %}
                 <div class="producto-desc">{{ p.descripcion }}</div>
               {% endif %}
               <div class="producto-precio">{{ p.precio | pesos }}</div>
+              <!-- Sabores -->
+              {% set sabores = sabores_map.get(p.id, []) %}
+              {% if sabores %}
+                <div style="display:flex;flex-wrap:wrap;gap:4px;margin-top:4px;">
+                  {% for s in sabores %}
+                    <span style="background:var(--azul-l);color:var(--azul-d);font-size:0.68rem;font-weight:700;padding:2px 8px;border-radius:99px;">
+                      {{ s.nombre }}
+                      <form method="POST" action="{{ url_for('sabor_eliminar', sabor_id=s.id) }}" style="display:inline;">
+                        <button type="submit" style="background:none;border:none;cursor:pointer;color:var(--azul-d);font-size:0.7rem;padding:0 0 0 2px;">✕</button>
+                      </form>
+                    </span>
+                  {% endfor %}
+                </div>
+              {% endif %}
+              <!-- Agregar sabor -->
+              <div style="margin-top:6px;" id="sabor-form-{{ p.id }}" class="sabor-form" style="display:none;">
+                <form method="POST" action="{{ url_for('sabor_nuevo', prod_id=p.id) }}" style="display:flex;gap:6px;">
+                  <input class="form-control" name="nombre" placeholder="Ej: Dulce de leche" style="font-size:0.8rem;padding:6px 10px;">
+                  <button class="btn btn-outline btn-sm" type="submit">+</button>
+                </form>
+              </div>
+              <button class="btn btn-outline btn-sm" style="margin-top:4px;font-size:0.72rem;"
+                      onclick="document.getElementById('sabor-form-{{ p.id }}').style.display = document.getElementById('sabor-form-{{ p.id }}').style.display === 'none' ? 'block' : 'none'">
+                🍦 Gustos
+              </button>
             </div>
             <div class="producto-acciones">
-              <!-- Toggle disponible -->
               <a href="{{ url_for('producto_toggle', prod_id=p.id) }}" title="{{ 'Desactivar' if p.disponible else 'Activar' }}">
                 <label class="toggle-switch">
                   <input type="checkbox" {% if p.disponible %}checked{% endif %} disabled>
                   <span class="toggle-slider"></span>
                 </label>
               </a>
-              <!-- Editar -->
               <button class="btn btn-outline btn-sm"
                 onclick="abrirEditarProducto({{ p.id }}, '{{ p.nombre|e }}', {{ p.precio }}, '{{ p.descripcion|e }}', {{ p.categoria_id or 'null' }}, {{ p.disponible }})">
                 ✏️
               </button>
-              <!-- Eliminar -->
               <form method="POST" action="{{ url_for('producto_eliminar', prod_id=p.id) }}"
                     onsubmit="return confirm('¿Eliminar {{ p.nombre }}?')">
                 <button class="btn btn-outline btn-sm" type="submit">🗑️</button>
@@ -978,6 +1103,126 @@ function abrirEditarPromo(id, titulo, desc, descPct, inicio, fin) {
   document.getElementById('ep2-fin').value        = fin || '';
   document.getElementById('modal-promo').classList.add('open');
 }
+
+
+// ── MENU TABS ─────────────────────────────────────────────
+function switchMenuTab(tab) {
+  document.getElementById('tab-uno').classList.toggle('activo', tab === 'uno');
+  document.getElementById('tab-masivo').classList.toggle('activo', tab === 'masivo');
+  document.getElementById('panel-uno').style.display    = tab === 'uno'    ? '' : 'none';
+  document.getElementById('panel-masivo').style.display = tab === 'masivo' ? '' : 'none';
+}
+
+// ── FOTO INLINE PREVIEW ───────────────────────────────────
+function previewInline(input, prevId, hintId) {
+  if (input.files && input.files[0]) {
+    const reader = new FileReader();
+    reader.onload = e => {
+      const prev = document.getElementById(prevId);
+      prev.src          = e.target.result;
+      prev.style.display = 'block';
+      document.getElementById(hintId).textContent = '✅ Foto lista';
+    };
+    reader.readAsDataURL(input.files[0]);
+  }
+}
+
+// ── RENGLONES MASIVOS ─────────────────────────────────────
+let renglonCount = 0;
+
+function agregarRenglon(nombre='', desc='', precio='', cat='') {
+  renglonCount++;
+  const div = document.createElement('div');
+  div.id = 'renglon-' + renglonCount;
+  div.style.cssText = 'display:grid;grid-template-columns:2fr 3fr 1fr 1.5fr auto;';
+  div.innerHTML = `
+    <input class="renglon-input" placeholder="Nombre *" value="${nombre}"
+           onkeydown="if(event.key==='Enter'){event.preventDefault();agregarRenglon();}">
+    <input class="renglon-input" placeholder="Descripción" value="${desc}">
+    <input class="renglon-input" type="number" placeholder="Precio" value="${precio}" min="0">
+    <input class="renglon-input" placeholder="Categoría" value="${cat}" style="border-right:none;"
+           list="cats-datalist">
+    <button class="renglon-del" onclick="document.getElementById('renglon-${renglonCount}').remove()">✕</button>
+  `;
+  document.getElementById('renglones-body').appendChild(div);
+  div.querySelector('input').focus();
+}
+
+function guardarMasivo() {
+  const filas = document.querySelectorAll('#renglones-body > div');
+  const productos = [];
+  filas.forEach(f => {
+    const inputs = f.querySelectorAll('input');
+    const nombre = inputs[0].value.trim();
+    if (!nombre) return;
+    productos.push({
+      nombre,
+      descripcion: inputs[1].value.trim(),
+      precio:      parseFloat(inputs[2].value) || 0,
+      categoria:   inputs[3].value.trim(),
+    });
+  });
+  if (!productos.length) {
+    alert('Agregá al menos un producto antes de guardar.');
+    return;
+  }
+  const btn = document.getElementById('btn-guardar-masivo');
+  btn.disabled = true;
+  btn.textContent = '⏳ Guardando...';
+
+  fetch('/mi-local/carga-masiva', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ productos })
+  })
+  .then(r => r.json())
+  .then(data => {
+    if (data.ok) {
+      mostrarResultado(`✅ ${data.insertados} producto${data.insertados !== 1 ? 's' : ''} guardado${data.insertados !== 1 ? 's' : ''} correctamente.`, 'success');
+      document.getElementById('renglones-body').innerHTML = '';
+      renglonCount = 0;
+      setTimeout(() => location.reload(), 1500);
+    } else {
+      mostrarResultado('❌ ' + (data.error || 'Error al guardar.'), 'danger');
+    }
+  })
+  .catch(() => mostrarResultado('❌ Error de conexión.', 'danger'))
+  .finally(() => { btn.disabled = false; btn.textContent = '💾 Guardar todos los productos'; });
+}
+
+function cargarArchivo(input) {
+  if (!input.files[0]) return;
+  const hint = document.getElementById('hint-archivo');
+  hint.textContent = '⏳ Subiendo ' + input.files[0].name + '...';
+  const fd = new FormData();
+  fd.append('archivo', input.files[0]);
+  fetch('/mi-local/carga-masiva', { method: 'POST', body: fd })
+  .then(r => r.json())
+  .then(data => {
+    if (data.ok) {
+      mostrarResultado(`✅ ${data.insertados} producto${data.insertados !== 1 ? 's' : ''} importado${data.insertados !== 1 ? 's' : ''}.`, 'success');
+      setTimeout(() => location.reload(), 1500);
+    } else {
+      mostrarResultado('❌ ' + (data.error || 'Error al importar.'), 'danger');
+      hint.textContent = 'CSV o XLSX · Primera fila = encabezados';
+    }
+  })
+  .catch(() => mostrarResultado('❌ Error de conexión.', 'danger'));
+}
+
+function mostrarResultado(msg, tipo) {
+  const el = document.getElementById('resultado-masivo');
+  el.style.display = 'block';
+  el.className = 'alert alert-' + tipo;
+  el.textContent = msg;
+}
+
+// Inicializar con 3 renglones vacíos al abrir el tab
+document.getElementById('tab-masivo').addEventListener('click', () => {
+  if (document.getElementById('renglones-body').children.length === 0) {
+    agregarRenglon(); agregarRenglon(); agregarRenglon();
+  }
+});
 
 // Auto-ocultar alertas
 setTimeout(() => {

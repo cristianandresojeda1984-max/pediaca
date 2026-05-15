@@ -2,7 +2,7 @@ services:
   - type: web
     name: pediaca
     runtime: python
-    buildCommand: pip install -r requirements.txt
+    buildCommand: apt-get install -y fonts-dejavu-core fonts-liberation && pip install -r requirements.txt
     startCommand: bash start.sh
     envVars:
       - key: PYTHON_VERSION

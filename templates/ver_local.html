@@ -767,7 +767,7 @@
                 {% for p in prods %}
                   <div class="prod-card {{ 'has-foto' if p.foto_url else 'no-foto' }}"
                        id="pcard-{{ p.id }}"
-                       onclick="agregarAlCarrito({{ p.id }}, '{{ p.nombre|e }}', {{ p.precio }}, '{{ url_for('static', filename=p.foto_url) if p.foto_url else '' }}')">
+                       onclick="verProducto({{ p.id }}, '{{ p.nombre|e }}', {{ p.precio }}, '{{ url_for('static', filename=p.foto_url) if p.foto_url else '' }}')">
 
                     {% if p.foto_url %}
                       <div class="prod-foto-container">
@@ -825,7 +825,7 @@
             {% for p in productos %}
               <div class="prod-card {{ 'has-foto' if p.foto_url else 'no-foto' }}"
                    id="pcard-{{ p.id }}"
-                   onclick="agregarAlCarrito({{ p.id }}, '{{ p.nombre|e }}', {{ p.precio }}, '{{ url_for('static', filename=p.foto_url) if p.foto_url else '' }}')">
+                   onclick="verProducto({{ p.id }}, '{{ p.nombre|e }}', {{ p.precio }}, '{{ url_for('static', filename=p.foto_url) if p.foto_url else '' }}')">
                 {% if p.foto_url %}
                   <div class="prod-foto-container">
                     <img src="{{ url_for('static', filename=p.foto_url) }}" alt="{{ p.nombre }}" loading="lazy">
@@ -893,9 +893,23 @@
         </div>
         {% endif %}
 
+        <!-- NOMBRE OBLIGATORIO -->
+        <div style="position:relative;margin-bottom:10px;">
+          <span style="position:absolute;left:10px;top:50%;transform:translateY(-50%);pointer-events:none;">👤</span>
+          <input class="campo-dir-input" id="inputNombre" placeholder="Tu nombre *" required
+                 style="padding-left:32px;border-color:var(--naranja);">
+        </div>
+
+        <!-- TELÉFONO OPCIONAL -->
+        <div style="position:relative;margin-bottom:10px;">
+          <span style="position:absolute;left:10px;top:50%;transform:translateY(-50%);pointer-events:none;">📱</span>
+          <input class="campo-dir-input" id="inputTel" placeholder="Tu WhatsApp (opcional)"
+                 style="padding-left:32px;">
+        </div>
+
         <div class="campo-dir" id="campoDir" style="display:none;">
           <span class="campo-dir-icon">📍</span>
-          <input class="campo-dir-input" id="inputDir" placeholder="Tu dirección de entrega">
+          <input class="campo-dir-input" id="inputDir" placeholder="Dirección de entrega *">
         </div>
 
         <textarea class="notas-input" id="inputNotas"
@@ -914,6 +928,50 @@
 
 </div><!-- /main-layout -->
 
+
+<!-- MODAL SELECTOR DE GUSTOS -->
+<div class="modal-overlay" id="modal-sabores" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.55);z-index:400;align-items:flex-end;justify-content:center;">
+  <div style="background:#fff;border-radius:20px 20px 0 0;padding:24px 20px;width:100%;max-width:480px;max-height:80vh;overflow-y:auto;">
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;">
+      <img id="modal-sabores-foto" style="width:56px;height:56px;border-radius:12px;object-fit:cover;display:none;">
+      <div style="flex:1;">
+        <div id="modal-sabores-nombre" style="font-weight:800;font-size:1.05rem;"></div>
+        <div id="modal-sabores-precio" style="font-weight:900;color:var(--naranja-d);font-size:1rem;"></div>
+      </div>
+      <button onclick="cerrarModalSabores()" style="background:var(--gris-1);border:none;width:32px;height:32px;border-radius:50%;cursor:pointer;font-size:1rem;">✕</button>
+    </div>
+
+    <div id="modal-sabores-loading" style="text-align:center;padding:20px;color:var(--texto-s);">Cargando gustos...</div>
+
+    <div id="modal-sabores-content" style="display:none;">
+      <div style="font-weight:800;font-size:0.88rem;margin-bottom:10px;color:var(--texto-s);text-transform:uppercase;letter-spacing:0.4px;">
+        🍦 Elegí los gustos
+      </div>
+      <div id="sabores-lista" style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:16px;"></div>
+      <div style="font-size:0.78rem;color:var(--texto-s);margin-bottom:14px;" id="sabores-hint"></div>
+    </div>
+
+    <div id="modal-sabores-libre" style="display:none;">
+      <div style="font-weight:800;font-size:0.88rem;margin-bottom:8px;color:var(--texto-s);">✏️ Indicá los gustos en las aclaraciones</div>
+    </div>
+
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;">
+      <div style="font-size:0.82rem;font-weight:700;">Cantidad:</div>
+      <div style="display:flex;align-items:center;gap:8px;">
+        <button onclick="cambiarCantModal(-1)" style="width:30px;height:30px;border-radius:50%;border:2px solid var(--gris-2);background:none;cursor:pointer;font-size:1rem;font-weight:700;">−</button>
+        <span id="modal-cant" style="font-weight:800;font-size:1.1rem;min-width:24px;text-align:center;">1</span>
+        <button onclick="cambiarCantModal(+1)" style="width:30px;height:30px;border-radius:50%;border:2px solid var(--gris-2);background:none;cursor:pointer;font-size:1rem;font-weight:700;">+</button>
+      </div>
+    </div>
+
+    <button id="modal-sabores-agregar"
+            style="width:100%;background:var(--naranja);color:#fff;border:none;border-radius:99px;padding:14px;font-family:Nunito,sans-serif;font-weight:800;font-size:1rem;cursor:pointer;"
+            onclick="confirmarProductoModal()">
+      Agregar al pedido
+    </button>
+  </div>
+</div>
+
 <!-- FAB mobile -->
 <button class="fab-carrito" id="fabCarrito" onclick="abrirCarrito()">
   🛒 Ver pedido
@@ -931,6 +989,107 @@ const RID        = {{ restaurante.id }};
 const HACE_ENVIO = {{ 'true' if restaurante.hace_envio else 'false' }};
 let carrito     = {};   // id → { nombre, precio, cantidad, fotoUrl }
 let tipoEntrega = 'retiro';
+
+
+/* ── SELECTOR DE SABORES ──────────────────────────────── */
+let _modalProd = null;
+let _modalCant = 1;
+let _saborSeleccionados = [];
+
+async function verProducto(id, nombre, precio, fotoUrl) {
+  _modalProd = { id, nombre, precio, fotoUrl };
+  _modalCant = 1;
+  _saborSeleccionados = [];
+
+  // Resetear UI
+  document.getElementById('modal-sabores-nombre').textContent = nombre;
+  document.getElementById('modal-sabores-precio').textContent = fmt(precio);
+  document.getElementById('modal-cant').textContent = '1';
+  document.getElementById('modal-sabores-loading').style.display = '';
+  document.getElementById('modal-sabores-content').style.display = 'none';
+  document.getElementById('modal-sabores-libre').style.display = 'none';
+  const fotoEl = document.getElementById('modal-sabores-foto');
+  if (fotoUrl) { fotoEl.src = fotoUrl; fotoEl.style.display = ''; }
+  else         { fotoEl.style.display = 'none'; }
+
+  // Mostrar modal
+  const overlay = document.getElementById('modal-sabores');
+  overlay.style.display = 'flex';
+  document.body.style.overflow = 'hidden';
+
+  // Buscar sabores
+  try {
+    const res  = await fetch('/api/producto/' + id + '/sabores');
+    const data = await res.json();
+    document.getElementById('modal-sabores-loading').style.display = 'none';
+
+    if (data.sabores && data.sabores.length > 0) {
+      // Tiene sabores → mostrar selector
+      document.getElementById('modal-sabores-content').style.display = '';
+      const lista = document.getElementById('sabores-lista');
+      lista.innerHTML = data.sabores.map(s => `
+        <button class="sabor-chip" id="sc-${s.id}" data-id="${s.id}" data-nombre="${s.nombre}"
+                onclick="toggleSabor(${s.id}, '${s.nombre}')"
+                style="padding:8px 16px;border-radius:99px;border:2px solid var(--gris-2);background:var(--gris-1);font-family:Nunito,sans-serif;font-weight:700;font-size:0.85rem;cursor:pointer;transition:all 0.15s;">
+          ${s.nombre}
+        </button>
+      `).join('');
+      document.getElementById('sabores-hint').textContent = 'Podés elegir varios gustos';
+    } else {
+      // Sin sabores → agregar directo
+      agregarAlCarrito(id, nombre, precio, fotoUrl);
+      cerrarModalSabores();
+    }
+  } catch(e) {
+    document.getElementById('modal-sabores-loading').style.display = 'none';
+    agregarAlCarrito(id, nombre, precio, fotoUrl);
+    cerrarModalSabores();
+  }
+}
+
+function toggleSabor(id, nombre) {
+  const btn = document.getElementById('sc-' + id);
+  const idx = _saborSeleccionados.findIndex(s => s.id === id);
+  if (idx >= 0) {
+    _saborSeleccionados.splice(idx, 1);
+    btn.style.background    = 'var(--gris-1)';
+    btn.style.borderColor   = 'var(--gris-2)';
+    btn.style.color         = '';
+  } else {
+    _saborSeleccionados.push({ id, nombre });
+    btn.style.background    = 'var(--azul)';
+    btn.style.borderColor   = 'var(--azul)';
+    btn.style.color         = '#fff';
+  }
+}
+
+function cambiarCantModal(delta) {
+  _modalCant = Math.max(1, _modalCant + delta);
+  document.getElementById('modal-cant').textContent = _modalCant;
+}
+
+function confirmarProductoModal() {
+  if (!_modalProd) return;
+  let nombre = _modalProd.nombre;
+  if (_saborSeleccionados.length > 0) {
+    nombre += ' (' + _saborSeleccionados.map(s => s.nombre).join(', ') + ')';
+  }
+  // Agregar la cantidad indicada
+  for (let i = 0; i < _modalCant; i++) {
+    agregarAlCarrito(_modalProd.id, nombre, _modalProd.precio, _modalProd.fotoUrl);
+  }
+  cerrarModalSabores();
+}
+
+function cerrarModalSabores() {
+  document.getElementById('modal-sabores').style.display = 'none';
+  document.body.style.overflow = '';
+  _modalProd = null;
+}
+
+document.getElementById('modal-sabores').addEventListener('click', function(e) {
+  if (e.target === this) cerrarModalSabores();
+});
 
 /* ── AGREGAR ──────────────────────────────────────────── */
 function agregarAlCarrito(id, nombre, precio, fotoUrl) {
@@ -1039,8 +1198,18 @@ async function enviarPedido() {
   const ids = Object.keys(carrito);
   if (!ids.length) return;
 
-  const dir   = document.getElementById('inputDir')?.value.trim() || '';
-  const notas = document.getElementById('inputNotas')?.value.trim() || '';
+  const nombre = document.getElementById('inputNombre')?.value.trim() || '';
+  const tel    = document.getElementById('inputTel')?.value.trim() || '';
+  const dir    = document.getElementById('inputDir')?.value.trim() || '';
+  const notas  = document.getElementById('inputNotas')?.value.trim() || '';
+
+  if (!nombre) {
+    const inp = document.getElementById('inputNombre');
+    inp.style.borderColor = '#E74C3C';
+    inp.focus();
+    inp.placeholder = '⚠️ Tu nombre es obligatorio';
+    return;
+  }
 
   if (tipoEntrega === 'delivery' && HACE_ENVIO && !dir) {
     const inp = document.getElementById('inputDir');
@@ -1064,7 +1233,7 @@ async function enviarPedido() {
     const res  = await fetch('/api/whatsapp-link', {
       method:  'POST',
       headers: { 'Content-Type': 'application/json' },
-      body:    JSON.stringify({ restaurante_id: RID, items, tipo_entrega: tipoEntrega, direccion: dir, notas })
+      body:    JSON.stringify({ restaurante_id: RID, items, tipo_entrega: tipoEntrega, direccion: dir, notas, nombre_cliente: nombre, tel_cliente: tel })
     });
     const data = await res.json();
     if (data.link) {
