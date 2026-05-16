@@ -13,6 +13,17 @@ from flask import (Flask, render_template, request, redirect,
 from werkzeug.security import generate_password_hash, check_password_hash
 from werkzeug.utils import secure_filename
 
+
+# ── PUSH NOTIFICATIONS ────────────────────────────────────────────────────────
+import base64, json as _json
+from pywebpush import webpush, WebPushException
+
+VAPID_PUBLIC_KEY  = os.environ.get("VAPID_PUBLIC_KEY",  "BDnnssm4HNQJ3uY_EDUaeLr10RVDD9rANxg1Z13OnGL-PAkYM6K_OMf_30aznQofdLphWH2ab5TIwwepauKkd_I")
+VAPID_PRIVATE_KEY = os.environ.get("VAPID_PRIVATE_KEY", "LS0tLS1CRUdJTiBFQyBQUklWQVRFIEtFWS0tLS0tCk1IY0NBUUVFSUJWUldGbzY1dXhGSS9mdEk0aTVqdzBIWXZ2d2NEY0pqakRGVHVjejRFSGxvQW9HQ0NxR1NNNDkKQXdFSG9VUURRZ0FFT2VleXliZ2MxQW5lNWo4UU5ScDR1dlhSRlVNUDJzQTNHRFZuWGM2Y1l2NDhDUmd6b3I4NAp4Ly9mUnJPZENoOTB1bUZZZlpwdmxNakRCNmxxNHFSMzhnPT0KLS0tLS1FTkQgRUMgUFJJVkFURSBLRVktLS0tLQo")
+VAPID_EMAIL       = os.environ.get("VAPID_CLAIMS_EMAIL", "admin@pediaca.ar")
+
+
+
 # ── CONFIGURACIÓN ─────────────────────────────────────────────────────────────
 app = Flask(__name__)
 app.secret_key = os.environ.get("SECRET_KEY", "dev-key-cambiar-en-produccion")
@@ -21,8 +32,74 @@ DB_PATH       = os.environ.get("DB_PATH", "pediaca.db")
 UPLOAD_FOLDER = "static/uploads"
 ALLOWED_EXT   = {"png", "jpg", "jpeg", "webp"}
 
+# ── CLOUDINARY (fotos persistentes gratis) ────────────────────────────────────
+import cloudinary
+import cloudinary.uploader
+
+CLOUDINARY_CLOUD = os.environ.get("CLOUDINARY_CLOUD_NAME", "")
+CLOUDINARY_KEY   = os.environ.get("CLOUDINARY_API_KEY",    "")
+CLOUDINARY_SEC   = os.environ.get("CLOUDINARY_API_SECRET", "")
+
+if CLOUDINARY_CLOUD:
+    cloudinary.config(
+        cloud_name = CLOUDINARY_CLOUD,
+        api_key    = CLOUDINARY_KEY,
+        api_secret = CLOUDINARY_SEC,
+        secure     = True
+    )
+    USE_CLOUDINARY = True
+else:
+    USE_CLOUDINARY = False
+
 app.config["UPLOAD_FOLDER"] = UPLOAD_FOLDER
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+
+
+def _enviar_push(subscription_info, payload):
+    """Envía una notificación push a una suscripción."""
+    try:
+        # Decodificar private key de base64 a PEM si es necesario
+        pk = VAPID_PRIVATE_KEY
+        if not pk.startswith("-----"):
+            pk_bytes = base64.urlsafe_b64decode(pk + "==")
+            pk = pk_bytes.decode("utf-8")
+
+        webpush(
+            subscription_info=subscription_info,
+            data=_json.dumps(payload),
+            vapid_private_key=pk,
+            vapid_claims={"sub": "mailto:" + VAPID_EMAIL}
+        )
+        return True
+    except WebPushException as e:
+        if "410" in str(e) or "404" in str(e):
+            # Suscripción expirada, limpiar
+            execute("DELETE FROM push_subscriptions WHERE endpoint=?",
+                    (subscription_info.get("endpoint",""),))
+        return False
+    except Exception:
+        return False
+
+
+def notificar_cadetes_push(pedido_id, nombre_local, total, direccion_entrega):
+    """Envía push a todos los cadetes disponibles y aprobados."""
+    subs = query("""
+        SELECT ps.endpoint, ps.p256dh, ps.auth
+        FROM push_subscriptions ps
+        JOIN usuarios u ON u.id = ps.usuario_id
+        JOIN cadetes c ON c.usuario_id = u.id
+        WHERE c.estado = 'aprobado' AND c.disponible = 1
+    """)
+    payload = {
+        "titulo": "🛵 Nuevo pedido disponible",
+        "cuerpo": f"{nombre_local} · ${int(total)} · {direccion_entrega or 'Retiro en local'}",
+        "url":    "/mi-panel-cadete",
+    }
+    for sub in subs:
+        _enviar_push({
+            "endpoint": sub["endpoint"],
+            "keys": {"p256dh": sub["p256dh"], "auth": sub["auth"]}
+        }, payload)
 
 
 # ── BASE DE DATOS ─────────────────────────────────────────────────────────────
@@ -283,21 +360,92 @@ def get_restaurante_any():
         (session["user_id"],), one=True
     )
 
+
+@app.route("/api/vapid-public-key")
+def vapid_public_key():
+    return jsonify({"publicKey": VAPID_PUBLIC_KEY})
+
+
+@app.route("/api/push/subscribe", methods=["POST"])
+@login_required
+def push_subscribe():
+    data     = request.get_json()
+    endpoint = data.get("endpoint")
+    p256dh   = data.get("keys", {}).get("p256dh")
+    auth     = data.get("keys", {}).get("auth")
+    if not all([endpoint, p256dh, auth]):
+        return jsonify({"error": "Datos incompletos"}), 400
+    # Upsert
+    existe = query("SELECT id FROM push_subscriptions WHERE endpoint=?", (endpoint,), one=True)
+    if existe:
+        execute("UPDATE push_subscriptions SET p256dh=?, auth=?, usuario_id=? WHERE endpoint=?",
+                (p256dh, auth, session["user_id"], endpoint))
+    else:
+        execute("""INSERT INTO push_subscriptions (usuario_id, endpoint, p256dh, auth)
+                   VALUES (?,?,?,?)""", (session["user_id"], endpoint, p256dh, auth))
+    return jsonify({"ok": True})
+
+
+@app.route("/api/push/unsubscribe", methods=["POST"])
+@login_required
+def push_unsubscribe():
+    data = request.get_json()
+    execute("DELETE FROM push_subscriptions WHERE endpoint=?", (data.get("endpoint",""),))
+    return jsonify({"ok": True})
+
+
+@app.route("/static/sw.js")
+def service_worker():
+    from flask import send_from_directory
+    return send_from_directory("static", "sw.js",
+                               mimetype="application/javascript")
+
+
+
+
+
 def guardar_imagen(archivo, subcarpeta=""):
-    """Guarda un archivo subido y devuelve la ruta relativa."""
+    """Guarda imagen en Cloudinary (si está configurado) o localmente."""
     if not archivo or archivo.filename == "":
         return None
     if not allowed_file(archivo.filename):
         return None
-    filename = secure_filename(archivo.filename)
+
+    if USE_CLOUDINARY:
+        try:
+            resultado = cloudinary.uploader.upload(
+                archivo,
+                folder=f"pediaca/{subcarpeta}",
+                resource_type="image",
+                quality="auto",
+                fetch_format="auto",
+            )
+            return resultado["secure_url"]
+        except Exception as e:
+            print(f"Error Cloudinary: {e}")
+            # Fallback a local
+
+    # Almacenamiento local
     import uuid, time
+    filename = secure_filename(archivo.filename)
     ext      = filename.rsplit(".", 1)[1].lower()
     filename = f"{int(time.time())}_{uuid.uuid4().hex[:6]}.{ext}"
     destino  = os.path.join(app.config["UPLOAD_FOLDER"], subcarpeta)
     os.makedirs(destino, exist_ok=True)
-    ruta_completa = os.path.join(destino, filename)
-    archivo.save(ruta_completa)
+    archivo.save(os.path.join(destino, filename))
     return os.path.join("uploads", subcarpeta, filename).replace("\\", "/")
+
+
+def url_imagen(ruta):
+    """Devuelve la URL correcta de una imagen (Cloudinary o local)."""
+    if not ruta:
+        return None
+    if ruta.startswith("http"):
+        return ruta
+    return url_for("static", filename=ruta)
+
+
+app.jinja_env.globals["url_imagen"] = url_imagen
 
 
 @app.route("/mi-local")
@@ -342,11 +490,20 @@ def restaurante_panel():
         for s in sabores:
             sabores_map.setdefault(s["producto_id"], []).append(s)
 
+    valoraciones = query("""
+        SELECT v.*, p.nombre_cliente_anonimo
+        FROM valoraciones v
+        LEFT JOIN pedidos p ON p.id = v.pedido_id
+        WHERE v.restaurante_id = ?
+        ORDER BY v.fecha DESC
+    """, (restaurante["id"],))
+
     return render_template("restaurante_panel.html",
                            restaurante=restaurante,
                            categorias=categorias,
                            productos=productos,
-                           sabores_map=sabores_map)
+                           sabores_map=sabores_map,
+                           valoraciones=valoraciones)
 
 
 @app.route("/mi-local/editar", methods=["POST"])
@@ -857,6 +1014,42 @@ def admin_cadete_estado(cadete_id, accion):
     return redirect(url_for("admin_panel"))
 
 
+# ── MÉTRICAS PARA ADMIN/AUSPICIANTES ─────────────────────────────────────────
+
+@app.route("/admin/metricas")
+@login_required
+@rol_required("admin")
+def admin_metricas():
+    stats = {
+        "usuarios_total":      query("SELECT COUNT(*) as n FROM usuarios", one=True)["n"],
+        "clientes":            query("SELECT COUNT(*) as n FROM usuarios WHERE rol='cliente'", one=True)["n"],
+        "restaurantes_activos":query("SELECT COUNT(*) as n FROM restaurantes WHERE estado='aprobado'", one=True)["n"],
+        "cadetes_activos":     query("SELECT COUNT(*) as n FROM cadetes WHERE estado='aprobado'", one=True)["n"],
+        "pedidos_total":       query("SELECT COUNT(*) as n FROM pedidos", one=True)["n"],
+        "pedidos_hoy":         query("SELECT COUNT(*) as n FROM pedidos WHERE date(fecha_pedido)=date('now','localtime')", one=True)["n"],
+        "pedidos_semana":      query("SELECT COUNT(*) as n FROM pedidos WHERE fecha_pedido >= datetime('now','-7 days','localtime')", one=True)["n"],
+        "facturado_total":     query("SELECT COALESCE(SUM(total),0) as n FROM pedidos WHERE estado != 'cancelado'", one=True)["n"],
+    }
+    pedidos_por_dia = query("""
+        SELECT date(fecha_pedido) as dia, COUNT(*) as total
+        FROM pedidos WHERE fecha_pedido >= datetime('now','-30 days','localtime')
+        GROUP BY dia ORDER BY dia
+    """)
+    top_restaurantes = query("""
+        SELECT r.nombre_local, COUNT(p.id) as pedidos,
+               COALESCE(AVG(v.estrellas),0) as rating
+        FROM restaurantes r
+        LEFT JOIN pedidos p ON p.restaurante_id = r.id
+        LEFT JOIN valoraciones v ON v.restaurante_id = r.id
+        WHERE r.estado='aprobado'
+        GROUP BY r.id ORDER BY pedidos DESC LIMIT 10
+    """)
+    return render_template("admin_metricas.html",
+                           stats=stats,
+                           pedidos_por_dia=pedidos_por_dia,
+                           top_restaurantes=top_restaurantes)
+
+
 # ── API: GENERAR LINK DE WHATSAPP ─────────────────────────────────────────────
 
 import urllib.parse
@@ -1006,6 +1199,21 @@ def restaurante_pedidos():
                            pedidos=pedidos,
                            items_por_pedido=items_por_pedido)
 
+# ── API: PEDIDOS NUEVOS PARA RESTAURANTE (notificación en panel) ─────────────
+
+@app.route("/api/restaurante/pedidos-nuevos")
+@login_required
+@rol_required("restaurante")
+def api_restaurante_pedidos_nuevos():
+    restaurante = get_restaurante_aprobado()
+    if not restaurante:
+        return jsonify({"error": "No autorizado"}), 403
+    count = query("""
+        SELECT COUNT(*) as total FROM pedidos
+        WHERE restaurante_id = ? AND estado = 'nuevo'
+    """, (restaurante["id"],), one=True)["total"]
+    return jsonify({"nuevos": count})
+
 
 @app.route("/mi-local/pedido/<int:pedido_id>/estado/<nuevo_estado>")
 @login_required
@@ -1015,7 +1223,7 @@ def restaurante_cambiar_estado(pedido_id, nuevo_estado):
     if not restaurante:
         return redirect(url_for("restaurante_panel"))
 
-    estados_validos = ["confirmado", "cancelado"]
+    estados_validos = ["confirmado", "cancelado", "entregado"]
     if nuevo_estado not in estados_validos:
         flash("Estado inválido.", "danger")
         return redirect(url_for("restaurante_pedidos"))
@@ -1024,6 +1232,17 @@ def restaurante_cambiar_estado(pedido_id, nuevo_estado):
         UPDATE pedidos SET estado=?, fecha_actualizado=datetime('now','localtime')
         WHERE id=? AND restaurante_id=?
     """, (nuevo_estado, pedido_id, restaurante["id"]))
+
+    # Si confirman → notificar cadetes por push
+    if nuevo_estado == "confirmado":
+        pedido = query("SELECT * FROM pedidos WHERE id=?", (pedido_id,), one=True)
+        if pedido and pedido["tipo_entrega"] == "delivery":
+            notificar_cadetes_push(
+                pedido_id,
+                restaurante["nombre_local"],
+                pedido["total"],
+                pedido["direccion_entrega"]
+            )
 
     flash(f"Pedido #{pedido_id} marcado como {nuevo_estado}.", "success")
     return redirect(url_for("restaurante_pedidos"))
@@ -1073,6 +1292,39 @@ def notificar_cadetes(pedido_id):
 
     return jsonify({"cadetes": links, "pedido_id": pedido_id})
 
+
+
+@app.route("/pedido/<int:pedido_id>/en-camino", methods=["POST"])
+@login_required
+def marcar_en_camino(pedido_id):
+    """Restaurante o cadete marcan el pedido como en camino."""
+    rol = session.get("rol")
+
+    if rol == "restaurante":
+        restaurante = get_restaurante_aprobado()
+        if not restaurante:
+            return jsonify({"error": "No autorizado"}), 403
+        pedido = query("SELECT * FROM pedidos WHERE id=? AND restaurante_id=?",
+                       (pedido_id, restaurante["id"]), one=True)
+    elif rol == "cadete":
+        cadete = query("SELECT * FROM cadetes WHERE usuario_id=? AND estado='aprobado'",
+                       (session["user_id"],), one=True)
+        if not cadete:
+            return jsonify({"error": "No autorizado"}), 403
+        pedido = query("SELECT * FROM pedidos WHERE id=? AND cadete_id=?",
+                       (pedido_id, cadete["id"]), one=True)
+    else:
+        return jsonify({"error": "No autorizado"}), 403
+
+    if not pedido:
+        return jsonify({"error": "Pedido no encontrado"}), 404
+
+    execute("""
+        UPDATE pedidos SET estado='en_camino', fecha_actualizado=datetime('now','localtime')
+        WHERE id=?
+    """, (pedido_id,))
+
+    return jsonify({"ok": True})
 
 # ── CADETE: ACEPTAR PEDIDO ────────────────────────────────────────────────────
 
@@ -1351,14 +1603,6 @@ def producto_editar(prod_id):
     return redirect(url_for("restaurante_panel"))
 
 
-# ── MAIN ──────────────────────────────────────────────────────────────────────
-if __name__ == "__main__":
-    if not os.path.exists(DB_PATH):
-        print(f"⚠️  No existe '{DB_PATH}'. Ejecutá primero: python init_db.py")
-    else:
-        app.run(debug=True, port=5000)
-
-
 # ── PÁGINAS LEGALES ───────────────────────────────────────────────────────────
 
 @app.route("/terminos")
@@ -1368,6 +1612,137 @@ def terminos():
 @app.route("/privacidad")
 def privacidad():
     return render_template("privacidad.html")
+
+
+# ── TOGGLE ABIERTO/CERRADO ────────────────────────────────────────────────────
+
+@app.route("/mi-local/toggle-abierto")
+@login_required
+@rol_required("restaurante")
+def restaurante_toggle_abierto():
+    restaurante = get_restaurante_aprobado()
+    if not restaurante:
+        return redirect(url_for("restaurante_panel"))
+    execute("UPDATE restaurantes SET abierto = 1 - abierto WHERE id=?",
+            (restaurante["id"],))
+    return redirect(url_for("restaurante_panel"))
+
+
+# ── RECUPERO DE CONTRASEÑA VIA WHATSAPP ───────────────────────────────────────
+
+@app.route("/recuperar-password", methods=["GET", "POST"])
+def recuperar_password():
+    if request.method == "POST":
+        telefono = request.form.get("telefono", "").strip()
+        email    = request.form.get("email", "").strip().lower()
+
+        usuario = None
+        if telefono:
+            usuario = query("SELECT * FROM usuarios WHERE telefono=?", (telefono,), one=True)
+        if not usuario and email:
+            usuario = query("SELECT * FROM usuarios WHERE email=?", (email,), one=True)
+
+        if usuario and usuario["telefono"]:
+            import secrets
+            from datetime import datetime, timedelta
+            token  = secrets.token_urlsafe(32)
+            expira = (datetime.now() + timedelta(hours=2)).strftime("%Y-%m-%d %H:%M:%S")
+            execute("""
+                INSERT INTO password_reset_tokens (usuario_id, token, expira)
+                VALUES (?,?,?)
+            """, (usuario["id"], token, expira))
+
+            base   = request.host_url.rstrip("/")
+            link   = f"{base}/reset-password/{token}"
+            msg    = f"PediAcá · Hola {usuario['nombre']}! Para resetear tu contraseña entrá a este link (válido 2hs): {link}"
+            numero = usuario["telefono"].replace("+","").replace("-","").replace(" ","")
+            if not numero.startswith("549"):
+                numero = "549" + numero
+            wa_link = f"https://wa.me/{numero}?text={urllib.parse.quote(msg)}"
+            return render_template("recuperar_password.html",
+                                   wa_link=wa_link, usuario=usuario, enviado=True)
+        else:
+            flash("No encontramos ninguna cuenta con esos datos.", "danger")
+
+    return render_template("recuperar_password.html", enviado=False)
+
+
+@app.route("/reset-password/<token>", methods=["GET", "POST"])
+def reset_password(token):
+    registro = query("""
+        SELECT t.*, u.nombre FROM password_reset_tokens t
+        JOIN usuarios u ON u.id = t.usuario_id
+        WHERE t.token=? AND t.usado=0 AND t.expira > datetime('now','localtime')
+    """, (token,), one=True)
+
+    if not registro:
+        flash("El link expiró o ya fue usado.", "danger")
+        return redirect(url_for("login"))
+
+    if request.method == "POST":
+        from werkzeug.security import generate_password_hash
+        nueva  = request.form.get("password", "")
+        nueva2 = request.form.get("password2", "")
+        if len(nueva) < 6:
+            flash("La contraseña debe tener al menos 6 caracteres.", "danger")
+            return render_template("reset_password.html", token=token, nombre=registro["nombre"])
+        if nueva != nueva2:
+            flash("Las contraseñas no coinciden.", "danger")
+            return render_template("reset_password.html", token=token, nombre=registro["nombre"])
+
+        execute("UPDATE usuarios SET password_hash=? WHERE id=?",
+                (generate_password_hash(nueva), registro["usuario_id"]))
+        execute("UPDATE password_reset_tokens SET usado=1 WHERE token=?", (token,))
+        flash("¡Contraseña cambiada! Ya podés iniciar sesión.", "success")
+        return redirect(url_for("login"))
+
+    return render_template("reset_password.html", token=token, nombre=registro["nombre"])
+
+
+# ── VALORACIONES ──────────────────────────────────────────────────────────────
+
+@app.route("/valorar/<int:pedido_id>", methods=["POST"])
+@login_required
+def valorar_pedido(pedido_id):
+    estrellas  = int(request.form.get("estrellas", 5))
+    comentario = request.form.get("comentario", "").strip()
+
+    pedido = query("SELECT * FROM pedidos WHERE id=? AND cliente_id=? AND estado='entregado'",
+                   (pedido_id, session["user_id"]), one=True)
+    if not pedido:
+        flash("No podés valorar este pedido.", "danger")
+        return redirect(url_for("cliente_panel"))
+
+    ya_valorado = query("SELECT id FROM valoraciones WHERE pedido_id=?", (pedido_id,), one=True)
+    if ya_valorado:
+        flash("Ya valoraste este pedido.", "warning")
+        return redirect(url_for("cliente_panel"))
+
+    execute("""
+        INSERT INTO valoraciones (pedido_id, restaurante_id, cliente_id, estrellas, comentario)
+        VALUES (?,?,?,?,?)
+    """, (pedido_id, pedido["restaurante_id"], session["user_id"], estrellas, comentario))
+    flash("¡Gracias por tu valoración!", "success")
+    return redirect(url_for("cliente_panel"))
+
+
+# ── CADETE: RECHAZAR PEDIDO ───────────────────────────────────────────────────
+
+@app.route("/cadete/rechazar/<int:pedido_id>", methods=["POST"])
+@login_required
+@rol_required("cadete")
+def cadete_rechazar_pedido(pedido_id):
+    cadete = query("SELECT * FROM cadetes WHERE usuario_id=? AND estado='aprobado'",
+                   (session["user_id"],), one=True)
+    if not cadete:
+        return jsonify({"error": "No autorizado"}), 403
+    # Solo puede rechazar si lo tiene asignado
+    execute("""
+        UPDATE pedidos SET cadete_id=NULL, estado='confirmado',
+               fecha_actualizado=datetime('now','localtime')
+        WHERE id=? AND cadete_id=?
+    """, (pedido_id, cadete["id"]))
+    return jsonify({"ok": True})
 
 
 # ── SETUP INICIAL (uso único para crear admin en producción) ──────────────────
@@ -1405,3 +1780,11 @@ def setup_admin(clave_secreta):
         </a>
     </body></html>
     """, 200
+
+
+# ── MAIN ──────────────────────────────────────────────────────────────────────
+if __name__ == "__main__":
+    if not os.path.exists(DB_PATH):
+        print(f"⚠️  No existe '{DB_PATH}'. Ejecutá primero: python init_db.py")
+    else:
+        app.run(debug=True, port=5000)

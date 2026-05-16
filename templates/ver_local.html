@@ -1,5 +1,11 @@
 {% extends "base.html" %}
-{% block title %}{{ restaurante.nombre_local }} — PediAcá{% endblock %}
+{% block title %}{{ restaurante.nombre_local }} — PediAcá Rosario{% endblock %}
+{% block meta_desc %}Pedí en {{ restaurante.nombre_local }}{% if restaurante.categoria %} ({{ restaurante.categoria }}){% endif %} por WhatsApp. Sin comisiones, directo al local. {{ restaurante.descripcion or '' }}{% endblock %}
+{% block og_title %}{{ restaurante.nombre_local }} — PediAcá{% endblock %}
+{% block og_desc %}Mirá el menú de {{ restaurante.nombre_local }} y pedí directo por WhatsApp sin pagar comisiones.{% endblock %}
+{% block og_image %}{{ url_imagen(restaurante.banner_url) or url_imagen(restaurante.logo_url) or 'https://pediaca.ar/static/img/logo_pediaca.png' }}{% endblock %}
+{% block og_url %}https://pediaca.ar/local/{{ restaurante.id }}{% endblock %}
+{% block canonical %}https://pediaca.ar/local/{{ restaurante.id }}{% endblock %}
 
 {% block extra_styles %}
 
@@ -972,6 +978,37 @@
   </div>
 </div>
 
+
+<!-- TRACKER DE ESTADO DEL PEDIDO -->
+<div id="pedido-tracker" style="display:none;position:fixed;bottom:90px;left:50%;transform:translateX(-50%);z-index:250;width:calc(100% - 32px);max-width:420px;">
+  <div style="background:#1A1A2E;border-radius:16px;padding:16px 18px;box-shadow:0 8px 32px rgba(0,0,0,0.35);">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+      <span style="font-family:'Paytone One',sans-serif;color:#fff;font-size:0.95rem;">Tu pedido</span>
+      <button onclick="document.getElementById('pedido-tracker').style.display='none'"
+              style="background:rgba(255,255,255,0.1);border:none;color:#fff;width:24px;height:24px;border-radius:50%;cursor:pointer;font-size:0.8rem;">✕</button>
+    </div>
+    <div style="display:flex;justify-content:space-between;align-items:center;">
+      {% for paso, label, icon in [('nuevo','Recibido','📩'),('confirmado','Confirmado','✅'),('en_camino','En camino','🛵'),('entregado','Entregado','🎉')] %}
+        <div style="text-align:center;flex:1;" class="tracker-paso" data-estado="{{ paso }}">
+          <div style="font-size:1.4rem;opacity:0.3;transition:all 0.3s;" class="tracker-ico">{{ icon }}</div>
+          <div style="font-size:0.62rem;font-weight:700;color:rgba(255,255,255,0.4);margin-top:3px;transition:all 0.3s;" class="tracker-label">{{ label }}</div>
+        </div>
+        {% if not loop.last %}
+          <div style="height:2px;flex:0.5;background:rgba(255,255,255,0.1);border-radius:99px;margin-bottom:14px;" class="tracker-linea" data-pos="{{ loop.index }}"></div>
+        {% endif %}
+      {% endfor %}
+    </div>
+    <div id="tracker-msg" style="text-align:center;font-size:0.78rem;color:rgba(255,255,255,0.6);margin-top:8px;">Esperando confirmación del local...</div>
+  </div>
+</div>
+
+<!-- BOTÓN COMPARTIR MENÚ -->
+<div style="position:fixed;bottom:20px;right:16px;z-index:190;" id="btn-compartir-wrap">
+  <button onclick="compartirMenu()"
+          style="background:#25D366;color:#fff;border:none;border-radius:99px;padding:12px 18px;font-family:Nunito,sans-serif;font-weight:800;font-size:0.82rem;cursor:pointer;box-shadow:0 4px 16px rgba(37,211,102,0.4);display:flex;align-items:center;gap:6px;">
+    📤 Compartir menú
+  </button>
+</div>
 <!-- FAB mobile -->
 <button class="fab-carrito" id="fabCarrito" onclick="abrirCarrito()">
   🛒 Ver pedido
@@ -1238,7 +1275,9 @@ async function enviarPedido() {
     const data = await res.json();
     if (data.link) {
       window.open(data.link, '_blank');
-      // Limpiar
+      // Mostrar tracker de estado
+      mostrarTrackerPedido(data.pedido_id);
+      // Limpiar carrito
       Object.keys(carrito).forEach(id => resetProducto(id));
       carrito = {};
       renderCarrito();

@@ -1,0 +1,319 @@
+{% extends "base.html" %}
+{% block title %}Pedidos — {{ restaurante.nombre_local }}{% endblock %}
+
+{% block extra_styles %}
+.pedidos-header {
+  background: linear-gradient(135deg, #1A1A2E 0%, #0F3460 100%);
+  padding: 28px 20px 24px;
+  color: #fff;
+}
+.pedidos-header h1 {
+  font-family: 'Paytone One', sans-serif;
+  font-size: 1.5rem;
+  margin-bottom: 4px;
+}
+.pedidos-header p {
+  opacity: 0.8;
+  font-weight: 600;
+}
+.pedidos-container {
+  max-width: 1000px;
+  margin: 0 auto;
+  padding: 24px 16px 80px;
+}
+.filtros {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 20px;
+  background: var(--blanco);
+  padding: 12px 16px;
+  border-radius: 14px;
+  box-shadow: var(--sombra-s);
+}
+.filtro-btn {
+  background: var(--gris-1);
+  border: none;
+  padding: 8px 18px;
+  border-radius: 99px;
+  font-weight: 700;
+  font-size: 0.82rem;
+  cursor: pointer;
+  font-family: 'Nunito', sans-serif;
+  transition: all 0.15s;
+}
+.filtro-btn.activo {
+  background: var(--naranja);
+  color: #fff;
+}
+.pedido-card {
+  background: var(--blanco);
+  border-radius: 14px;
+  box-shadow: var(--sombra-s);
+  margin-bottom: 20px;
+  overflow: hidden;
+  border-left: 4px solid var(--naranja);
+}
+.pedido-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 14px 20px;
+  background: var(--gris-1);
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.pedido-id {
+  font-family: 'Paytone One', sans-serif;
+  font-size: 1rem;
+  color: var(--naranja-d);
+}
+.pedido-fecha {
+  font-size: 0.78rem;
+  color: var(--texto-s);
+}
+.pedido-total {
+  font-weight: 800;
+  font-size: 1.1rem;
+  color: var(--texto);
+}
+.pedido-estado {
+  padding: 4px 12px;
+  border-radius: 99px;
+  font-size: 0.72rem;
+  font-weight: 800;
+}
+.estado-nuevo      { background: #FEF3DC; color: #9A6000; }
+.estado-confirmado { background: #D5F5E3; color: #1E8449; }
+.estado-en_camino  { background: var(--azul-l); color: var(--azul-d); }
+.estado-entregado  { background: #D5F5E3; color: #1E8449; }
+.estado-cancelado  { background: #FADBD8; color: #922B21; }
+
+.pedido-cliente {
+  padding: 12px 20px 8px;
+  border-bottom: 1px solid var(--gris-1);
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+.cliente-nombre {
+  font-weight: 800;
+}
+.cliente-tel {
+  font-size: 0.82rem;
+  color: var(--texto-s);
+}
+.pedido-items {
+  padding: 12px 20px;
+}
+.item-row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.88rem;
+  padding: 6px 0;
+  border-bottom: 1px dashed var(--gris-1);
+}
+.item-nombre {
+  font-weight: 600;
+}
+.item-precio {
+  font-weight: 700;
+  color: var(--naranja-d);
+}
+.pedido-direccion {
+  padding: 8px 20px;
+  background: var(--naranja-l);
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: var(--naranja-d);
+}
+.pedido-notas {
+  padding: 8px 20px;
+  font-size: 0.82rem;
+  color: var(--texto-s);
+  font-style: italic;
+}
+.pedido-actions {
+  padding: 14px 20px;
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  border-top: 1px solid var(--gris-1);
+}
+.btn-estado {
+  padding: 8px 18px;
+  border-radius: 99px;
+  font-weight: 700;
+  font-size: 0.8rem;
+  border: none;
+  cursor: pointer;
+  font-family: 'Nunito', sans-serif;
+  transition: all 0.15s;
+  text-decoration: none;
+  display: inline-block;
+}
+.btn-confirmar  { background: #D5F5E3; color: #1E8449; }
+.btn-cancelar   { background: #FADBD8; color: #922B21; }
+.btn-entregar   { background: var(--azul-l); color: var(--azul-d); }
+.btn-entregado  { background: #D5F5E3; color: #1E8449; cursor: default; }
+.btn-cadete     { background: var(--naranja-l); color: var(--naranja-d); }
+.empty-pedidos {
+  background: var(--blanco);
+  border-radius: 14px;
+  padding: 60px 24px;
+  text-align: center;
+  color: var(--texto-s);
+}
+{% endblock %}
+
+{% block content %}
+<div class="pedidos-header">
+  <div class="pedidos-container" style="padding:0;">
+    <h1>📋 Pedidos de {{ restaurante.nombre_local }}</h1>
+    <p>Gestioná los pedidos que recibiste</p>
+  </div>
+</div>
+
+<div class="pedidos-container">
+  {% with msgs = get_flashed_messages(with_categories=true) %}
+    {% for cat, msg in msgs %}
+      <div class="alert alert-{{ cat }}" style="margin-bottom:16px;">{{ msg }}</div>
+    {% endfor %}
+  {% endwith %}
+
+  <!-- Filtros -->
+  <div class="filtros">
+    <button class="filtro-btn activo" data-filtro="todos">📋 Todos</button>
+    <button class="filtro-btn" data-filtro="nuevo">🆕 Nuevos</button>
+    <button class="filtro-btn" data-filtro="confirmado">✅ Confirmados</button>
+    <button class="filtro-btn" data-filtro="en_camino">🛵 En camino</button>
+    <button class="filtro-btn" data-filtro="entregado">🎉 Entregados</button>
+    <button class="filtro-btn" data-filtro="cancelado">❌ Cancelados</button>
+  </div>
+
+  {% if pedidos %}
+    {% for p in pedidos %}
+      <div class="pedido-card" data-estado="{{ p.estado }}">
+        <div class="pedido-card-header">
+          <span class="pedido-id">Pedido #{{ p.id }}</span>
+          <span class="pedido-fecha">{{ p.fecha_pedido[:16] }}</span>
+          <span class="pedido-total">${{ p.total|int }}</span>
+          <span class="pedido-estado estado-{{ p.estado|replace('_','-') }}">
+            {% if p.estado == 'nuevo' %}🆕 Nuevo
+            {% elif p.estado == 'confirmado' %}✅ Confirmado
+            {% elif p.estado == 'en_camino' %}🛵 En camino
+            {% elif p.estado == 'entregado' %}🎉 Entregado
+            {% elif p.estado == 'cancelado' %}❌ Cancelado
+            {% else %}{{ p.estado }}{% endif %}
+          </span>
+        </div>
+
+        <div class="pedido-cliente">
+          <span class="cliente-nombre">👤 {{ p.cliente_nombre or p.nombre_cliente_anonimo or 'Cliente anónimo' }}</span>
+          {% if p.cliente_tel %}
+            <span class="cliente-tel">📱 {{ p.cliente_tel }}</span>
+          {% endif %}
+          {% if p.telefono_cliente_anonimo %}
+            <span class="cliente-tel">📱 {{ p.telefono_cliente_anonimo }}</span>
+          {% endif %}
+          {% if p.tipo_entrega == 'delivery' and p.cadete_nombre %}
+            <span class="cliente-tel">🛵 Cadete: {{ p.cadete_nombre }} ({{ p.cadete_vehiculo or 'moto' }}) - {{ p.cadete_tel }}</span>
+          {% endif %}
+        </div>
+
+        {% if items_por_pedido.get(p.id) %}
+          <div class="pedido-items">
+            {% for item in items_por_pedido[p.id] %}
+              <div class="item-row">
+                <span class="item-nombre">{{ item.cantidad }}x {{ item.nombre_producto }}</span>
+                <span class="item-precio">${{ item.subtotal|int }}</span>
+              </div>
+            {% endfor %}
+          </div>
+        {% endif %}
+
+        {% if p.tipo_entrega == 'delivery' and p.direccion_entrega %}
+          <div class="pedido-direccion">
+            📍 {{ p.direccion_entrega }}
+          </div>
+        {% endif %}
+
+        {% if p.notas %}
+          <div class="pedido-notas">
+            💬 Notas: {{ p.notas }}
+          </div>
+        {% endif %}
+
+        <div class="pedido-actions">
+          {% if p.estado == 'nuevo' %}
+            <a href="{{ url_for('restaurante_cambiar_estado', pedido_id=p.id, nuevo_estado='confirmado') }}" class="btn-estado btn-confirmar">✅ Confirmar pedido</a>
+            <a href="{{ url_for('restaurante_cambiar_estado', pedido_id=p.id, nuevo_estado='cancelado') }}" class="btn-estado btn-cancelar">❌ Cancelar</a>
+          {% elif p.estado == 'confirmado' %}
+            {% if p.tipo_entrega == 'delivery' %}
+              <a href="#" class="btn-estado btn-cadete" onclick="notificarCadetes({{ p.id }}, this)">📢 Notificar cadetes</a>
+            {% else %}
+              <a href="{{ url_for('restaurante_cambiar_estado', pedido_id=p.id, nuevo_estado='entregado') }}" class="btn-estado btn-entregar">🎉 Marcar como entregado (retiro)</a>
+            {% endif %}
+            <a href="{{ url_for('restaurante_cambiar_estado', pedido_id=p.id, nuevo_estado='cancelado') }}" class="btn-estado btn-cancelar">❌ Cancelar</a>
+          {% elif p.estado == 'en_camino' %}
+            <span class="btn-estado btn-entregado">🛵 En camino (cadete)</span>
+            <a href="{{ url_for('restaurante_cambiar_estado', pedido_id=p.id, nuevo_estado='entregado') }}" class="btn-estado btn-entregar">🎉 Marcar entregado</a>
+          {% elif p.estado == 'entregado' %}
+            <span class="btn-estado btn-entregado">✅ Entregado</span>
+          {% elif p.estado == 'cancelado' %}
+            <span class="btn-estado btn-cancelar">❌ Cancelado</span>
+          {% endif %}
+        </div>
+      </div>
+    {% endfor %}
+  {% else %}
+    <div class="empty-pedidos">
+      <div style="font-size:3rem;margin-bottom:12px;">📭</div>
+      <h3 style="font-weight:800;">Todavía no tenés pedidos</h3>
+      <p>Cuando los clientes hagan pedidos aparecerán acá.</p>
+    </div>
+  {% endif %}
+</div>
+
+<script>
+// Filtros por estado
+const filtros = document.querySelectorAll('.filtro-btn');
+const cards = document.querySelectorAll('.pedido-card');
+filtros.forEach(btn => {
+  btn.addEventListener('click', () => {
+    filtros.forEach(b => b.classList.remove('activo'));
+    btn.classList.add('activo');
+    const filtro = btn.dataset.filtro;
+    cards.forEach(card => {
+      if (filtro === 'todos') card.style.display = '';
+      else if (card.dataset.estado === filtro) card.style.display = '';
+      else card.style.display = 'none';
+    });
+  });
+});
+
+async function notificarCadetes(pedidoId, btn) {
+  btn.disabled = true;
+  btn.textContent = '⏳ Enviando...';
+  try {
+    const res = await fetch(`/api/notificar-cadetes/${pedidoId}`);
+    const data = await res.json();
+    if (data.cadetes && data.cadetes.length) {
+      let msg = 'Cadetes disponibles:\n';
+      data.cadetes.forEach(c => {
+        msg += `\n${c.nombre} (${c.vehiculo}): ${c.link}`;
+      });
+      alert(msg);
+    } else {
+      alert('No hay cadetes disponibles en este momento.');
+    }
+  } catch(e) {
+    alert('Error al notificar cadetes.');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = '📢 Notificar cadetes';
+  }
+}
+</script>
+{% endblock %}

@@ -78,10 +78,45 @@ body {
   white-space: nowrap;
   transition: all 0.2s;
   user-select: none;
+  text-decoration: none;
+  background: none;
+  border-top: none;
+  border-left: none;
+  border-right: none;
+  font-family: inherit;
 }
 .nav-tab.activo {
   color: var(--rojo);
   border-bottom-color: var(--rojo);
+}
+
+/* Badge para pedidos nuevos */
+.pedidos-badge {
+  background-color: #e74c3c;
+  color: white;
+  border-radius: 99px;
+  padding: 2px 8px;
+  font-size: 0.7rem;
+  font-weight: 800;
+  margin-left: 6px;
+  display: inline-block;
+  animation: pulse 1s infinite;
+}
+@keyframes pulse {
+  0% { opacity: 0.6; transform: scale(0.9); }
+  50% { opacity: 1; transform: scale(1.1); background-color: #c0392b; }
+  100% { opacity: 0.6; transform: scale(0.9); }
+}
+/* Parpadeo para la pestaña cuando hay pedidos nuevos */
+.nav-tab.notify {
+  animation: blinkTab 1s ease-in-out infinite;
+  background-color: rgba(231, 76, 60, 0.1);
+  border-radius: 12px;
+}
+@keyframes blinkTab {
+  0% { color: #e74c3c; }
+  50% { color: #c0392b; background-color: rgba(231, 76, 60, 0.2); }
+  100% { color: #e74c3c; }
 }
 
 /* ── LAYOUT PRINCIPAL ──────────────────────────────────────── */
@@ -403,7 +438,7 @@ select.form-control { appearance: none; cursor: pointer; }
   font-weight:700; font-size:0.83rem; cursor:pointer;
   color:var(--gris-3); transition:all 0.15s;
 }
-.menu-tab.activo { background:var(--blanco); color:var(--rojo); box-shadow:var(--sombra-s); }
+.menu-tab.activo { background:var(--blanco); color:var(--rojo); box-shadow:var(--sombra); }
 
 /* ── FOTO INLINE ─────────────────────────────────────────── */
 .foto-inline-wrap {
@@ -429,7 +464,6 @@ select.form-control { appearance: none; cursor: pointer; }
   font-size:0.9rem; width:36px;
 }
 .renglon-del:hover { color:var(--rojo); background:#FADBD8; }
-
 </style>
 </head>
 <body>
@@ -443,14 +477,17 @@ select.form-control { appearance: none; cursor: pointer; }
   <a href="{{ url_for('logout') }}" class="header-logout">Salir</a>
 </div>
 
-<!-- NAV TABS -->
+<!-- NAV TABS (modificado: agregado badge y id a la pestaña Pedidos) -->
 <div class="nav-tabs">
   <div class="nav-tab activo" onclick="mostrarSeccion('inicio')">📊 Inicio</div>
   <div class="nav-tab" onclick="mostrarSeccion('perfil')">🏪 Mi Local</div>
   <div class="nav-tab" onclick="mostrarSeccion('fotos')">📷 Fotos</div>
   <div class="nav-tab" onclick="mostrarSeccion('menu')">🍕 Menú</div>
   <div class="nav-tab" onclick="mostrarSeccion('promociones')">🎉 Promociones</div>
-  <a class="nav-tab" href="/mi-local/pedidos" style="text-decoration:none;">📋 Pedidos</a>
+  <a class="nav-tab" href="/mi-local/pedidos" id="tab-pedidos" style="text-decoration:none;">
+    📋 Pedidos <span id="pedidos-badge" class="pedidos-badge" style="display:none;">0</span>
+  </a>
+  <div class="nav-tab" onclick="mostrarSeccion('valoraciones')">⭐ Valoraciones</div>
 </div>
 
 <div class="container">
@@ -506,14 +543,39 @@ select.form-control { appearance: none; cursor: pointer; }
       {% endif %}
     </div>
 
+    <!-- Toggle abierto/cerrado -->
+    <div class="card" style="border-left:4px solid {{ 'var(--verde)' if restaurante.abierto else 'var(--rojo)' }};">
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;">
+        <div>
+          <div style="font-weight:800;font-size:0.95rem;">
+            {{ '🟢 Estamos abiertos' if restaurante.abierto else '🔴 Estamos cerrados' }}
+          </div>
+          <div style="font-size:0.78rem;color:var(--gris-3);margin-top:2px;">
+            {{ 'Los clientes pueden hacer pedidos' if restaurante.abierto else 'No aparecés como disponible' }}
+          </div>
+        </div>
+        <a href="{{ url_for('restaurante_toggle_abierto') }}"
+           style="background:{{ 'var(--verde)' if restaurante.abierto else 'var(--rojo)' }};color:#fff;padding:8px 18px;border-radius:99px;text-decoration:none;font-weight:800;font-size:0.82rem;flex-shrink:0;">
+          {{ 'Cerrar local' if restaurante.abierto else 'Abrir local' }}
+        </a>
+      </div>
+    </div>
+
     <div class="card">
       <div class="card-titulo">🔗 Tu link de menú</div>
       <div style="background:#f4f6f9; padding:12px; border-radius:8px; font-family:monospace; font-size:0.85rem; word-break:break-all;">
         pediaca.ar/local/{{ restaurante.id }}
       </div>
-      <button class="btn btn-outline btn-sm" style="margin-top:10px;" onclick="copiarLink()">
-        📋 Copiar link
-      </button>
+      <div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap;">
+        <button class="btn btn-outline btn-sm" onclick="copiarLink()">
+          📋 Copiar link
+        </button>
+        <a class="btn btn-success btn-sm"
+           href="https://wa.me/?text={{ ('🍽️ Mirá nuestro menú en PediAcá y pedí directo por WhatsApp: https://pediaca.ar/local/' ~ restaurante.id)|urlencode }}"
+           target="_blank">
+          📤 Compartir por WA
+        </a>
+      </div>
     </div>
 
     <div class="card">
@@ -903,7 +965,7 @@ select.form-control { appearance: none; cursor: pointer; }
     </div>
 
     <!-- Lista de promociones -->
-    {% if promociones %}
+    {% if promociones is defined and promociones %}
       {% for promo in promociones %}
         <div class="promo-card {{ '' if promo.activa else 'inactiva' }}">
           {% if promo.imagen_url %}
@@ -954,7 +1016,67 @@ select.form-control { appearance: none; cursor: pointer; }
       </div>
     {% endif %}
 
+
   </div><!-- /promociones -->
+
+  <!-- ══ VALORACIONES ════════════════════════════════════ -->
+  <div class="seccion" id="sec-valoraciones">
+
+    {% if valoraciones %}
+      <div style="display:flex;align-items:center;gap:12px;background:var(--blanco);border-radius:12px;padding:16px 20px;box-shadow:var(--sombra-s);margin-bottom:16px;">
+        <div style="text-align:center;">
+          <div style="font-family:'Paytone One',sans-serif;font-size:2.2rem;color:var(--naranja-d);">
+            {{ "%.1f"|format(valoraciones|map(attribute='estrellas')|sum / valoraciones|length) }}
+          </div>
+          <div style="font-size:1.2rem;color:var(--naranja);">
+            {% set avg = (valoraciones|map(attribute='estrellas')|sum / valoraciones|length)|int %}
+            {% for i in range(avg) %}★{% endfor %}{% for i in range(5-avg) %}☆{% endfor %}
+          </div>
+          <div style="font-size:0.75rem;color:var(--gris-3);font-weight:700;">{{ valoraciones|length }} opinión{{ 'es' if valoraciones|length != 1 else '' }}</div>
+        </div>
+        <div style="flex:1;">
+          {% for n in [5,4,3,2,1] %}
+            {% set cant = valoraciones|selectattr('estrellas','equalto',n)|list|length %}
+            {% set pct  = (cant / valoraciones|length * 100)|int if valoraciones else 0 %}
+            <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;">
+              <span style="font-size:0.72rem;font-weight:700;width:12px;">{{ n }}</span>
+              <span style="font-size:0.7rem;">★</span>
+              <div style="flex:1;background:var(--gris-1);border-radius:99px;height:8px;overflow:hidden;">
+                <div style="width:{{ pct }}%;height:100%;background:var(--naranja);border-radius:99px;"></div>
+              </div>
+              <span style="font-size:0.7rem;color:var(--gris-3);width:20px;">{{ cant }}</span>
+            </div>
+          {% endfor %}
+        </div>
+      </div>
+
+      {% for v in valoraciones %}
+        <div class="card" style="margin-bottom:10px;">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
+            <div style="color:var(--naranja);font-size:1.1rem;">
+              {% for i in range(v.estrellas) %}★{% endfor %}{% for i in range(5-v.estrellas) %}☆{% endfor %}
+            </div>
+            <div style="font-size:0.75rem;color:var(--gris-3);">{{ v.fecha[:10] }}</div>
+          </div>
+          {% if v.comentario %}
+            <p style="font-size:0.88rem;color:var(--texto-s);line-height:1.5;">{{ v.comentario }}</p>
+          {% else %}
+            <p style="font-size:0.82rem;color:var(--gris-3);font-style:italic;">Sin comentario</p>
+          {% endif %}
+        </div>
+      {% endfor %}
+
+    {% else %}
+      <div class="empty">
+        <div class="empty-icon">⭐</div>
+        <p style="font-weight:700;color:var(--texto);">Todavía no tenés valoraciones</p>
+        <p style="font-size:0.82rem;color:var(--gris-3);margin-top:4px;">Cuando tus clientes califiquen sus pedidos van a aparecer acá.</p>
+      </div>
+    {% endif %}
+
+  </div><!-- /valoraciones -->
+
+
 
 </div><!-- /container -->
 
@@ -1232,7 +1354,42 @@ setTimeout(() => {
     setTimeout(() => a.remove(), 500);
   });
 }, 3500);
-</script>
 
+// ── NOTIFICACIÓN DE PEDIDOS NUEVOS (polling cada 10s) ─────
+let pollingRestaurante = null;
+
+function actualizarPedidosNuevos() {
+  fetch('/api/restaurante/pedidos-nuevos')
+    .then(res => res.json())
+    .then(data => {
+      const badge = document.getElementById('pedidos-badge');
+      const tab = document.getElementById('tab-pedidos');
+      if (data.nuevos > 0) {
+        badge.textContent = data.nuevos;
+        badge.style.display = 'inline-block';
+        tab.classList.add('notify');
+        // Opcional: cambiar título de la pestaña del navegador
+        if (document.title.indexOf('🔔') === -1) {
+          document.title = '🔔 ' + document.title;
+        }
+      } else {
+        badge.style.display = 'none';
+        tab.classList.remove('notify');
+        if (document.title.indexOf('🔔') !== -1) {
+          document.title = document.title.replace('🔔 ', '');
+        }
+      }
+    })
+    .catch(err => console.error('Error polling pedidos restaurante:', err));
+}
+
+{% if session.rol == 'restaurante' and restaurante and restaurante.estado == 'aprobado' %}
+  actualizarPedidosNuevos();
+  pollingRestaurante = setInterval(actualizarPedidosNuevos, 10000);
+  window.addEventListener('beforeunload', function() {
+    if (pollingRestaurante) clearInterval(pollingRestaurante);
+  });
+{% endif %}
+</script>
 </body>
 </html>

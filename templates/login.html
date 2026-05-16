@@ -123,6 +123,9 @@
       <button class="btn-auth" type="submit">Ingresar →</button>
     </form>
 
+    <div class="auth-footer" style="margin-top:12px;">
+   <a href="{{ url_for('cliente_cambiar_password') }}" style="color:var(--gris-3);font-size:0.82rem;">¿Olvidaste tu contraseña?</a>
+    </div>
     <div class="auth-footer">
       ¿Todavía no tenés cuenta?
       <a href="{{ url_for('registro') }}">Registrate gratis</a>

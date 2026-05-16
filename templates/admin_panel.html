@@ -353,6 +353,10 @@
     </button>
 
     <div class="sidebar-label">Sistema</div>
+    <button class="sidebar-link" onclick="mostrar('solicitudes')">
+      <span class="sidebar-icon">📊</span> Métricas
+      <a href="{{ url_for('admin_metricas') }}" target="_blank" style="margin-left:auto;font-size:0.7rem;opacity:0.6;">↗</a>
+    </button>
     <a class="sidebar-link" href="{{ url_for('home') }}" target="_blank">
       <span class="sidebar-icon">🌐</span> Ver sitio
     </a>

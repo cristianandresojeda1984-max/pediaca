@@ -409,7 +409,13 @@
             {% else %}
               <span></span>
             {% endif %}
-            <span class="local-footer-ver">Ver menú →</span>
+            <span class="local-footer-ver">
+              {% if not r.abierto %}
+                <span style="background:#FADBD8;color:#922B21;font-size:0.72rem;padding:3px 10px;border-radius:99px;font-weight:800;">Cerrado</span>
+              {% else %}
+                Ver menú →
+              {% endif %}
+            </span>
           </div>
 
         </a>

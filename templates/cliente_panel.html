@@ -331,11 +331,38 @@
             </span>
           </div>
 
-          <!-- Repetir pedido: va al menú del mismo local -->
-          <a class="btn-repetir"
-             href="{{ url_for('ver_local', restaurante_id=p.restaurante_id) }}">
-            🔄 Volver a pedir acá
-          </a>
+          <!-- Repetir + valorar -->
+          <div style="display:flex;gap:8px;margin:0 16px 14px;">
+            <a class="btn-repetir" style="flex:1;"
+               href="{{ url_for('ver_local', restaurante_id=p.restaurante_id) }}">
+              🔄 Volver a pedir
+            </a>
+            {% if p.estado == 'entregado' %}
+              <button class="btn-repetir" style="flex:none;padding:10px 14px;"
+                      onclick="document.getElementById('form-val-{{ p.id }}').style.display = document.getElementById('form-val-{{ p.id }}').style.display === 'none' ? 'block' : 'none'">
+                ⭐ Valorar
+              </button>
+            {% endif %}
+          </div>
+          {% if p.estado == 'entregado' %}
+            <div id="form-val-{{ p.id }}" style="display:none;padding:0 16px 14px;">
+              <form method="POST" action="{{ url_for('valorar_pedido', pedido_id=p.id) }}">
+                <div style="display:flex;gap:6px;margin-bottom:8px;" id="stars-{{ p.id }}">
+                  {% for i in [1,2,3,4,5] %}
+                    <button type="button" onclick="setStar({{ p.id }}, {{ i }})"
+                            id="star-{{ p.id }}-{{ i }}"
+                            style="font-size:1.4rem;background:none;border:none;cursor:pointer;opacity:0.3;transition:all 0.1s;">⭐</button>
+                  {% endfor %}
+                </div>
+                <input type="hidden" name="estrellas" id="inp-star-{{ p.id }}" value="5">
+                <textarea name="comentario" placeholder="Comentario opcional..."
+                          style="width:100%;padding:8px 12px;border:2px solid var(--gris-2);border-radius:8px;font-family:Nunito,sans-serif;font-size:0.85rem;resize:none;height:52px;outline:none;margin-bottom:8px;"></textarea>
+                <button type="submit" style="width:100%;background:var(--naranja);color:#fff;border:none;border-radius:99px;padding:10px;font-family:Nunito,sans-serif;font-weight:800;font-size:0.85rem;cursor:pointer;">
+                  Enviar valoración
+                </button>
+              </form>
+            </div>
+          {% endif %}
         </div>
       {% endfor %}
 
@@ -447,6 +474,21 @@
 
 {% block extra_scripts %}
 <script>
+function setStar(pedidoId, val) {
+  document.getElementById('inp-star-' + pedidoId).value = val;
+  for (let i = 1; i <= 5; i++) {
+    const btn = document.getElementById('star-' + pedidoId + '-' + i);
+    btn.style.opacity = i <= val ? '1' : '0.3';
+  }
+}
+// Inicializar todas con 5 estrellas
+document.addEventListener('DOMContentLoaded', () => {
+  document.querySelectorAll('[id^="stars-"]').forEach(div => {
+    const id = div.id.replace('stars-', '');
+    setStar(id, 5);
+  });
+});
+
 function mostrar(nombre, btn) {
   document.querySelectorAll('.seccion').forEach(s => s.classList.remove('activo'));
   document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('activo'));

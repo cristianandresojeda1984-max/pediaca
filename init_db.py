@@ -1,6 +1,6 @@
 """
-PediAcá — Inicialización de Base de Datos
-Ejecutar una sola vez para crear todas las tablas.
+PediAcá — Inicialización de Base de Datos (versión completa)
+Ejecutar una sola vez para crear todas las tablas necesarias.
 """
 
 import sqlite3
@@ -46,7 +46,7 @@ def init_db():
         )
     """)
 
-    # ── RESTAURANTES ──────────────────────────────────────────────────────────
+    # ── RESTAURANTES (incluye columna 'abierto') ──────────────────────────────
     cur.execute("""
         CREATE TABLE restaurantes (
             id              INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -62,6 +62,7 @@ def init_db():
             hace_envio      INTEGER NOT NULL DEFAULT 0,
             costo_envio     REAL NOT NULL DEFAULT 0,
             tiempo_estimado INTEGER,
+            abierto         INTEGER NOT NULL DEFAULT 1,
             estado          TEXT NOT NULL DEFAULT 'pendiente'
                             CHECK(estado IN ('pendiente','aprobado','suspendido')),
             fecha_alta      TEXT NOT NULL DEFAULT (datetime('now','localtime'))
@@ -157,6 +158,7 @@ def init_db():
         )
     """)
 
+    # ── SABORES PRODUCTO ──────────────────────────────────────────────────────
     cur.execute("""
         CREATE TABLE IF NOT EXISTS sabores_producto (
             id          INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -167,14 +169,68 @@ def init_db():
         )
     """)
 
+    # ── PROMOCIONES ───────────────────────────────────────────────────────────
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS promociones (
+            id              INTEGER PRIMARY KEY AUTOINCREMENT,
+            restaurante_id  INTEGER NOT NULL REFERENCES restaurantes(id),
+            titulo          TEXT NOT NULL,
+            descripcion     TEXT,
+            imagen_url      TEXT,
+            descuento_pct   INTEGER DEFAULT 0,
+            activa          INTEGER NOT NULL DEFAULT 1,
+            fecha_inicio    TEXT,
+            fecha_fin       TEXT,
+            fecha_creacion  TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+        )
+    """)
+
+    # ── TOKENS PARA RECUPERAR CONTRASEÑA ──────────────────────────────────────
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS password_reset_tokens (
+            id         INTEGER PRIMARY KEY AUTOINCREMENT,
+            usuario_id INTEGER NOT NULL REFERENCES usuarios(id),
+            token      TEXT NOT NULL UNIQUE,
+            expira     TEXT NOT NULL,
+            usado      INTEGER NOT NULL DEFAULT 0
+        )
+    """)
+
+    # ── VALORACIONES DE CLIENTES ──────────────────────────────────────────────
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS valoraciones (
+            id             INTEGER PRIMARY KEY AUTOINCREMENT,
+            pedido_id      INTEGER NOT NULL UNIQUE REFERENCES pedidos(id),
+            restaurante_id INTEGER NOT NULL REFERENCES restaurantes(id),
+            cliente_id     INTEGER REFERENCES usuarios(id),
+            estrellas      INTEGER NOT NULL CHECK(estrellas BETWEEN 1 AND 5),
+            comentario     TEXT,
+            fecha          TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+        )
+    """)
+
+    # ── SUSCRIPCIONES A NOTIFICACIONES PUSH ───────────────────────────────────
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS push_subscriptions (
+            id          INTEGER PRIMARY KEY AUTOINCREMENT,
+            usuario_id  INTEGER NOT NULL REFERENCES usuarios(id),
+            endpoint    TEXT NOT NULL UNIQUE,
+            p256dh      TEXT NOT NULL,
+            auth        TEXT NOT NULL,
+            fecha_creacion TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+        )
+    """)
+
     conn.commit()
     conn.close()
     print(f"✅ Base de datos '{DB_PATH}' creada con todas las tablas.")
     print("\nTablas creadas:")
     tablas = [
-        "  • usuarios", "  • clientes", "  • restaurantes",
+        "  • usuarios", "  • clientes", "  • restaurantes (con columna 'abierto')",
         "  • categorias_menu", "  • productos", "  • cadetes",
-        "  • pedidos", "  • items_pedido", "  • auspiciantes"
+        "  • pedidos", "  • items_pedido", "  • auspiciantes",
+        "  • sabores_producto", "  • promociones", "  • password_reset_tokens",
+        "  • valoraciones", "  • push_subscriptions"
     ]
     for t in tablas:
         print(t)

@@ -1,0 +1,167 @@
+{% extends "base.html" %}
+{% block title %}Métricas — Admin PediAcá{% endblock %}
+
+{% block extra_styles %}
+.metricas-page { max-width: 860px; margin: 0 auto; padding: 24px 16px 80px; }
+.page-header   { background:linear-gradient(135deg,#1A1A2E,#0F3460); padding:20px; display:flex; align-items:center; gap:14px; margin-bottom:0; }
+.page-header h1{ font-family:'Paytone One',sans-serif; color:#fff; font-size:1.2rem; }
+.back-btn      { background:rgba(255,255,255,0.12); border:none; color:#fff; padding:8px 16px; border-radius:99px; font-weight:700; font-size:0.82rem; cursor:pointer; text-decoration:none; font-family:'Nunito',sans-serif; margin-left:auto; }
+
+.stats-grid { display:grid; grid-template-columns:repeat(2,1fr); gap:14px; margin-bottom:20px; }
+@media(min-width:600px){ .stats-grid{ grid-template-columns:repeat(4,1fr); } }
+.stat-card  { background:#fff; border-radius:14px; padding:18px 16px; box-shadow:var(--sombra-s); position:relative; overflow:hidden; }
+.stat-card::before { content:''; position:absolute; top:0; left:0; right:0; height:3px; }
+.sc-naranja::before{ background:var(--naranja); }
+.sc-azul::before   { background:var(--azul); }
+.sc-verde::before  { background:var(--verde); }
+.sc-rojo::before   { background:var(--rojo); }
+.stat-num   { font-family:'Paytone One',sans-serif; font-size:1.8rem; line-height:1; }
+.stat-label { font-size:0.75rem; font-weight:700; color:var(--texto-s); margin-top:4px; }
+.stat-ico   { position:absolute; right:12px; top:12px; font-size:1.5rem; opacity:0.12; }
+
+.card { background:#fff; border-radius:14px; padding:20px; box-shadow:var(--sombra-s); margin-bottom:16px; }
+.card-titulo { font-family:'Paytone One',sans-serif; font-size:1rem; margin-bottom:16px; }
+
+/* Gráfico de barras simple */
+.bar-chart { display:flex; flex-direction:column; gap:6px; }
+.bar-row   { display:flex; align-items:center; gap:10px; }
+.bar-label { font-size:0.72rem; font-weight:700; color:var(--texto-s); width:70px; flex-shrink:0; text-align:right; }
+.bar-wrap  { flex:1; background:var(--gris-1); border-radius:99px; height:22px; overflow:hidden; }
+.bar-fill  { height:100%; background:linear-gradient(90deg, var(--naranja), var(--naranja-d)); border-radius:99px; transition:width 0.6s ease; display:flex; align-items:center; justify-content:flex-end; padding-right:8px; }
+.bar-val   { font-size:0.72rem; font-weight:800; color:#fff; }
+
+.tabla     { width:100%; border-collapse:collapse; }
+.tabla th  { background:var(--gris-1); padding:10px 12px; text-align:left; font-size:0.73rem; font-weight:800; text-transform:uppercase; letter-spacing:0.4px; color:var(--texto-s); }
+.tabla td  { padding:10px 12px; border-top:1px solid var(--gris-1); font-size:0.85rem; font-weight:600; }
+.tabla tr:hover td { background:var(--gris-1); }
+
+.estrellas { color:#F39C12; letter-spacing:1px; }
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div style="flex:1;">
+    <h1>📊 Métricas de PediAcá</h1>
+  </div>
+  <a href="{{ url_for('admin_panel') }}" class="back-btn">← Admin</a>
+</div>
+
+<div class="metricas-page">
+
+  <!-- STATS PRINCIPALES -->
+  <div class="stats-grid" style="margin-top:20px;">
+    <div class="stat-card sc-naranja">
+      <div class="stat-num">{{ stats.clientes }}</div>
+      <div class="stat-label">Clientes registrados</div>
+      <div class="stat-ico">👥</div>
+    </div>
+    <div class="stat-card sc-azul">
+      <div class="stat-num">{{ stats.restaurantes_activos }}</div>
+      <div class="stat-label">Locales activos</div>
+      <div class="stat-ico">🏪</div>
+    </div>
+    <div class="stat-card sc-verde">
+      <div class="stat-num">{{ stats.pedidos_total }}</div>
+      <div class="stat-label">Pedidos totales</div>
+      <div class="stat-ico">📋</div>
+    </div>
+    <div class="stat-card sc-rojo">
+      <div class="stat-num">{{ stats.pedidos_hoy }}</div>
+      <div class="stat-label">Pedidos hoy</div>
+      <div class="stat-ico">🔥</div>
+    </div>
+  </div>
+
+  <div class="stats-grid">
+    <div class="stat-card sc-naranja">
+      <div class="stat-num">{{ stats.pedidos_semana }}</div>
+      <div class="stat-label">Pedidos esta semana</div>
+    </div>
+    <div class="stat-card sc-verde">
+      <div class="stat-num">${{ stats.facturado_total|int }}</div>
+      <div class="stat-label">Facturado total</div>
+    </div>
+    <div class="stat-card sc-azul">
+      <div class="stat-num">{{ stats.cadetes_activos }}</div>
+      <div class="stat-label">Cadetes activos</div>
+    </div>
+    <div class="stat-card sc-rojo">
+      <div class="stat-num">{{ stats.usuarios_total }}</div>
+      <div class="stat-label">Usuarios totales</div>
+    </div>
+  </div>
+
+  <!-- PEDIDOS ÚLTIMOS 30 DÍAS -->
+  {% if pedidos_por_dia %}
+  <div class="card">
+    <div class="card-titulo">📈 Pedidos últimos 30 días</div>
+    {% set max_p = pedidos_por_dia|map(attribute='total')|max %}
+    <div class="bar-chart">
+      {% for dia in pedidos_por_dia %}
+        <div class="bar-row">
+          <div class="bar-label">{{ dia.dia[5:] }}</div>
+          <div class="bar-wrap">
+            <div class="bar-fill" style="width:{{ (dia.total / max_p * 100)|int }}%">
+              {% if dia.total > 2 %}<span class="bar-val">{{ dia.total }}</span>{% endif %}
+            </div>
+          </div>
+          {% if dia.total <= 2 %}
+            <span style="font-size:0.72rem;font-weight:800;color:var(--texto-s);">{{ dia.total }}</span>
+          {% endif %}
+        </div>
+      {% endfor %}
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- TOP RESTAURANTES -->
+  {% if top_restaurantes %}
+  <div class="card">
+    <div class="card-titulo">🏆 Top locales</div>
+    <table class="tabla">
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Local</th>
+          <th>Pedidos</th>
+          <th>Rating</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for r in top_restaurantes %}
+          <tr>
+            <td style="color:var(--texto-s);">{{ loop.index }}</td>
+            <td style="font-weight:800;">{{ r.nombre_local }}</td>
+            <td>{{ r.pedidos }}</td>
+            <td>
+              {% if r.rating > 0 %}
+                <span class="estrellas">
+                  {% for i in range(r.rating|int) %}★{% endfor %}
+                  {% for i in range(5 - r.rating|int) %}☆{% endfor %}
+                </span>
+                <span style="font-size:0.78rem;color:var(--texto-s);">{{ "%.1f"|format(r.rating) }}</span>
+              {% else %}
+                <span style="color:var(--texto-s);font-size:0.82rem;">Sin valoraciones</span>
+              {% endif %}
+            </td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% endif %}
+
+  <!-- INFO PARA AUSPICIANTES -->
+  <div class="card" style="border-left:4px solid var(--naranja);">
+    <div class="card-titulo">💼 Resumen para auspiciantes</div>
+    <p style="font-size:0.88rem;color:var(--texto-s);line-height:1.7;">
+      PediAcá cuenta con <strong>{{ stats.clientes }} clientes registrados</strong>
+      en Rosario, <strong>{{ stats.restaurantes_activos }} locales gastronómicos activos</strong>
+      y un total de <strong>{{ stats.pedidos_total }} pedidos procesados</strong>.
+      En los últimos 7 días se generaron <strong>{{ stats.pedidos_semana }} pedidos</strong>.
+      Su marca puede estar presente en todas las pantallas de esta plataforma.
+    </p>
+  </div>
+
+</div>
+{% endblock %}
