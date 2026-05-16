@@ -272,7 +272,6 @@
 .prod-card:hover { background: #FDFAF3; }
 .prod-card:active { background: #FEF3DC; }
 
-/* Card con foto grande (cuando hay imagen) */
 .prod-card.has-foto {
   /* foto arriba */
 }
@@ -296,7 +295,6 @@
   background: linear-gradient(to top, rgba(0,0,0,0.3) 0%, transparent 50%);
 }
 
-/* Card sin foto: layout horizontal */
 .prod-card.no-foto {
   flex-direction: row;
   align-items: center;
@@ -400,7 +398,6 @@
   .carrito-wrap { position: sticky; top: 80px; max-height: calc(100vh - 100px); display: flex; flex-direction: column; }
 }
 
-/* Drawer mobile */
 @media (max-width: 819px) {
   .carrito-wrap {
     position: fixed;
@@ -455,7 +452,6 @@
 .carrito-vacio h4 { font-weight: 800; color: var(--texto); margin-bottom: 4px; }
 .carrito-vacio p  { font-size: 0.82rem; color: var(--texto-s); }
 
-/* Items */
 .carrito-items { padding: 8px 0; }
 .ci {
   display: flex;
@@ -504,7 +500,6 @@
 .ci-btn:hover { border-color: var(--naranja); color: var(--naranja); background: var(--naranja-l); }
 .ci-cant { font-weight: 800; font-size: 0.9rem; min-width: 18px; text-align: center; }
 
-/* Footer carrito */
 .carrito-footer {
   padding: 16px 20px 20px;
   border-top: 2px solid var(--gris-1);
@@ -520,7 +515,6 @@
 .total-label { font-weight: 700; color: var(--texto-s); font-size: 0.9rem; }
 .total-valor { font-family: 'Paytone One', sans-serif; font-size: 1.3rem; color: var(--naranja-d); }
 
-/* Entrega toggle */
 .entrega-toggle {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -611,7 +605,6 @@
 .wa-btn:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(37,211,102,0.5); }
 .wa-btn:disabled { background: var(--gris-2); color: var(--gris-3); box-shadow: none; transform: none; }
 
-/* ── FAB MOBILE ──────────────────────────────────────────── */
 .fab-carrito {
   position: fixed;
   bottom: 20px;
@@ -645,7 +638,6 @@
 }
 @media (min-width: 820px) { .fab-carrito { display: none !important; } }
 
-/* ── OVERLAY ─────────────────────────────────────────────── */
 .overlay {
   display: none;
   position: fixed;
@@ -656,13 +648,32 @@
 }
 .overlay.visible { display: block; }
 
-/* ── EMPTY MENU ──────────────────────────────────────────── */
 .menu-vacio {
   padding: 80px 20px;
   text-align: center;
   color: var(--texto-s);
 }
 .menu-vacio-emoji { font-size: 4rem; margin-bottom: 16px; }
+
+.toast-msg {
+  position: fixed;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #1a1a2e;
+  color: #fff;
+  padding: 10px 20px;
+  border-radius: 99px;
+  font-weight: 700;
+  font-size: 0.85rem;
+  z-index: 400;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.3);
+  animation: fadeInUp 0.3s ease;
+}
+@keyframes fadeInUp {
+  from { opacity:0; transform: translateX(-50%) translateY(20px); }
+  to   { opacity:1; transform: translateX(-50%) translateY(0); }
+}
 {% endblock %}
 
 {% block content %}
@@ -731,7 +742,7 @@
 
 <div class="main-layout">
 
-  <!-- ── COLUMNA MENÚ ─────────────────────────────────────── -->
+  <!-- COLUMNA MENÚ -->
   <div>
 
     <!-- PROMOCIONES -->
@@ -870,7 +881,7 @@
     <div style="height: 100px;"></div>
   </div>
 
-  <!-- ── CARRITO ─────────────────────────────────────────── -->
+  <!-- CARRITO SIDEBAR -->
   <div class="carrito-wrap" id="carritoWrap">
     <div class="carrito-header">
       <span class="carrito-titulo">🛒 Tu pedido</span>
@@ -899,14 +910,12 @@
         </div>
         {% endif %}
 
-        <!-- NOMBRE OBLIGATORIO -->
         <div style="position:relative;margin-bottom:10px;">
           <span style="position:absolute;left:10px;top:50%;transform:translateY(-50%);pointer-events:none;">👤</span>
           <input class="campo-dir-input" id="inputNombre" placeholder="Tu nombre *" required
                  style="padding-left:32px;border-color:var(--naranja);">
         </div>
 
-        <!-- TELÉFONO OPCIONAL -->
         <div style="position:relative;margin-bottom:10px;">
           <span style="position:absolute;left:10px;top:50%;transform:translateY(-50%);pointer-events:none;">📱</span>
           <input class="campo-dir-input" id="inputTel" placeholder="Tu WhatsApp (opcional)"
@@ -932,8 +941,7 @@
     </div>
   </div>
 
-</div><!-- /main-layout -->
-
+</div>
 
 <!-- MODAL SELECTOR DE GUSTOS -->
 <div class="modal-overlay" id="modal-sabores" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.55);z-index:400;align-items:flex-end;justify-content:center;">
@@ -978,30 +986,6 @@
   </div>
 </div>
 
-
-<!-- TRACKER DE ESTADO DEL PEDIDO -->
-<div id="pedido-tracker" style="display:none;position:fixed;bottom:90px;left:50%;transform:translateX(-50%);z-index:250;width:calc(100% - 32px);max-width:420px;">
-  <div style="background:#1A1A2E;border-radius:16px;padding:16px 18px;box-shadow:0 8px 32px rgba(0,0,0,0.35);">
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
-      <span style="font-family:'Paytone One',sans-serif;color:#fff;font-size:0.95rem;">Tu pedido</span>
-      <button onclick="document.getElementById('pedido-tracker').style.display='none'"
-              style="background:rgba(255,255,255,0.1);border:none;color:#fff;width:24px;height:24px;border-radius:50%;cursor:pointer;font-size:0.8rem;">✕</button>
-    </div>
-    <div style="display:flex;justify-content:space-between;align-items:center;">
-      {% for paso, label, icon in [('nuevo','Recibido','📩'),('confirmado','Confirmado','✅'),('en_camino','En camino','🛵'),('entregado','Entregado','🎉')] %}
-        <div style="text-align:center;flex:1;" class="tracker-paso" data-estado="{{ paso }}">
-          <div style="font-size:1.4rem;opacity:0.3;transition:all 0.3s;" class="tracker-ico">{{ icon }}</div>
-          <div style="font-size:0.62rem;font-weight:700;color:rgba(255,255,255,0.4);margin-top:3px;transition:all 0.3s;" class="tracker-label">{{ label }}</div>
-        </div>
-        {% if not loop.last %}
-          <div style="height:2px;flex:0.5;background:rgba(255,255,255,0.1);border-radius:99px;margin-bottom:14px;" class="tracker-linea" data-pos="{{ loop.index }}"></div>
-        {% endif %}
-      {% endfor %}
-    </div>
-    <div id="tracker-msg" style="text-align:center;font-size:0.78rem;color:rgba(255,255,255,0.6);margin-top:8px;">Esperando confirmación del local...</div>
-  </div>
-</div>
-
 <!-- BOTÓN COMPARTIR MENÚ -->
 <div style="position:fixed;bottom:20px;right:16px;z-index:190;" id="btn-compartir-wrap">
   <button onclick="compartirMenu()"
@@ -1009,13 +993,12 @@
     📤 Compartir menú
   </button>
 </div>
-<!-- FAB mobile -->
+
 <button class="fab-carrito" id="fabCarrito" onclick="abrirCarrito()">
   🛒 Ver pedido
   <span class="fab-badge" id="fabBadge">0 items</span>
 </button>
 
-<!-- Overlay -->
 <div class="overlay" id="overlay" onclick="cerrarCarrito()"></div>
 
 {% endblock %}
@@ -1024,9 +1007,9 @@
 <script>
 const RID        = {{ restaurante.id }};
 const HACE_ENVIO = {{ 'true' if restaurante.hace_envio else 'false' }};
-let carrito     = {};   // id → { nombre, precio, cantidad, fotoUrl }
-let tipoEntrega = 'retiro';
+let carrito     = {};
 
+let tipoEntrega = 'retiro';
 
 /* ── SELECTOR DE SABORES ──────────────────────────────── */
 let _modalProd = null;
@@ -1038,7 +1021,6 @@ async function verProducto(id, nombre, precio, fotoUrl) {
   _modalCant = 1;
   _saborSeleccionados = [];
 
-  // Resetear UI
   document.getElementById('modal-sabores-nombre').textContent = nombre;
   document.getElementById('modal-sabores-precio').textContent = fmt(precio);
   document.getElementById('modal-cant').textContent = '1';
@@ -1049,19 +1031,16 @@ async function verProducto(id, nombre, precio, fotoUrl) {
   if (fotoUrl) { fotoEl.src = fotoUrl; fotoEl.style.display = ''; }
   else         { fotoEl.style.display = 'none'; }
 
-  // Mostrar modal
   const overlay = document.getElementById('modal-sabores');
   overlay.style.display = 'flex';
   document.body.style.overflow = 'hidden';
 
-  // Buscar sabores
   try {
     const res  = await fetch('/api/producto/' + id + '/sabores');
     const data = await res.json();
     document.getElementById('modal-sabores-loading').style.display = 'none';
 
     if (data.sabores && data.sabores.length > 0) {
-      // Tiene sabores → mostrar selector
       document.getElementById('modal-sabores-content').style.display = '';
       const lista = document.getElementById('sabores-lista');
       lista.innerHTML = data.sabores.map(s => `
@@ -1073,7 +1052,6 @@ async function verProducto(id, nombre, precio, fotoUrl) {
       `).join('');
       document.getElementById('sabores-hint').textContent = 'Podés elegir varios gustos';
     } else {
-      // Sin sabores → agregar directo
       agregarAlCarrito(id, nombre, precio, fotoUrl);
       cerrarModalSabores();
     }
@@ -1111,7 +1089,6 @@ function confirmarProductoModal() {
   if (_saborSeleccionados.length > 0) {
     nombre += ' (' + _saborSeleccionados.map(s => s.nombre).join(', ') + ')';
   }
-  // Agregar la cantidad indicada
   for (let i = 0; i < _modalCant; i++) {
     agregarAlCarrito(_modalProd.id, nombre, _modalProd.precio, _modalProd.fotoUrl);
   }
@@ -1275,9 +1252,7 @@ async function enviarPedido() {
     const data = await res.json();
     if (data.link) {
       window.open(data.link, '_blank');
-      // Mostrar tracker de estado
-      mostrarTrackerPedido(data.pedido_id);
-      // Limpiar carrito
+      mostrarToast('✅ Pedido enviado al local. ¡Gracias!', '#27AE60');
       Object.keys(carrito).forEach(id => resetProducto(id));
       carrito = {};
       renderCarrito();
@@ -1289,6 +1264,15 @@ async function enviarPedido() {
     btn.disabled = false;
     btn.innerHTML = `<svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/><path d="M12 0C5.373 0 0 5.373 0 12c0 2.127.557 4.122 1.529 5.856L.057 23.943l6.23-1.434C7.9 23.459 9.9 24 12 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 22c-1.89 0-3.663-.5-5.195-1.375l-.373-.217-3.844.885.916-3.739-.24-.389C2.516 15.607 2 13.867 2 12 2 6.477 6.477 2 12 2s10 4.477 10 10-4.477 10-10 10z"/></svg> Pedir por WhatsApp`;
   }
+}
+
+function mostrarToast(mensaje, bgColor) {
+  const toast = document.createElement('div');
+  toast.className = 'toast-msg';
+  toast.textContent = mensaje;
+  toast.style.background = bgColor;
+  document.body.appendChild(toast);
+  setTimeout(() => toast.remove(), 3000);
 }
 
 /* ── DRAWER MOBILE ────────────────────────────────────── */
@@ -1324,5 +1308,30 @@ window.addEventListener('scroll', () => {
     }
   });
 }, { passive: true });
+
+function compartirMenu() {
+  const url = window.location.href;
+  navigator.clipboard.writeText(url);
+  mostrarToast('✅ Link del menú copiado al portapapeles', '#27AE60');
+}
+
+/* ── REPETIR PEDIDO (cargar carrito desde sessionStorage) ── */
+document.addEventListener('DOMContentLoaded', function() {
+  const urlParams = new URLSearchParams(window.location.search);
+  if (urlParams.get('repetir') === '1') {
+    const repetirData = sessionStorage.getItem('carrito_repetir');
+    if (repetirData) {
+      const items = JSON.parse(repetirData);
+      items.forEach(item => {
+        agregarAlCarrito(item.producto_id || 0, item.nombre, item.precio, '');
+      });
+      sessionStorage.removeItem('carrito_repetir');
+      mostrarToast('✅ Pedido anterior cargado. Revisá el carrito.', '#27AE60');
+    }
+  }
+});
+
+/* ── DAR FOCUS AL NOMBRE SI EL CARRITO NO ESTÁ VACÍO ── */
+// ya se hace automáticamente en el render
 </script>
 {% endblock %}

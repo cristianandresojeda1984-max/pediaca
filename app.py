@@ -58,12 +58,10 @@ os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 def _enviar_push(subscription_info, payload):
     """Envía una notificación push a una suscripción."""
     try:
-        # Decodificar private key de base64 a PEM si es necesario
         pk = VAPID_PRIVATE_KEY
         if not pk.startswith("-----"):
             pk_bytes = base64.urlsafe_b64decode(pk + "==")
             pk = pk_bytes.decode("utf-8")
-
         webpush(
             subscription_info=subscription_info,
             data=_json.dumps(payload),
@@ -73,7 +71,6 @@ def _enviar_push(subscription_info, payload):
         return True
     except WebPushException as e:
         if "410" in str(e) or "404" in str(e):
-            # Suscripción expirada, limpiar
             execute("DELETE FROM push_subscriptions WHERE endpoint=?",
                     (subscription_info.get("endpoint",""),))
         return False
@@ -227,7 +224,6 @@ def registro():
         password2 = request.form.get("password2", "")
         rol       = request.form.get("rol", "cliente")
 
-        # Validaciones
         if not all([nombre, apellido, email, password]):
             flash("Completá todos los campos obligatorios.", "danger")
             return redirect(url_for("registro"))
@@ -249,14 +245,12 @@ def registro():
             flash("Ya existe una cuenta con ese email.", "warning")
             return redirect(url_for("registro"))
 
-        # Crear usuario
         password_hash = generate_password_hash(password)
         user_id = execute("""
             INSERT INTO usuarios (nombre, apellido, email, telefono, password_hash, rol)
             VALUES (?, ?, ?, ?, ?, ?)
         """, (nombre, apellido, email, telefono, password_hash, rol))
 
-        # Crear perfil según rol
         if rol == "cliente":
             execute("INSERT INTO clientes (usuario_id) VALUES (?)", (user_id,))
             flash("¡Cuenta creada! Ya podés iniciar sesión.", "success")
@@ -329,7 +323,7 @@ def logout():
     return redirect(url_for("home"))
 
 
-# ── DASHBOARD (despacha según rol) ────────────────────────────────────────────
+# ── DASHBOARD ─────────────────────────────────────────────────────────────────
 
 @app.route("/dashboard")
 @login_required
@@ -347,14 +341,12 @@ def dashboard():
 # ── PANEL RESTAURANTE ─────────────────────────────────────────────────────────
 
 def get_restaurante_aprobado():
-    """Devuelve el restaurante si está aprobado, o None."""
     return query("""
         SELECT * FROM restaurantes
         WHERE usuario_id = ? AND estado = 'aprobado'
     """, (session["user_id"],), one=True)
 
 def get_restaurante_any():
-    """Devuelve el restaurante sin importar su estado."""
     return query(
         "SELECT * FROM restaurantes WHERE usuario_id = ?",
         (session["user_id"],), one=True
@@ -375,7 +367,6 @@ def push_subscribe():
     auth     = data.get("keys", {}).get("auth")
     if not all([endpoint, p256dh, auth]):
         return jsonify({"error": "Datos incompletos"}), 400
-    # Upsert
     existe = query("SELECT id FROM push_subscriptions WHERE endpoint=?", (endpoint,), one=True)
     if existe:
         execute("UPDATE push_subscriptions SET p256dh=?, auth=?, usuario_id=? WHERE endpoint=?",
@@ -401,11 +392,7 @@ def service_worker():
                                mimetype="application/javascript")
 
 
-
-
-
 def guardar_imagen(archivo, subcarpeta=""):
-    """Guarda imagen en Cloudinary (si está configurado) o localmente."""
     if not archivo or archivo.filename == "":
         return None
     if not allowed_file(archivo.filename):
@@ -423,9 +410,7 @@ def guardar_imagen(archivo, subcarpeta=""):
             return resultado["secure_url"]
         except Exception as e:
             print(f"Error Cloudinary: {e}")
-            # Fallback a local
 
-    # Almacenamiento local
     import uuid, time
     filename = secure_filename(archivo.filename)
     ext      = filename.rsplit(".", 1)[1].lower()
@@ -437,7 +422,6 @@ def guardar_imagen(archivo, subcarpeta=""):
 
 
 def url_imagen(ruta):
-    """Devuelve la URL correcta de una imagen (Cloudinary o local)."""
     if not ruta:
         return None
     if ruta.startswith("http"):
@@ -452,13 +436,11 @@ app.jinja_env.globals["url_imagen"] = url_imagen
 @login_required
 @rol_required("restaurante")
 def restaurante_panel():
-    # Primero chequear si el local existe (puede estar pendiente)
     restaurante_raw = get_restaurante_any()
     if not restaurante_raw:
         flash("No encontramos tu local.", "danger")
         return redirect(url_for("home"))
 
-    # Si está pendiente o suspendido, mostrar pantalla de espera
     if restaurante_raw["estado"] != "aprobado":
         return render_template("restaurante_espera.html",
                                restaurante=restaurante_raw)
@@ -482,7 +464,6 @@ def restaurante_panel():
         ORDER BY p.categoria_id, p.orden
     """, (restaurante["id"],))
 
-    # Cargar sabores por producto
     sabores_map = {}
     if productos:
         ids = ",".join(str(p["id"]) for p in productos)
@@ -575,7 +556,6 @@ def producto_nuevo():
     categoria_id = request.form.get("categoria_id") or None
     disponible   = 1 if request.form.get("disponible") else 0
 
-    # Foto inline
     foto_url = None
     archivo  = request.files.get("foto")
     if archivo and archivo.filename:
@@ -596,14 +576,12 @@ def producto_nuevo():
 @login_required
 @rol_required("restaurante")
 def carga_masiva():
-    """Acepta JSON (renglones manuales), CSV o Excel."""
     restaurante = get_restaurante_aprobado()
     if not restaurante:
         return jsonify({"error": "No autorizado"}), 403
 
     productos_data = []
 
-    # ── Renglones manuales (JSON) ──────────────────────────────
     if request.is_json:
         rows = request.get_json().get("productos", [])
         for r in rows:
@@ -617,7 +595,6 @@ def carga_masiva():
                 "categoria":   str(r.get("categoria", "")).strip(),
             })
 
-    # ── Archivo CSV o Excel ────────────────────────────────────
     else:
         archivo = request.files.get("archivo")
         if not archivo:
@@ -647,7 +624,6 @@ def carga_masiva():
             rows = list(ws.iter_rows(values_only=True))
             if not rows:
                 return jsonify({"error": "Archivo vacío"}), 400
-            # Primera fila = encabezados
             headers = [str(h or "").lower().strip() for h in rows[0]]
             def _col(row, *names):
                 for n in names:
@@ -671,7 +647,6 @@ def carga_masiva():
     if not productos_data:
         return jsonify({"error": "No se encontraron productos válidos"}), 400
 
-    # Mapear categorías por nombre
     cats = query("SELECT id, nombre FROM categorias_menu WHERE restaurante_id=?",
                  (restaurante["id"],))
     cat_map = {c["nombre"].lower().strip(): c["id"] for c in cats}
@@ -692,7 +667,6 @@ def carga_masiva():
 @login_required
 @rol_required("restaurante")
 def descargar_plantilla():
-    """Genera un Excel de ejemplo para carga masiva."""
     import openpyxl
     from flask import send_file
     wb = openpyxl.Workbook()
@@ -707,7 +681,6 @@ def descargar_plantilla():
     ]
     for e in ejemplos:
         ws.append(e)
-    # Ancho de columnas
     for col, ancho in [("A", 30), ("B", 40), ("C", 12), ("D", 20)]:
         ws.column_dimensions[col].width = ancho
 
@@ -727,7 +700,6 @@ def sabor_nuevo(prod_id):
     restaurante = get_restaurante_aprobado()
     if not restaurante:
         return redirect(url_for("restaurante_panel"))
-    # Verificar que el producto es del restaurante
     prod = query("SELECT id FROM productos WHERE id=? AND restaurante_id=?",
                  (prod_id, restaurante["id"]), one=True)
     if not prod:
@@ -848,21 +820,20 @@ def cadete_editar_perfil():
     return redirect(url_for("cadete_panel"))
 
 
-# ── PANEL CLIENTE ─────────────────────────────────────────────────────────────
+# ── PANEL CLIENTE (CORREGIDO) ──────────────────────────────────────────────────
 
 @app.route("/mi-cuenta")
 @login_required
 @rol_required("cliente")
 def cliente_panel():
     pedidos = query("""
-        SELECT p.*, r.nombre_local, r.restaurante_id
+        SELECT p.*, r.nombre_local, r.id AS restaurante_id
         FROM pedidos p
         JOIN restaurantes r ON r.id = p.restaurante_id
         WHERE p.cliente_id = ?
         ORDER BY p.fecha_pedido DESC LIMIT 30
     """, (session["user_id"],))
 
-    # Locales más pedidos (frecuentes)
     locales_frecuentes = query("""
         SELECT r.*, COUNT(p.id) as veces
         FROM pedidos p
@@ -911,7 +882,6 @@ def cliente_editar_perfil():
 @login_required
 @rol_required("cliente")
 def cliente_cambiar_password():
-    from werkzeug.security import check_password_hash, generate_password_hash
     actual = request.form.get("password_actual", "")
     nueva  = request.form.get("password_nueva", "")
 
@@ -930,6 +900,42 @@ def cliente_cambiar_password():
             (generate_password_hash(nueva), session["user_id"]))
     flash("Contraseña actualizada correctamente.", "success")
     return redirect(url_for("cliente_panel"))
+
+
+# ── API REPETIR PEDIDO (NUEVO) ─────────────────────────────────────────────────
+
+@app.route("/api/repetir-pedido/<int:pedido_id>")
+@login_required
+@rol_required("cliente")
+def api_repetir_pedido(pedido_id):
+    pedido = query("""
+        SELECT p.*, r.id AS restaurante_id
+        FROM pedidos p
+        JOIN restaurantes r ON r.id = p.restaurante_id
+        WHERE p.id = ? AND p.cliente_id = ?
+    """, (pedido_id, session["user_id"]), one=True)
+    if not pedido:
+        return jsonify({"error": "Pedido no encontrado"}), 404
+
+    items = query("""
+        SELECT producto_id, nombre_producto, cantidad, precio_unitario
+        FROM items_pedido
+        WHERE pedido_id = ?
+    """, (pedido_id,))
+    
+    items_data = []
+    for it in items:
+        items_data.append({
+            "producto_id": it["producto_id"],
+            "nombre": it["nombre_producto"],
+            "precio": it["precio_unitario"],
+            "cantidad": it["cantidad"]
+        })
+    
+    return jsonify({
+        "restaurante_id": pedido["restaurante_id"],
+        "items": items_data
+    })
 
 
 # ── PANEL ADMIN ───────────────────────────────────────────────────────────────
@@ -1014,7 +1020,7 @@ def admin_cadete_estado(cadete_id, accion):
     return redirect(url_for("admin_panel"))
 
 
-# ── MÉTRICAS PARA ADMIN/AUSPICIANTES ─────────────────────────────────────────
+# ── MÉTRICAS PARA ADMIN ───────────────────────────────────────────────────────
 
 @app.route("/admin/metricas")
 @login_required
@@ -1050,7 +1056,7 @@ def admin_metricas():
                            top_restaurantes=top_restaurantes)
 
 
-# ── API: GENERAR LINK DE WHATSAPP ─────────────────────────────────────────────
+# ── API WHATSAPP ───────────────────────────────────────────────────────────────
 
 import urllib.parse
 
@@ -1075,7 +1081,6 @@ def whatsapp_link():
     nombre_cliente = data.get("nombre_cliente", "").strip()
     tel_cliente    = data.get("tel_cliente", "").strip()
 
-    # Validaciones obligatorias
     if not nombre_cliente:
         return jsonify({"error": "El nombre es obligatorio"}), 400
     if tipo_entrega == "delivery" and not direccion:
@@ -1088,7 +1093,6 @@ def whatsapp_link():
     if not restaurante or not items:
         return jsonify({"error": "Datos inválidos"}), 400
 
-    # Armar mensaje para el local
     total = sum(i["cantidad"] * i["precio"] for i in items)
     lineas = [f"🛵 *Nuevo pedido — {restaurante['nombre_local']}*\n"]
     lineas.append(f"👤 *Cliente:* {nombre_cliente}")
@@ -1110,7 +1114,6 @@ def whatsapp_link():
     numero     = _limpiar_numero(restaurante["whatsapp"])
     link       = _wa_link(numero, mensaje)
 
-    # Guardar pedido
     cliente_id = session.get("user_id")
     nom_anon   = nombre_cliente if not cliente_id else None
     tel_anon   = tel_cliente    if not cliente_id else None
@@ -1134,7 +1137,7 @@ def whatsapp_link():
     return jsonify({"link": link, "pedido_id": pedido_id})
 
 
-# ── API: STATUS DEL PEDIDO (polling cliente) ──────────────────────────────────
+# ── API: STATUS DEL PEDIDO ─────────────────────────────────────────────────────
 
 @app.route("/api/pedido/<int:pedido_id>/status")
 def pedido_status(pedido_id):
@@ -1183,7 +1186,6 @@ def restaurante_pedidos():
         LIMIT 100
     """, (restaurante["id"],))
 
-    # Items por pedido
     items_por_pedido = {}
     if pedidos:
         ids = ",".join(str(p["id"]) for p in pedidos)
@@ -1199,7 +1201,8 @@ def restaurante_pedidos():
                            pedidos=pedidos,
                            items_por_pedido=items_por_pedido)
 
-# ── API: PEDIDOS NUEVOS PARA RESTAURANTE (notificación en panel) ─────────────
+
+# ── API: PEDIDOS NUEVOS PARA RESTAURANTE (notificación) ────────────────────────
 
 @app.route("/api/restaurante/pedidos-nuevos")
 @login_required
@@ -1233,7 +1236,6 @@ def restaurante_cambiar_estado(pedido_id, nuevo_estado):
         WHERE id=? AND restaurante_id=?
     """, (nuevo_estado, pedido_id, restaurante["id"]))
 
-    # Si confirman → notificar cadetes por push
     if nuevo_estado == "confirmado":
         pedido = query("SELECT * FROM pedidos WHERE id=?", (pedido_id,), one=True)
         if pedido and pedido["tipo_entrega"] == "delivery":
@@ -1252,7 +1254,6 @@ def restaurante_cambiar_estado(pedido_id, nuevo_estado):
 @login_required
 @rol_required("restaurante")
 def notificar_cadetes(pedido_id):
-    """Devuelve links WA para notificar a cada cadete disponible."""
     restaurante = get_restaurante_aprobado()
     if not restaurante:
         return jsonify({"error": "No autorizado"}), 403
@@ -1293,11 +1294,9 @@ def notificar_cadetes(pedido_id):
     return jsonify({"cadetes": links, "pedido_id": pedido_id})
 
 
-
 @app.route("/pedido/<int:pedido_id>/en-camino", methods=["POST"])
 @login_required
 def marcar_en_camino(pedido_id):
-    """Restaurante o cadete marcan el pedido como en camino."""
     rol = session.get("rol")
 
     if rol == "restaurante":
@@ -1326,6 +1325,7 @@ def marcar_en_camino(pedido_id):
 
     return jsonify({"ok": True})
 
+
 # ── CADETE: ACEPTAR PEDIDO ────────────────────────────────────────────────────
 
 @app.route("/cadete/aceptar/<int:pedido_id>", methods=["POST"])
@@ -1339,7 +1339,6 @@ def cadete_aceptar_pedido(pedido_id):
     if not cadete:
         return jsonify({"error": "No autorizado"}), 403
 
-    # Verificar que no está tomado
     pedido = query(
         "SELECT * FROM pedidos WHERE id=? AND cadete_id IS NULL AND estado='confirmado'",
         (pedido_id,), one=True
@@ -1353,7 +1352,6 @@ def cadete_aceptar_pedido(pedido_id):
         WHERE id=? AND cadete_id IS NULL
     """, (cadete["id"], pedido_id))
 
-    # Verificar que lo grabamos nosotros (race condition)
     check = query("SELECT cadete_id FROM pedidos WHERE id=?", (pedido_id,), one=True)
     if check["cadete_id"] != cadete["id"]:
         return jsonify({"ok": False, "msg": "El pedido ya fue tomado por otro cadete"}), 409
@@ -1365,7 +1363,6 @@ def cadete_aceptar_pedido(pedido_id):
 @login_required
 @rol_required("cadete")
 def pedidos_nuevos_cadete():
-    """Polling: devuelve pedidos de delivery sin cadete asignado."""
     pedidos = query("""
         SELECT p.id, p.total, p.direccion_entrega, p.fecha_pedido,
                r.nombre_local, r.direccion AS local_direccion, r.whatsapp
@@ -1628,7 +1625,7 @@ def restaurante_toggle_abierto():
     return redirect(url_for("restaurante_panel"))
 
 
-# ── RECUPERO DE CONTRASEÑA VIA WHATSAPP ───────────────────────────────────────
+# ── RECUPERO DE CONTRASEÑA ────────────────────────────────────────────────────
 
 @app.route("/recuperar-password", methods=["GET", "POST"])
 def recuperar_password():
@@ -1736,7 +1733,6 @@ def cadete_rechazar_pedido(pedido_id):
                    (session["user_id"],), one=True)
     if not cadete:
         return jsonify({"error": "No autorizado"}), 403
-    # Solo puede rechazar si lo tiene asignado
     execute("""
         UPDATE pedidos SET cadete_id=NULL, estado='confirmado',
                fecha_actualizado=datetime('now','localtime')
@@ -1745,7 +1741,7 @@ def cadete_rechazar_pedido(pedido_id):
     return jsonify({"ok": True})
 
 
-# ── SETUP INICIAL (uso único para crear admin en producción) ──────────────────
+# ── SETUP ADMIN ───────────────────────────────────────────────────────────────
 
 @app.route("/setup/<clave_secreta>")
 def setup_admin(clave_secreta):
