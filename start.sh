@@ -1,22 +1,13 @@
 #!/bin/bash
-# start.sh — Se ejecuta en Render antes de levantar el servidor
-
 echo "🚀 Iniciando PediAcá..."
 
-# Crear la base de datos si no existe
-if [ ! -f "pediaca.db" ]; then
-    echo "📦 Creando base de datos..."
-    python init_db.py <<< "s"
-    echo "✅ Base de datos creada"
-fi
+mkdir -p static/uploads/logos static/uploads/banners \
+         static/uploads/productos static/uploads/promociones \
+         static/img static/fonts
 
-# Crear carpetas de uploads
-mkdir -p static/uploads/logos
-mkdir -p static/uploads/banners
-mkdir -p static/uploads/productos
-mkdir -p static/uploads/promociones
-mkdir -p static/img
+# Inicializar DB (PostgreSQL o SQLite)
+echo "📦 Inicializando base de datos..."
+python init_db.py
 
-# Copiar logo si existe
 echo "▶️  Iniciando servidor..."
 gunicorn app:app --bind 0.0.0.0:$PORT --workers 2 --timeout 120
