@@ -2,6 +2,7 @@
 {% block title %}Mi cuenta — PediAcá{% endblock %}
 
 {% block extra_styles %}
+/* ── HERO ────────────────────────────────────────────────── */
 .cliente-hero {
   background: linear-gradient(135deg, #1A1A2E 0%, #0F3460 100%);
   padding: 28px 20px 32px;
@@ -46,6 +47,8 @@
   cursor: pointer; text-decoration: none;
   font-family: 'Nunito', sans-serif; flex-shrink: 0;
 }
+
+/* Stats */
 .cliente-stats {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
@@ -61,6 +64,7 @@
 .cs-num   { font-family:'Paytone One',sans-serif; font-size:1.5rem; color:#fff; }
 .cs-label { font-size:0.72rem; color:rgba(255,255,255,0.6); font-weight:700; margin-top:2px; }
 
+/* ── TABS ────────────────────────────────────────────────── */
 .tab-nav {
   background: var(--blanco);
   display: flex;
@@ -77,10 +81,12 @@
 }
 .tab-btn.activo { color: var(--naranja); border-bottom-color: var(--naranja); }
 
+/* ── LAYOUT ──────────────────────────────────────────────── */
 .container-sm { max-width: 640px; margin: 0 auto; padding: 20px 16px 80px; }
 .seccion { display: none; }
 .seccion.activo { display: block; }
 
+/* ── PEDIDO CARD ─────────────────────────────────────────── */
 .pedido-card {
   background: var(--blanco);
   border-radius: 14px;
@@ -88,7 +94,11 @@
   margin-bottom: 12px;
   overflow: hidden;
   border-left: 4px solid var(--naranja);
-  transition: all 0.2s;
+  animation: fadeUp 0.3s ease both;
+}
+@keyframes fadeUp {
+  from { opacity:0; transform:translateY(10px); }
+  to   { opacity:1; transform:translateY(0); }
 }
 .pedido-header {
   display: flex;
@@ -127,32 +137,25 @@
 .chip-azul   { background:var(--azul-l); color:var(--azul-d); }
 .chip-gris   { background:var(--gris-1); color:var(--texto-s); }
 .chip-rojo   { background:#FADBD8; color:#922B21; }
-.pedido-actions {
-  display: flex;
-  gap: 8px;
-  margin: 0 16px 14px;
-}
-.btn-repetir, .btn-estado {
-  flex: 1;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+
+/* Repetir pedido btn */
+.btn-repetir {
+  display: flex; align-items: center; justify-content: center;
   gap: 6px;
+  margin: 0 16px 14px;
   padding: 10px;
+  background: var(--naranja-l);
+  color: var(--naranja-d);
   border-radius: 10px;
-  font-weight: 800;
-  font-size: 0.83rem;
+  font-weight: 800; font-size: 0.83rem;
   font-family: 'Nunito', sans-serif;
   text-decoration: none;
-  border: none;
-  cursor: pointer;
+  border: none; cursor: pointer; width: calc(100% - 32px);
   transition: all 0.15s;
 }
-.btn-repetir { background: var(--naranja-l); color: var(--naranja-d); }
 .btn-repetir:hover { background: var(--naranja); color: #fff; }
-.btn-estado { background: var(--azul-l); color: var(--azul-d); }
-.btn-estado:hover { background: var(--azul); color: #fff; }
 
+/* ── EMPTY ───────────────────────────────────────────────── */
 .empty-state {
   background: var(--blanco);
   border-radius: 14px;
@@ -174,8 +177,11 @@
   font-size: 0.9rem;
   text-decoration: none;
   box-shadow: 0 4px 14px rgba(243,156,18,0.35);
+  transition: all 0.15s;
 }
+.btn-explorar:hover { background: var(--naranja-d); transform: translateY(-1px); }
 
+/* ── PERFIL FORM ─────────────────────────────────────────── */
 .perfil-card {
   background: var(--blanco);
   border-radius: 14px;
@@ -199,6 +205,7 @@
 }
 .btn-guardar:hover { transform:translateY(-1px); box-shadow:0 6px 20px rgba(243,156,18,0.4); }
 
+/* ── LOCALES FAVORITOS ───────────────────────────────────── */
 .fav-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -225,6 +232,7 @@
 .fav-nombre { font-weight:800; font-size:0.85rem; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 .fav-cat    { font-size:0.73rem; color:var(--texto-s); margin-top:2px; }
 
+/* ── SECCION TITULO ──────────────────────────────────────── */
 .sec-titulo {
   font-family: 'Paytone One', sans-serif;
   font-size: 1rem;
@@ -235,79 +243,11 @@
   gap: 8px;
 }
 .sec-titulo::after { content:''; flex:1; height:1px; background:var(--gris-2); }
-
-/* MODAL ESTADO */
-.modal-estado {
-  display: none;
-  position: fixed;
-  inset: 0;
-  background: rgba(0,0,0,0.6);
-  z-index: 1000;
-  align-items: center;
-  justify-content: center;
-}
-.modal-estado.open { display: flex; }
-.modal-contenido {
-  background: var(--blanco);
-  border-radius: 20px;
-  max-width: 400px;
-  width: 90%;
-  padding: 24px 20px;
-  position: relative;
-}
-.modal-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 16px;
-}
-.modal-header h3 { font-family: 'Paytone One', sans-serif; font-size: 1.2rem; }
-.modal-close {
-  background: var(--gris-1);
-  border: none;
-  width: 30px;
-  height: 30px;
-  border-radius: 50%;
-  cursor: pointer;
-}
-.tracker-steps {
-  display: flex;
-  justify-content: space-between;
-  margin: 20px 0;
-}
-.tracker-step {
-  text-align: center;
-  flex: 1;
-}
-.tracker-ico {
-  font-size: 1.6rem;
-  opacity: 0.3;
-  transition: all 0.3s;
-}
-.tracker-step.activo .tracker-ico { opacity: 1; transform: scale(1.1); }
-.tracker-label {
-  font-size: 0.7rem;
-  font-weight: 700;
-  color: var(--texto-s);
-  margin-top: 4px;
-}
-.tracker-linea {
-  height: 2px;
-  background: var(--gris-2);
-  flex: 1;
-  margin: 0 4px;
-  align-self: center;
-}
-.tracker-msg {
-  background: var(--gris-1);
-  padding: 12px;
-  border-radius: 10px;
-  font-size: 0.85rem;
-  margin-top: 12px;
-}
 {% endblock %}
 
 {% block content %}
+
+<!-- HERO -->
 <div class="cliente-hero">
   <div class="cliente-hero-top">
     <div class="cliente-avatar">{{ session.nombre[0]|upper }}</div>
@@ -317,6 +257,7 @@
     </div>
     <a href="{{ url_for('logout') }}" class="cliente-logout">Salir</a>
   </div>
+
   <div class="cliente-stats">
     <div class="cliente-stat">
       <div class="cs-num">{{ pedidos|length }}</div>
@@ -338,6 +279,7 @@
   </div>
 </div>
 
+<!-- TABS -->
 <div class="tab-nav">
   <button class="tab-btn activo" onclick="mostrar('historial', this)">📋 Mis pedidos</button>
   <button class="tab-btn"        onclick="mostrar('favoritos', this)">❤️ Favoritos</button>
@@ -345,17 +287,19 @@
 </div>
 
 <div class="container-sm">
+
   {% with msgs = get_flashed_messages(with_categories=true) %}
     {% for cat, msg in msgs %}
       <div class="alert alert-{{ cat }}" style="margin-bottom:12px;">{{ msg }}</div>
     {% endfor %}
   {% endwith %}
 
-  <!-- HISTORIAL -->
+  <!-- ── HISTORIAL ──────────────────────────────────────── -->
   <div class="seccion activo" id="sec-historial">
+
     {% if pedidos %}
       {% for p in pedidos %}
-        <div class="pedido-card" data-pedido-id="{{ p.id }}" data-restaurante-id="{{ p.restaurante_id }}">
+        <div class="pedido-card" style="animation-delay: {{ loop.index0 * 0.05 }}s">
           <div class="pedido-header">
             <div class="pedido-local">
               <div class="pedido-local-ico">🍽️</div>
@@ -366,7 +310,9 @@
             </div>
             <div class="pedido-total">${{ p.total|int }}</div>
           </div>
+
           <div class="pedido-chips">
+            <!-- Estado -->
             {% if p.estado == 'entregado' %}
               <span class="chip chip-ok">✅ Entregado</span>
             {% elif p.estado == 'en_camino' %}
@@ -378,18 +324,48 @@
             {% else %}
               <span class="chip chip-warn">⏳ Nuevo</span>
             {% endif %}
-            <span class="chip chip-gris">{{ '🛵 Delivery' if p.tipo_entrega == 'delivery' else '🏪 Retiro' }}</span>
+
+            <!-- Tipo entrega -->
+            <span class="chip chip-gris">
+              {{ '🛵 Delivery' if p.tipo_entrega == 'delivery' else '🏪 Retiro' }}
+            </span>
           </div>
-          <div class="pedido-actions">
-            <button class="btn-estado" onclick="verEstadoPedido({{ p.id }})">
-              📍 Ver estado
-            </button>
-            <button class="btn-repetir" onclick="repetirPedido({{ p.id }}, {{ p.restaurante_id }})">
-              🔄 Repetir pedido
-            </button>
+
+          <!-- Repetir + valorar -->
+          <div style="display:flex;gap:8px;margin:0 16px 14px;">
+            <a class="btn-repetir" style="flex:1;"
+               href="{{ url_for('ver_local', restaurante_id=p.restaurante_id) }}">
+              🔄 Volver a pedir
+            </a>
+            {% if p.estado == 'entregado' %}
+              <button class="btn-repetir" style="flex:none;padding:10px 14px;"
+                      onclick="document.getElementById('form-val-{{ p.id }}').style.display = document.getElementById('form-val-{{ p.id }}').style.display === 'none' ? 'block' : 'none'">
+                ⭐ Valorar
+              </button>
+            {% endif %}
           </div>
+          {% if p.estado == 'entregado' %}
+            <div id="form-val-{{ p.id }}" style="display:none;padding:0 16px 14px;">
+              <form method="POST" action="{{ url_for('valorar_pedido', pedido_id=p.id) }}">
+                <div style="display:flex;gap:6px;margin-bottom:8px;" id="stars-{{ p.id }}">
+                  {% for i in [1,2,3,4,5] %}
+                    <button type="button" onclick="setStar({{ p.id }}, {{ i }})"
+                            id="star-{{ p.id }}-{{ i }}"
+                            style="font-size:1.4rem;background:none;border:none;cursor:pointer;opacity:0.3;transition:all 0.1s;">⭐</button>
+                  {% endfor %}
+                </div>
+                <input type="hidden" name="estrellas" id="inp-star-{{ p.id }}" value="5">
+                <textarea name="comentario" placeholder="Comentario opcional..."
+                          style="width:100%;padding:8px 12px;border:2px solid var(--gris-2);border-radius:8px;font-family:Nunito,sans-serif;font-size:0.85rem;resize:none;height:52px;outline:none;margin-bottom:8px;"></textarea>
+                <button type="submit" style="width:100%;background:var(--naranja);color:#fff;border:none;border-radius:99px;padding:10px;font-family:Nunito,sans-serif;font-weight:800;font-size:0.85rem;cursor:pointer;">
+                  Enviar valoración
+                </button>
+              </form>
+            </div>
+          {% endif %}
         </div>
       {% endfor %}
+
     {% else %}
       <div class="empty-state">
         <div class="empty-icon">🛒</div>
@@ -398,9 +374,10 @@
         <a href="{{ url_for('home') }}" class="btn-explorar">Ver locales →</a>
       </div>
     {% endif %}
+
   </div>
 
-  <!-- FAVORITOS -->
+  <!-- ── FAVORITOS ──────────────────────────────────────── -->
   <div class="seccion" id="sec-favoritos">
     {% if locales_frecuentes %}
       <div class="sec-titulo">🔥 Tus locales frecuentes</div>
@@ -409,11 +386,13 @@
           <a href="{{ url_for('ver_local', restaurante_id=local.id) }}" class="fav-card">
             <div class="fav-banner">
               {% if local.banner_url %}
-                <img src="{{ url_for('static', filename=local.banner_url) }}" style="width:100%;height:100%;object-fit:cover;">
+                <img src="{{ url_imagen(local.banner_url) }}"
+                     style="width:100%;height:100%;object-fit:cover;" alt="">
               {% else %}
                 {% if local.categoria == 'Pizzería' %}🍕
                 {% elif local.categoria == 'Hamburguesería' %}🍔
                 {% elif local.categoria == 'Sushi' %}🍣
+                {% elif local.categoria == 'Heladería' %}🍦
                 {% else %}🍽️{% endif %}
               {% endif %}
             </div>
@@ -434,7 +413,7 @@
     {% endif %}
   </div>
 
-  <!-- PERFIL -->
+  <!-- ── PERFIL ─────────────────────────────────────────── -->
   <div class="seccion" id="sec-perfil">
     <form method="POST" action="{{ url_for('cliente_editar_perfil') }}">
       <div class="perfil-card">
@@ -459,11 +438,15 @@
         </div>
         <div class="form-group">
           <label class="form-label">Dirección habitual de entrega</label>
-          <input class="form-control" name="direccion_default" value="{{ cliente.direccion_default or '' }}" placeholder="Ej: San Martín 1234, 3° B">
+          <input class="form-control" name="direccion_default"
+                 value="{{ cliente.direccion_default or '' }}"
+                 placeholder="Ej: San Martín 1234, 3° B">
         </div>
         <div class="form-group">
           <label class="form-label">Aclaraciones de entrega</label>
-          <input class="form-control" name="notas_default" value="{{ cliente.notas_default or '' }}" placeholder="Ej: Timbre 3B, no tocar puerta">
+          <input class="form-control" name="notas_default"
+                 value="{{ cliente.notas_default or '' }}"
+                 placeholder="Ej: Timbre 3B, no tocar puerta">
         </div>
         <button class="btn-guardar" type="submit">💾 Guardar cambios</button>
       </div>
@@ -483,126 +466,34 @@
         <button class="btn-guardar" type="submit">🔒 Cambiar contraseña</button>
       </form>
     </div>
-  </div>
-</div>
 
-<!-- MODAL ESTADO DEL PEDIDO -->
-<div id="modalEstado" class="modal-estado">
-  <div class="modal-contenido">
-    <div class="modal-header">
-      <h3>Estado del pedido</h3>
-      <button class="modal-close" onclick="cerrarModalEstado()">✕</button>
-    </div>
-    <div id="modal-estado-body">
-      <div class="tracker-steps" id="tracker-steps">
-        <div class="tracker-step" data-estado="nuevo">
-          <div class="tracker-ico">📩</div>
-          <div class="tracker-label">Recibido</div>
-        </div>
-        <div class="tracker-linea"></div>
-        <div class="tracker-step" data-estado="confirmado">
-          <div class="tracker-ico">✅</div>
-          <div class="tracker-label">Confirmado</div>
-        </div>
-        <div class="tracker-linea"></div>
-        <div class="tracker-step" data-estado="en_camino">
-          <div class="tracker-ico">🛵</div>
-          <div class="tracker-label">En camino</div>
-        </div>
-        <div class="tracker-linea"></div>
-        <div class="tracker-step" data-estado="entregado">
-          <div class="tracker-ico">🎉</div>
-          <div class="tracker-label">Entregado</div>
-        </div>
-      </div>
-      <div id="tracker-detalle" class="tracker-msg">
-        Cargando...
-      </div>
-    </div>
   </div>
-</div>
 
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
 <script>
+function setStar(pedidoId, val) {
+  document.getElementById('inp-star-' + pedidoId).value = val;
+  for (let i = 1; i <= 5; i++) {
+    const btn = document.getElementById('star-' + pedidoId + '-' + i);
+    btn.style.opacity = i <= val ? '1' : '0.3';
+  }
+}
+// Inicializar todas con 5 estrellas
+document.addEventListener('DOMContentLoaded', () => {
+  document.querySelectorAll('[id^="stars-"]').forEach(div => {
+    const id = div.id.replace('stars-', '');
+    setStar(id, 5);
+  });
+});
+
 function mostrar(nombre, btn) {
   document.querySelectorAll('.seccion').forEach(s => s.classList.remove('activo'));
   document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('activo'));
   document.getElementById('sec-' + nombre).classList.add('activo');
   btn.classList.add('activo');
 }
-
-let pollingEstadoInterval = null;
-let pedidoActualId = null;
-
-function verEstadoPedido(pedidoId) {
-  pedidoActualId = pedidoId;
-  const modal = document.getElementById('modalEstado');
-  modal.classList.add('open');
-  actualizarEstadoModal(pedidoId);
-  if (pollingEstadoInterval) clearInterval(pollingEstadoInterval);
-  pollingEstadoInterval = setInterval(() => actualizarEstadoModal(pedidoId), 5000);
-}
-
-async function actualizarEstadoModal(pedidoId) {
-  try {
-    const res = await fetch(`/api/pedido/${pedidoId}/status`);
-    const data = await res.json();
-    if (data.error) throw new Error(data.error);
-    // Actualizar pasos
-    const estados = ['nuevo', 'confirmado', 'en_camino', 'entregado'];
-    const currentIdx = estados.indexOf(data.estado);
-    document.querySelectorAll('.tracker-step').forEach((step, idx) => {
-      if (idx <= currentIdx) step.classList.add('activo');
-      else step.classList.remove('activo');
-    });
-    // Actualizar líneas
-    document.querySelectorAll('.tracker-linea').forEach((line, idx) => {
-      if (idx < currentIdx) line.style.background = 'var(--naranja)';
-      else line.style.background = 'var(--gris-2)';
-    });
-    let msg = '';
-    if (data.estado === 'nuevo') msg = 'El local aún no confirmó tu pedido. Esperá unos minutos.';
-    else if (data.estado === 'confirmado') msg = '✅ Pedido confirmado. Pronto estará en camino.';
-    else if (data.estado === 'en_camino') {
-      msg = `🛵 En camino con ${data.cadete_nombre || 'un cadete'} (${data.cadete_vehiculo || 'moto'}). `;
-      if (data.cadete_tel) msg += `Contacto: ${data.cadete_tel}`;
-    }
-    else if (data.estado === 'entregado') msg = '🎉 Pedido entregado. ¡Gracias por elegirnos!';
-    else if (data.estado === 'cancelado') msg = '❌ El pedido fue cancelado.';
-    document.getElementById('tracker-detalle').innerHTML = msg;
-  } catch(e) {
-    document.getElementById('tracker-detalle').innerHTML = 'Error al cargar el estado.';
-  }
-}
-
-function cerrarModalEstado() {
-  document.getElementById('modalEstado').classList.remove('open');
-  if (pollingEstadoInterval) clearInterval(pollingEstadoInterval);
-  pollingEstadoInterval = null;
-}
-
-async function repetirPedido(pedidoId, restauranteId) {
-  const btn = event.currentTarget;
-  btn.disabled = true;
-  btn.innerHTML = '⏳ Cargando...';
-  try {
-    const res = await fetch(`/api/repetir-pedido/${pedidoId}`);
-    const data = await res.json();
-    if (data.error) throw new Error(data.error);
-    // Guardar items en sessionStorage para que ver_local.html los lea
-    sessionStorage.setItem('carrito_repetir', JSON.stringify(data.items));
-    // Redirigir al local
-    window.location.href = `/local/${restauranteId}?repetir=1`;
-  } catch(e) {
-    alert('No se pudo repetir el pedido: ' + e.message);
-  } finally {
-    btn.disabled = false;
-    btn.innerHTML = '🔄 Repetir pedido';
-  }
-}
-
-// Cerrar modal al hacer clic fuera
-document.getElementById('modalEstado').addEventListener('click', function(e) {
-  if (e.target === this) cerrarModalEstado();
-});
 </script>
 {% endblock %}

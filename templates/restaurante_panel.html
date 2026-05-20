@@ -78,45 +78,10 @@ body {
   white-space: nowrap;
   transition: all 0.2s;
   user-select: none;
-  text-decoration: none;
-  background: none;
-  border-top: none;
-  border-left: none;
-  border-right: none;
-  font-family: inherit;
 }
 .nav-tab.activo {
   color: var(--rojo);
   border-bottom-color: var(--rojo);
-}
-
-/* Badge para pedidos nuevos */
-.pedidos-badge {
-  background-color: #e74c3c;
-  color: white;
-  border-radius: 99px;
-  padding: 2px 8px;
-  font-size: 0.7rem;
-  font-weight: 800;
-  margin-left: 6px;
-  display: inline-block;
-  animation: pulse 1s infinite;
-}
-@keyframes pulse {
-  0% { opacity: 0.6; transform: scale(0.9); }
-  50% { opacity: 1; transform: scale(1.1); background-color: #c0392b; }
-  100% { opacity: 0.6; transform: scale(0.9); }
-}
-/* Parpadeo para la pestaña cuando hay pedidos nuevos */
-.nav-tab.notify {
-  animation: blinkTab 1s ease-in-out infinite;
-  background-color: rgba(231, 76, 60, 0.1);
-  border-radius: 12px;
-}
-@keyframes blinkTab {
-  0% { color: #e74c3c; }
-  50% { color: #c0392b; background-color: rgba(231, 76, 60, 0.2); }
-  100% { color: #e74c3c; }
 }
 
 /* ── LAYOUT PRINCIPAL ──────────────────────────────────────── */
@@ -438,7 +403,7 @@ select.form-control { appearance: none; cursor: pointer; }
   font-weight:700; font-size:0.83rem; cursor:pointer;
   color:var(--gris-3); transition:all 0.15s;
 }
-.menu-tab.activo { background:var(--blanco); color:var(--rojo); box-shadow:var(--sombra); }
+.menu-tab.activo { background:var(--blanco); color:var(--rojo); box-shadow:var(--sombra-s); }
 
 /* ── FOTO INLINE ─────────────────────────────────────────── */
 .foto-inline-wrap {
@@ -464,6 +429,7 @@ select.form-control { appearance: none; cursor: pointer; }
   font-size:0.9rem; width:36px;
 }
 .renglon-del:hover { color:var(--rojo); background:#FADBD8; }
+
 </style>
 </head>
 <body>
@@ -477,17 +443,15 @@ select.form-control { appearance: none; cursor: pointer; }
   <a href="{{ url_for('logout') }}" class="header-logout">Salir</a>
 </div>
 
-<!-- NAV TABS (modificado: agregado badge y id a la pestaña Pedidos) -->
+<!-- NAV TABS -->
 <div class="nav-tabs">
   <div class="nav-tab activo" onclick="mostrarSeccion('inicio')">📊 Inicio</div>
   <div class="nav-tab" onclick="mostrarSeccion('perfil')">🏪 Mi Local</div>
   <div class="nav-tab" onclick="mostrarSeccion('fotos')">📷 Fotos</div>
   <div class="nav-tab" onclick="mostrarSeccion('menu')">🍕 Menú</div>
   <div class="nav-tab" onclick="mostrarSeccion('promociones')">🎉 Promociones</div>
-  <a class="nav-tab" href="/mi-local/pedidos" id="tab-pedidos" style="text-decoration:none;">
-    📋 Pedidos <span id="pedidos-badge" class="pedidos-badge" style="display:none;">0</span>
-  </a>
-  <div class="nav-tab" onclick="mostrarSeccion('valoraciones')">⭐ Valoraciones</div>
+  <a class="nav-tab" href="/mi-local/pedidos" style="text-decoration:none;">📋 Pedidos</a>
+  <button class="nav-tab" onclick="mostrarSeccion('valoraciones')">⭐ Valoraciones</button>
 </div>
 
 <div class="container">
@@ -521,7 +485,7 @@ select.form-control { appearance: none; cursor: pointer; }
       <div class="card-titulo">📋 Estado del local</div>
       <div style="display:flex; gap:12px; align-items:center; margin-bottom:12px;">
         {% if restaurante.logo_url %}
-          <img src="{{ url_for('static', filename=restaurante.logo_url) }}" style="width:52px;height:52px;border-radius:8px;object-fit:cover;">
+          <img src="{{ url_imagen(restaurante.logo_url) }}" style="width:52px;height:52px;border-radius:8px;object-fit:cover;">
         {% else %}
           <div style="width:52px;height:52px;border-radius:8px;background:#f4f6f9;display:flex;align-items:center;justify-content:center;font-size:1.5rem;">🏪</div>
         {% endif %}
@@ -656,7 +620,7 @@ select.form-control { appearance: none; cursor: pointer; }
       <form method="POST" action="{{ url_for('subir_logo') }}" enctype="multipart/form-data">
         <div class="foto-upload-area" onclick="document.getElementById('inp-logo').click()">
           {% if restaurante.logo_url %}
-            <img class="foto-actual" src="{{ url_for('static', filename=restaurante.logo_url) }}" alt="Logo">
+            <img class="foto-actual" src="{{ url_imagen(restaurante.logo_url) }}" alt="Logo">
           {% else %}
             <div style="font-size:2.5rem;margin-bottom:8px;">📷</div>
           {% endif %}
@@ -673,7 +637,7 @@ select.form-control { appearance: none; cursor: pointer; }
       <form method="POST" action="{{ url_for('subir_banner') }}" enctype="multipart/form-data">
         <div class="foto-upload-area" onclick="document.getElementById('inp-banner').click()">
           {% if restaurante.banner_url %}
-            <img class="banner-actual" src="{{ url_for('static', filename=restaurante.banner_url) }}" alt="Banner">
+            <img class="banner-actual" src="{{ url_imagen(restaurante.banner_url) }}" alt="Banner">
           {% else %}
             <div style="font-size:2.5rem;margin-bottom:8px;">🏞️</div>
           {% endif %}
@@ -693,7 +657,7 @@ select.form-control { appearance: none; cursor: pointer; }
           <div class="producto-item">
             <div class="producto-foto">
               {% if p.foto_url %}
-                <img src="{{ url_for('static', filename=p.foto_url) }}" alt="{{ p.nombre }}">
+                <img src="{{ url_imagen(p.foto_url) }}" alt="{{ p.nombre }}">
               {% else %}
                 🍽️
               {% endif %}
@@ -856,7 +820,7 @@ select.form-control { appearance: none; cursor: pointer; }
             <!-- Foto con upload inline -->
             <div class="producto-foto" style="cursor:pointer;" onclick="document.getElementById('inp-foto-{{ p.id }}').click()" title="Cambiar foto">
               {% if p.foto_url %}
-                <img src="{{ url_for('static', filename=p.foto_url) }}" alt="{{ p.nombre }}">
+                <img src="{{ url_imagen(p.foto_url) }}" alt="{{ p.nombre }}">
               {% else %}
                 🍽️
               {% endif %}
@@ -965,11 +929,11 @@ select.form-control { appearance: none; cursor: pointer; }
     </div>
 
     <!-- Lista de promociones -->
-    {% if promociones is defined and promociones %}
+    {% if promociones %}
       {% for promo in promociones %}
         <div class="promo-card {{ '' if promo.activa else 'inactiva' }}">
           {% if promo.imagen_url %}
-            <img class="promo-img" src="{{ url_for('static', filename=promo.imagen_url) }}" alt="{{ promo.titulo }}">
+            <img class="promo-img" src="{{ url_imagen(promo.imagen_url) }}" alt="{{ promo.titulo }}">
           {% endif %}
           <div class="promo-header">
             <div>
@@ -1354,42 +1318,7 @@ setTimeout(() => {
     setTimeout(() => a.remove(), 500);
   });
 }, 3500);
-
-// ── NOTIFICACIÓN DE PEDIDOS NUEVOS (polling cada 10s) ─────
-let pollingRestaurante = null;
-
-function actualizarPedidosNuevos() {
-  fetch('/api/restaurante/pedidos-nuevos')
-    .then(res => res.json())
-    .then(data => {
-      const badge = document.getElementById('pedidos-badge');
-      const tab = document.getElementById('tab-pedidos');
-      if (data.nuevos > 0) {
-        badge.textContent = data.nuevos;
-        badge.style.display = 'inline-block';
-        tab.classList.add('notify');
-        // Opcional: cambiar título de la pestaña del navegador
-        if (document.title.indexOf('🔔') === -1) {
-          document.title = '🔔 ' + document.title;
-        }
-      } else {
-        badge.style.display = 'none';
-        tab.classList.remove('notify');
-        if (document.title.indexOf('🔔') !== -1) {
-          document.title = document.title.replace('🔔 ', '');
-        }
-      }
-    })
-    .catch(err => console.error('Error polling pedidos restaurante:', err));
-}
-
-{% if session.rol == 'restaurante' and restaurante and restaurante.estado == 'aprobado' %}
-  actualizarPedidosNuevos();
-  pollingRestaurante = setInterval(actualizarPedidosNuevos, 10000);
-  window.addEventListener('beforeunload', function() {
-    if (pollingRestaurante) clearInterval(pollingRestaurante);
-  });
-{% endif %}
 </script>
+
 </body>
 </html>

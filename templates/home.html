@@ -366,7 +366,7 @@
 
           <div class="local-banner">
             {% if r.banner_url %}
-              <img src="{{ url_for('static', filename=r.banner_url) }}" alt="">
+              <img src="{{ url_imagen(r.banner_url) }}" alt="">
             {% else %}
               <div class="local-banner-placeholder">
                 {% if r.categoria == 'Pizzería' %}🍕
@@ -381,7 +381,7 @@
             {% endif %}
             <div class="local-logo-wrap">
               {% if r.logo_url %}
-                <img class="local-logo" src="{{ url_for('static', filename=r.logo_url) }}" alt="">
+                <img class="local-logo" src="{{ url_imagen(r.logo_url) }}" alt="">
               {% else %}
                 <div class="local-logo-placeholder">{{ r.nombre_local[0] | upper }}</div>
               {% endif %}
