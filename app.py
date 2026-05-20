@@ -858,7 +858,7 @@ def cadete_editar_perfil():
 @rol_required("cliente")
 def cliente_panel():
     pedidos = query("""
-        SELECT p.*, r.nombre_local, r.restaurante_id
+        SELECT p.*, r.nombre_local, r.id AS restaurante_id
         FROM pedidos p
         JOIN restaurantes r ON r.id = p.restaurante_id
         WHERE p.cliente_id = ?
