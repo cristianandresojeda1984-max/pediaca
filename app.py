@@ -858,7 +858,7 @@ def cadete_editar_perfil():
 @rol_required("cliente")
 def cliente_panel():
     pedidos = query("""
-        SELECT p.*, r.nombre_local, r.id AS restaurante_id
+        SELECT p.*, r.nombre_local, r.restaurante_id
         FROM pedidos p
         JOIN restaurantes r ON r.id = p.restaurante_id
         WHERE p.cliente_id = ?
@@ -910,7 +910,7 @@ def cliente_editar_perfil():
     return redirect(url_for("cliente_panel"))
 
 
-@app.route("/mi-cuenta/password", methods=["POST"])
+@app.route("/mi-cuenta/password", methods=["GET", "POST"])
 @login_required
 @rol_required("cliente")
 def cliente_cambiar_password():
