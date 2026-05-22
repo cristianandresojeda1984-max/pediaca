@@ -3,8 +3,12 @@ PediAcá — Aplicación Principal
 Stack: Python + Flask + SQLite
 """
 
-import sqlite3
 import os
+try:
+    import psycopg2
+    import psycopg2.extras
+except ImportError:
+    psycopg2 = None
 import re
 import io
 from functools import wraps
@@ -29,6 +33,8 @@ app = Flask(__name__)
 app.secret_key = os.environ.get("SECRET_KEY", "dev-key-cambiar-en-produccion")
 
 DB_PATH       = os.environ.get("DB_PATH", "pediaca.db")
+DATABASE_URL  = os.environ.get("DATABASE_URL", "")
+USE_POSTGRES  = bool(DATABASE_URL and psycopg2)
 UPLOAD_FOLDER = "static/uploads"
 ALLOWED_EXT   = {"png", "jpg", "jpeg", "webp"}
 
@@ -108,9 +114,13 @@ def notificar_cadetes_push(pedido_id, nombre_local, total, direccion_entrega):
 # ── BASE DE DATOS ─────────────────────────────────────────────────────────────
 def get_db():
     if "db" not in g:
-        g.db = sqlite3.connect(DB_PATH)
-        g.db.row_factory = sqlite3.Row
-        g.db.execute("PRAGMA foreign_keys = ON")
+        if USE_POSTGRES:
+            g.db = psycopg2.connect(DATABASE_URL)
+        else:
+            import sqlite3 as _sq
+            g.db = _sq.connect(DB_PATH)
+            g.db.row_factory = _sq.Row
+            g.db.execute("PRAGMA foreign_keys = ON")
     return g.db
 
 @app.teardown_appcontext
@@ -119,16 +129,38 @@ def close_db(exc):
     if db:
         db.close()
 
+def _sql(sql):
+    return sql.replace("?", "%s") if USE_POSTGRES else sql
+
 def query(sql, args=(), one=False):
-    cur = get_db().execute(sql, args)
-    rv  = cur.fetchall()
+    sql = _sql(sql)
+    if USE_POSTGRES:
+        cur = get_db().cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+        cur.execute(sql, args)
+        rv = [dict(r) for r in cur.fetchall()]
+    else:
+        cur = get_db().execute(sql, args)
+        cols = [d[0] for d in cur.description] if cur.description else []
+        rv = [dict(zip(cols, row)) for row in cur.fetchall()]
     return (rv[0] if rv else None) if one else rv
 
 def execute(sql, args=()):
+    sql = _sql(sql)
     db  = get_db()
-    cur = db.execute(sql, args)
-    db.commit()
-    return cur.lastrowid
+    if USE_POSTGRES:
+        cur = db.cursor()
+        cur.execute(sql, args)
+        try:
+            cur.execute("SELECT lastval()")
+            last_id = cur.fetchone()[0]
+        except Exception:
+            last_id = None
+        db.commit()
+        return last_id
+    else:
+        cur = db.execute(sql, args)
+        db.commit()
+        return cur.lastrowid
 
 
 # ── HELPERS ───────────────────────────────────────────────────────────────────
@@ -186,8 +218,8 @@ def home():
     auspiciantes = query("""
         SELECT * FROM auspiciantes
         WHERE activo = 1
-          AND (fecha_inicio IS NULL OR fecha_inicio <= date('now'))
-          AND (fecha_fin   IS NULL OR fecha_fin   >= date('now'))
+          AND (fecha_inicio IS NULL OR fecha_inicio <= CURRENT_DATE)
+          AND (fecha_fin   IS NULL OR fecha_fin   >= CURRENT_DATE)
     """)
     return render_template("home.html",
                            restaurantes=restaurantes,
@@ -991,7 +1023,7 @@ def admin_panel():
         "clientes": query(
             "SELECT COUNT(*) as n FROM usuarios WHERE rol='cliente'", one=True)["n"],
         "pedidos_hoy": query(
-            "SELECT COUNT(*) as n FROM pedidos WHERE date(fecha_pedido)=date('now','localtime')",
+            "SELECT COUNT(*) as n FROM pedidos WHERE date(fecha_pedido)=CURRENT_DATE",
             one=True)["n"],
     }
     return render_template("admin_panel.html",
@@ -1015,7 +1047,7 @@ def admin_metricas():
         "restaurantes_activos":query("SELECT COUNT(*) as n FROM restaurantes WHERE estado='aprobado'", one=True)["n"],
         "cadetes_activos":     query("SELECT COUNT(*) as n FROM cadetes WHERE estado='aprobado'", one=True)["n"],
         "pedidos_total":       query("SELECT COUNT(*) as n FROM pedidos", one=True)["n"],
-        "pedidos_hoy":         query("SELECT COUNT(*) as n FROM pedidos WHERE date(fecha_pedido)=date('now','localtime')", one=True)["n"],
+        "pedidos_hoy":         query("SELECT COUNT(*) as n FROM pedidos WHERE date(fecha_pedido)=CURRENT_DATE", one=True)["n"],
         "pedidos_semana":      query("SELECT COUNT(*) as n FROM pedidos WHERE fecha_pedido >= datetime('now','-7 days','localtime')", one=True)["n"],
         "facturado_total":     query("SELECT COALESCE(SUM(total),0) as n FROM pedidos WHERE estado != 'cancelado'", one=True)["n"],
     }
@@ -1231,7 +1263,7 @@ def restaurante_cambiar_estado(pedido_id, nuevo_estado):
         return redirect(url_for("restaurante_pedidos"))
 
     execute("""
-        UPDATE pedidos SET estado=?, fecha_actualizado=datetime('now','localtime')
+        UPDATE pedidos SET estado=?, fecha_actualizado=NOW()
         WHERE id=? AND restaurante_id=?
     """, (nuevo_estado, pedido_id, restaurante["id"]))
 
@@ -1321,7 +1353,7 @@ def marcar_en_camino(pedido_id):
         return jsonify({"error": "Pedido no encontrado"}), 404
 
     execute("""
-        UPDATE pedidos SET estado='en_camino', fecha_actualizado=datetime('now','localtime')
+        UPDATE pedidos SET estado='en_camino', fecha_actualizado=NOW()
         WHERE id=?
     """, (pedido_id,))
 
@@ -1350,7 +1382,7 @@ def cadete_aceptar_pedido(pedido_id):
 
     execute("""
         UPDATE pedidos SET cadete_id=?, estado='en_camino',
-               fecha_actualizado=datetime('now','localtime')
+               fecha_actualizado=NOW()
         WHERE id=? AND cadete_id IS NULL
     """, (cadete["id"], pedido_id))
 
@@ -1662,7 +1694,7 @@ def reset_password(token):
     registro = query("""
         SELECT t.*, u.nombre FROM password_reset_tokens t
         JOIN usuarios u ON u.id = t.usuario_id
-        WHERE t.token=? AND t.usado=0 AND t.expira > datetime('now','localtime')
+        WHERE t.token=? AND t.usado=0 AND t.expira > NOW()
     """, (token,), one=True)
 
     if not registro:
@@ -1729,7 +1761,7 @@ def cadete_rechazar_pedido(pedido_id):
     # Solo puede rechazar si lo tiene asignado
     execute("""
         UPDATE pedidos SET cadete_id=NULL, estado='confirmado',
-               fecha_actualizado=datetime('now','localtime')
+               fecha_actualizado=NOW()
         WHERE id=? AND cadete_id=?
     """, (pedido_id, cadete["id"]))
     return jsonify({"ok": True})
