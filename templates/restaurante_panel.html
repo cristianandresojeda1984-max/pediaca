@@ -1020,7 +1020,7 @@ select.form-control { appearance: none; cursor: pointer; }
             <div style="color:var(--naranja);font-size:1.1rem;">
               {% for i in range(v.estrellas) %}★{% endfor %}{% for i in range(5-v.estrellas) %}☆{% endfor %}
             </div>
-            <div style="font-size:0.75rem;color:var(--gris-3);">{{ v.fecha[:10] }}</div>
+            <div style="font-size:0.75rem;color:var(--gris-3);">{{ v.fecha|fecha_corta }}</div>
           </div>
           {% if v.comentario %}
             <p style="font-size:0.88rem;color:var(--texto-s);line-height:1.5;">{{ v.comentario }}</p>

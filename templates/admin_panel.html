@@ -457,7 +457,7 @@
                 📍 {{ r.direccion or 'Sin dirección' }}<br>
                 📂 {{ r.categoria or 'Sin categoría' }}<br>
                 💬 WhatsApp: {{ r.whatsapp }}<br>
-                📅 {{ r.fecha_alta[:10] }}
+                📅 {{ r.fecha_alta|fecha_corta }}
               </div>
               <div class="solicitud-acciones">
                 <a href="{{ url_for('admin_restaurante_estado', restaurante_id=r.id, accion='aprobar') }}"
@@ -686,7 +686,7 @@
                     {% endif %}
                   </td>
                   <td style="font-size:0.78rem;color:var(--texto-s);">
-                    {{ p.fecha_pedido[:16] }}
+                    {{ p.fecha_pedido|fecha }}
                   </td>
                 </tr>
               {% endfor %}

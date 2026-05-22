@@ -3,16 +3,10 @@ PediAcá — Aplicación Principal
 Stack: Python + Flask + SQLite
 """
 
+import sqlite3
 import os
 import re
 import io
-try:
-    import psycopg2
-    import psycopg2.extras
-    USE_POSTGRES = True
-except ImportError:
-    import sqlite3
-    USE_POSTGRES = False
 from functools import wraps
 from flask import (Flask, render_template, request, redirect,
                    url_for, session, flash, jsonify, g)
@@ -34,9 +28,7 @@ VAPID_EMAIL       = os.environ.get("VAPID_CLAIMS_EMAIL", "admin@pediaca.ar")
 app = Flask(__name__)
 app.secret_key = os.environ.get("SECRET_KEY", "dev-key-cambiar-en-produccion")
 
-DB_PATH        = os.environ.get("DB_PATH", "pediaca.db")
-DATABASE_URL   = os.environ.get("DATABASE_URL", "")
-USE_POSTGRES   = bool(DATABASE_URL)
+DB_PATH       = os.environ.get("DB_PATH", "pediaca.db")
 UPLOAD_FOLDER = "static/uploads"
 ALLOWED_EXT   = {"png", "jpg", "jpeg", "webp"}
 
@@ -116,14 +108,9 @@ def notificar_cadetes_push(pedido_id, nombre_local, total, direccion_entrega):
 # ── BASE DE DATOS ─────────────────────────────────────────────────────────────
 def get_db():
     if "db" not in g:
-        if USE_POSTGRES:
-            g.db = psycopg2.connect(DATABASE_URL)
-            g.db.autocommit = False
-        else:
-            import sqlite3 as _sqlite3
-            g.db = _sqlite3.connect(DB_PATH)
-            g.db.row_factory = _sqlite3.Row
-            g.db.execute("PRAGMA foreign_keys = ON")
+        g.db = sqlite3.connect(DB_PATH)
+        g.db.row_factory = sqlite3.Row
+        g.db.execute("PRAGMA foreign_keys = ON")
     return g.db
 
 @app.teardown_appcontext
@@ -132,43 +119,16 @@ def close_db(exc):
     if db:
         db.close()
 
-def _adapt_sql(sql):
-    """Convierte ? de SQLite a %s de PostgreSQL."""
-    if USE_POSTGRES:
-        return sql.replace("?", "%s")
-    return sql
-
 def query(sql, args=(), one=False):
-    sql = _adapt_sql(sql)
-    if USE_POSTGRES:
-        cur = get_db().cursor(cursor_factory=psycopg2.extras.RealDictCursor)
-        cur.execute(sql, args)
-        rv = cur.fetchall()
-        rv = [dict(r) for r in rv]
-    else:
-        cur = get_db().execute(sql, args)
-        rv  = [dict(zip([d[0] for d in cur.description], row)) 
-               for row in cur.fetchall()] if cur.description else []
+    cur = get_db().execute(sql, args)
+    rv  = cur.fetchall()
     return (rv[0] if rv else None) if one else rv
 
 def execute(sql, args=()):
-    sql = _adapt_sql(sql)
     db  = get_db()
-    if USE_POSTGRES:
-        cur = db.cursor()
-        cur.execute(sql, args)
-        # Intentar obtener el ID del último insert
-        try:
-            cur.execute("SELECT lastval()")
-            last_id = cur.fetchone()[0]
-        except Exception:
-            last_id = None
-        db.commit()
-        return last_id
-    else:
-        cur = db.execute(sql, args)
-        db.commit()
-        return cur.lastrowid
+    cur = db.execute(sql, args)
+    db.commit()
+    return cur.lastrowid
 
 
 # ── HELPERS ───────────────────────────────────────────────────────────────────
@@ -198,7 +158,18 @@ def rol_required(*roles):
 def formato_pesos(valor):
     return f"${valor:,.0f}".replace(",", ".")
 
-app.jinja_env.filters["pesos"] = formato_pesos
+def formato_fecha(valor, formato="%Y-%m-%d %H:%M"):
+    """Formatea fecha tanto si es string como datetime."""
+    if not valor:
+        return ""
+    if hasattr(valor, 'strftime'):
+        return valor.strftime(formato)
+    # Es string
+    return str(valor)[:len(formato.replace("%Y","0000").replace("%m","00").replace("%d","00").replace("%H","00").replace("%M","00"))]
+
+app.jinja_env.filters["pesos"]  = formato_pesos
+app.jinja_env.filters["fecha"]  = formato_fecha
+app.jinja_env.filters["fecha_corta"] = lambda v: formato_fecha(v, "%Y-%m-%d")
 
 
 # ── RUTAS PÚBLICAS ────────────────────────────────────────────────────────────
@@ -215,8 +186,8 @@ def home():
     auspiciantes = query("""
         SELECT * FROM auspiciantes
         WHERE activo = 1
-          AND (fecha_inicio IS NULL OR fecha_inicio <= CURRENT_DATE)
-          AND (fecha_fin   IS NULL OR fecha_fin   >= CURRENT_DATE)
+          AND (fecha_inicio IS NULL OR fecha_inicio <= date('now'))
+          AND (fecha_fin   IS NULL OR fecha_fin   >= date('now'))
     """)
     return render_template("home.html",
                            restaurantes=restaurantes,
@@ -442,9 +413,6 @@ def service_worker():
     from flask import send_from_directory
     return send_from_directory("static", "sw.js",
                                mimetype="application/javascript")
-
-
-
 
 
 def guardar_imagen(archivo, subcarpeta=""):
@@ -950,10 +918,16 @@ def cliente_editar_perfil():
     return redirect(url_for("cliente_panel"))
 
 
-@app.route("/mi-cuenta/password", methods=["POST"])
+@app.route("/mi-cuenta/password", methods=["GET", "POST"])
 @login_required
 @rol_required("cliente")
 def cliente_cambiar_password():
+    # Si alguien entra por GET, redirigir al panel
+    if request.method == "GET":
+        flash("Usá el formulario para cambiar tu contraseña.", "info")
+        return redirect(url_for("cliente_panel"))
+    
+    # Si es POST, procesar el cambio
     from werkzeug.security import check_password_hash, generate_password_hash
     actual = request.form.get("password_actual", "")
     nueva  = request.form.get("password_nueva", "")
@@ -1017,7 +991,7 @@ def admin_panel():
         "clientes": query(
             "SELECT COUNT(*) as n FROM usuarios WHERE rol='cliente'", one=True)["n"],
         "pedidos_hoy": query(
-            "SELECT COUNT(*) as n FROM pedidos WHERE date(fecha_pedido)=CURRENT_DATE",
+            "SELECT COUNT(*) as n FROM pedidos WHERE date(fecha_pedido)=date('now','localtime')",
             one=True)["n"],
     }
     return render_template("admin_panel.html",
@@ -1027,6 +1001,42 @@ def admin_panel():
                            todos_cadetes=todos_cadetes,
                            ultimos_pedidos=ultimos_pedidos,
                            stats=stats)
+
+
+# ── ADMIN MÉTRICAS ────────────────────────────────────────────────────────────
+
+@app.route("/admin/metricas")
+@login_required
+@rol_required("admin")
+def admin_metricas():
+    stats = {
+        "usuarios_total":      query("SELECT COUNT(*) as n FROM usuarios", one=True)["n"],
+        "clientes":            query("SELECT COUNT(*) as n FROM usuarios WHERE rol='cliente'", one=True)["n"],
+        "restaurantes_activos":query("SELECT COUNT(*) as n FROM restaurantes WHERE estado='aprobado'", one=True)["n"],
+        "cadetes_activos":     query("SELECT COUNT(*) as n FROM cadetes WHERE estado='aprobado'", one=True)["n"],
+        "pedidos_total":       query("SELECT COUNT(*) as n FROM pedidos", one=True)["n"],
+        "pedidos_hoy":         query("SELECT COUNT(*) as n FROM pedidos WHERE date(fecha_pedido)=date('now','localtime')", one=True)["n"],
+        "pedidos_semana":      query("SELECT COUNT(*) as n FROM pedidos WHERE fecha_pedido >= datetime('now','-7 days','localtime')", one=True)["n"],
+        "facturado_total":     query("SELECT COALESCE(SUM(total),0) as n FROM pedidos WHERE estado != 'cancelado'", one=True)["n"],
+    }
+    pedidos_por_dia = query("""
+        SELECT date(fecha_pedido) as dia, COUNT(*) as total
+        FROM pedidos WHERE fecha_pedido >= datetime('now','-30 days','localtime')
+        GROUP BY dia ORDER BY dia
+    """)
+    top_restaurantes = query("""
+        SELECT r.nombre_local, COUNT(p.id) as pedidos,
+               COALESCE(AVG(v.estrellas),0) as rating
+        FROM restaurantes r
+        LEFT JOIN pedidos p ON p.restaurante_id = r.id
+        LEFT JOIN valoraciones v ON v.restaurante_id = r.id
+        WHERE r.estado='aprobado'
+        GROUP BY r.id ORDER BY pedidos DESC LIMIT 10
+    """)
+    return render_template("admin_metricas.html",
+                           stats=stats,
+                           pedidos_por_dia=pedidos_por_dia,
+                           top_restaurantes=top_restaurantes)
 
 
 @app.route("/admin/restaurante/<int:restaurante_id>/estado/<accion>")
@@ -1221,7 +1231,7 @@ def restaurante_cambiar_estado(pedido_id, nuevo_estado):
         return redirect(url_for("restaurante_pedidos"))
 
     execute("""
-        UPDATE pedidos SET estado=?, fecha_actualizado=NOW()
+        UPDATE pedidos SET estado=?, fecha_actualizado=datetime('now','localtime')
         WHERE id=? AND restaurante_id=?
     """, (nuevo_estado, pedido_id, restaurante["id"]))
 
@@ -1285,7 +1295,6 @@ def notificar_cadetes(pedido_id):
     return jsonify({"cadetes": links, "pedido_id": pedido_id})
 
 
-
 @app.route("/pedido/<int:pedido_id>/en-camino", methods=["POST"])
 @login_required
 def marcar_en_camino(pedido_id):
@@ -1312,7 +1321,7 @@ def marcar_en_camino(pedido_id):
         return jsonify({"error": "Pedido no encontrado"}), 404
 
     execute("""
-        UPDATE pedidos SET estado='en_camino', fecha_actualizado=NOW()
+        UPDATE pedidos SET estado='en_camino', fecha_actualizado=datetime('now','localtime')
         WHERE id=?
     """, (pedido_id,))
 
@@ -1341,7 +1350,7 @@ def cadete_aceptar_pedido(pedido_id):
 
     execute("""
         UPDATE pedidos SET cadete_id=?, estado='en_camino',
-               fecha_actualizado=NOW()
+               fecha_actualizado=datetime('now','localtime')
         WHERE id=? AND cadete_id IS NULL
     """, (cadete["id"], pedido_id))
 
@@ -1595,26 +1604,6 @@ def producto_editar(prod_id):
     return redirect(url_for("restaurante_panel"))
 
 
-# ── MAIN ──────────────────────────────────────────────────────────────────────
-if __name__ == "__main__":
-    if not USE_POSTGRES and not os.path.exists(DB_PATH):
-        print(f"⚠️  No existe '{DB_PATH}'. Ejecutá primero: python init_db.py")
-    else:
-        app.run(debug=True, port=5000)
-
-
-# ── PÁGINAS LEGALES ───────────────────────────────────────────────────────────
-
-@app.route("/terminos")
-def terminos():
-    return render_template("terminos.html")
-
-@app.route("/privacidad")
-def privacidad():
-    return render_template("privacidad.html")
-
-
-
 # ── TOGGLE ABIERTO/CERRADO ────────────────────────────────────────────────────
 
 @app.route("/mi-local/toggle-abierto")
@@ -1673,7 +1662,7 @@ def reset_password(token):
     registro = query("""
         SELECT t.*, u.nombre FROM password_reset_tokens t
         JOIN usuarios u ON u.id = t.usuario_id
-        WHERE t.token=? AND t.usado=0 AND t.expira > NOW()
+        WHERE t.token=? AND t.usado=0 AND t.expira > datetime('now','localtime')
     """, (token,), one=True)
 
     if not registro:
@@ -1740,69 +1729,22 @@ def cadete_rechazar_pedido(pedido_id):
     # Solo puede rechazar si lo tiene asignado
     execute("""
         UPDATE pedidos SET cadete_id=NULL, estado='confirmado',
-               fecha_actualizado=NOW()
+               fecha_actualizado=datetime('now','localtime')
         WHERE id=? AND cadete_id=?
     """, (pedido_id, cadete["id"]))
     return jsonify({"ok": True})
 
 
-# ── MÉTRICAS PARA ADMIN/AUSPICIANTES ─────────────────────────────────────────
+# ── PÁGINAS LEGALES ───────────────────────────────────────────────────────────
 
-@app.route("/admin/metricas")
-@login_required
-@rol_required("admin")
-def admin_metricas():
-    stats = {
-        "usuarios_total":      query("SELECT COUNT(*) as n FROM usuarios", one=True)["n"],
-        "clientes":            query("SELECT COUNT(*) as n FROM usuarios WHERE rol='cliente'", one=True)["n"],
-        "restaurantes_activos":query("SELECT COUNT(*) as n FROM restaurantes WHERE estado='aprobado'", one=True)["n"],
-        "cadetes_activos":     query("SELECT COUNT(*) as n FROM cadetes WHERE estado='aprobado'", one=True)["n"],
-        "pedidos_total":       query("SELECT COUNT(*) as n FROM pedidos", one=True)["n"],
-        "pedidos_hoy":         query("SELECT COUNT(*) as n FROM pedidos WHERE date(fecha_pedido)=CURRENT_DATE", one=True)["n"],
-        "pedidos_semana":      query("SELECT COUNT(*) as n FROM pedidos WHERE fecha_pedido >= datetime('now','-7 days','localtime')", one=True)["n"],
-        "facturado_total":     query("SELECT COALESCE(SUM(total),0) as n FROM pedidos WHERE estado != 'cancelado'", one=True)["n"],
-    }
-    pedidos_por_dia = query("""
-        SELECT date(fecha_pedido) as dia, COUNT(*) as total
-        FROM pedidos WHERE fecha_pedido >= datetime('now','-30 days','localtime')
-        GROUP BY dia ORDER BY dia
-    """)
-    top_restaurantes = query("""
-        SELECT r.nombre_local, COUNT(p.id) as pedidos,
-               COALESCE(AVG(v.estrellas),0) as rating
-        FROM restaurantes r
-        LEFT JOIN pedidos p ON p.restaurante_id = r.id
-        LEFT JOIN valoraciones v ON v.restaurante_id = r.id
-        WHERE r.estado='aprobado'
-        GROUP BY r.id ORDER BY pedidos DESC LIMIT 10
-    """)
-    return render_template("admin_metricas.html",
-                           stats=stats,
-                           pedidos_por_dia=pedidos_por_dia,
-                           top_restaurantes=top_restaurantes)
+@app.route("/terminos")
+def terminos():
+    return render_template("terminos.html")
 
+@app.route("/privacidad")
+def privacidad():
+    return render_template("privacidad.html")
 
-
-@app.route("/admin/test-cloudinary")
-@login_required
-@rol_required("admin")
-def test_cloudinary():
-    info = {
-        "USE_CLOUDINARY": USE_CLOUDINARY,
-        "CLOUDINARY_CLOUD": CLOUDINARY_CLOUD,
-        "CLOUDINARY_KEY": CLOUDINARY_KEY[:6] + "..." if CLOUDINARY_KEY else "",
-        "CLOUDINARY_SEC": CLOUDINARY_SEC[:6] + "..." if CLOUDINARY_SEC else "",
-    }
-    if USE_CLOUDINARY:
-        try:
-            # Test mínimo: listar recursos
-            result = cloudinary.api.ping()
-            info["ping"] = str(result)
-            info["status"] = "OK"
-        except Exception as e:
-            info["status"] = "ERROR"
-            info["error"] = str(e)
-    return jsonify(info)
 
 # ── SETUP INICIAL (uso único para crear admin en producción) ──────────────────
 
@@ -1839,3 +1781,11 @@ def setup_admin(clave_secreta):
         </a>
     </body></html>
     """, 200
+
+
+# ── MAIN ──────────────────────────────────────────────────────────────────────
+if __name__ == "__main__":
+    if not os.path.exists(DB_PATH):
+        print(f"⚠️  No existe '{DB_PATH}'. Ejecutá primero: python init_db.py")
+    else:
+        app.run(debug=True, port=5000)

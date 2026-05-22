@@ -1,319 +1,471 @@
 {% extends "base.html" %}
-{% block title %}Pedidos — {{ restaurante.nombre_local }}{% endblock %}
+{% block title %}Mis Pedidos — {{ restaurante.nombre_local }}{% endblock %}
 
 {% block extra_styles %}
-.pedidos-header {
-  background: linear-gradient(135deg, #1A1A2E 0%, #0F3460 100%);
-  padding: 28px 20px 24px;
-  color: #fff;
+.page-header {
+  background: linear-gradient(135deg, #1A1A2E, #0F3460);
+  padding: 20px;
+  display: flex; align-items: center; gap: 14px;
 }
-.pedidos-header h1 {
-  font-family: 'Paytone One', sans-serif;
-  font-size: 1.5rem;
-  margin-bottom: 4px;
+.page-header h1 { font-family:'Paytone One',sans-serif; color:#fff; font-size:1.2rem; }
+.page-header p  { color:rgba(255,255,255,0.6); font-size:0.8rem; font-weight:600; }
+.back-btn {
+  background: rgba(255,255,255,0.12); border:none; color:#fff;
+  padding:8px 16px; border-radius:99px; font-weight:700;
+  font-size:0.82rem; cursor:pointer; text-decoration:none;
+  font-family:'Nunito',sans-serif;
 }
-.pedidos-header p {
-  opacity: 0.8;
-  font-weight: 600;
-}
-.pedidos-container {
-  max-width: 1000px;
-  margin: 0 auto;
-  padding: 24px 16px 80px;
-}
+
+/* FILTROS */
 .filtros {
-  display: flex;
-  gap: 10px;
-  flex-wrap: wrap;
-  margin-bottom: 20px;
   background: var(--blanco);
   padding: 12px 16px;
-  border-radius: 14px;
-  box-shadow: var(--sombra-s);
+  display: flex; gap: 8px; flex-wrap: wrap;
+  border-bottom: 1px solid var(--gris-2);
+  position: sticky; top: 60px; z-index: 100;
 }
 .filtro-btn {
-  background: var(--gris-1);
-  border: none;
-  padding: 8px 18px;
-  border-radius: 99px;
-  font-weight: 700;
-  font-size: 0.82rem;
-  cursor: pointer;
-  font-family: 'Nunito', sans-serif;
-  transition: all 0.15s;
+  padding: 6px 16px; border-radius: 99px;
+  border: 2px solid var(--gris-2);
+  background: none; font-family:'Nunito',sans-serif;
+  font-weight:700; font-size:0.8rem; cursor:pointer;
+  transition: all 0.15s; color: var(--texto-s);
 }
-.filtro-btn.activo {
-  background: var(--naranja);
-  color: #fff;
+.filtro-btn.activo { background:var(--naranja); border-color:var(--naranja); color:#fff; }
+.search-input {
+  flex:1; min-width:160px; padding:7px 14px;
+  border:2px solid var(--gris-2); border-radius:99px;
+  font-family:'Nunito',sans-serif; font-weight:600;
+  font-size:0.85rem; outline:none;
 }
+.search-input:focus { border-color:var(--naranja); }
+
+/* STATS RÁPIDAS */
+.stats-bar {
+  display: grid; grid-template-columns: repeat(4,1fr);
+  gap: 1px; background: var(--gris-2);
+  margin-bottom: 16px;
+}
+.stat-mini {
+  background: var(--blanco);
+  padding: 14px; text-align:center;
+}
+.stat-mini-num   { font-family:'Paytone One',sans-serif; font-size:1.3rem; color:var(--naranja-d); }
+.stat-mini-label { font-size:0.7rem; color:var(--texto-s); font-weight:700; margin-top:2px; }
+
+/* PEDIDO CARD */
+.container-lg { max-width:860px; margin:0 auto; padding:16px; }
 .pedido-card {
   background: var(--blanco);
   border-radius: 14px;
   box-shadow: var(--sombra-s);
-  margin-bottom: 20px;
+  margin-bottom: 12px;
   overflow: hidden;
-  border-left: 4px solid var(--naranja);
-}
-.pedido-card-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 14px 20px;
-  background: var(--gris-1);
-  flex-wrap: wrap;
-  gap: 8px;
-}
-.pedido-id {
-  font-family: 'Paytone One', sans-serif;
-  font-size: 1rem;
-  color: var(--naranja-d);
-}
-.pedido-fecha {
-  font-size: 0.78rem;
-  color: var(--texto-s);
-}
-.pedido-total {
-  font-weight: 800;
-  font-size: 1.1rem;
-  color: var(--texto);
-}
-.pedido-estado {
-  padding: 4px 12px;
-  border-radius: 99px;
-  font-size: 0.72rem;
-  font-weight: 800;
-}
-.estado-nuevo      { background: #FEF3DC; color: #9A6000; }
-.estado-confirmado { background: #D5F5E3; color: #1E8449; }
-.estado-en_camino  { background: var(--azul-l); color: var(--azul-d); }
-.estado-entregado  { background: #D5F5E3; color: #1E8449; }
-.estado-cancelado  { background: #FADBD8; color: #922B21; }
-
-.pedido-cliente {
-  padding: 12px 20px 8px;
-  border-bottom: 1px solid var(--gris-1);
-  display: flex;
-  gap: 12px;
-  align-items: center;
-  flex-wrap: wrap;
-}
-.cliente-nombre {
-  font-weight: 800;
-}
-.cliente-tel {
-  font-size: 0.82rem;
-  color: var(--texto-s);
-}
-.pedido-items {
-  padding: 12px 20px;
-}
-.item-row {
-  display: flex;
-  justify-content: space-between;
-  font-size: 0.88rem;
-  padding: 6px 0;
-  border-bottom: 1px dashed var(--gris-1);
-}
-.item-nombre {
-  font-weight: 600;
-}
-.item-precio {
-  font-weight: 700;
-  color: var(--naranja-d);
-}
-.pedido-direccion {
-  padding: 8px 20px;
-  background: var(--naranja-l);
-  font-size: 0.82rem;
-  font-weight: 700;
-  color: var(--naranja-d);
-}
-.pedido-notas {
-  padding: 8px 20px;
-  font-size: 0.82rem;
-  color: var(--texto-s);
-  font-style: italic;
-}
-.pedido-actions {
-  padding: 14px 20px;
-  display: flex;
-  gap: 10px;
-  flex-wrap: wrap;
-  border-top: 1px solid var(--gris-1);
-}
-.btn-estado {
-  padding: 8px 18px;
-  border-radius: 99px;
-  font-weight: 700;
-  font-size: 0.8rem;
-  border: none;
-  cursor: pointer;
-  font-family: 'Nunito', sans-serif;
+  border-left: 4px solid var(--gris-2);
   transition: all 0.15s;
-  text-decoration: none;
-  display: inline-block;
 }
-.btn-confirmar  { background: #D5F5E3; color: #1E8449; }
-.btn-cancelar   { background: #FADBD8; color: #922B21; }
-.btn-entregar   { background: var(--azul-l); color: var(--azul-d); }
-.btn-entregado  { background: #D5F5E3; color: #1E8449; cursor: default; }
-.btn-cadete     { background: var(--naranja-l); color: var(--naranja-d); }
-.empty-pedidos {
-  background: var(--blanco);
-  border-radius: 14px;
-  padding: 60px 24px;
-  text-align: center;
-  color: var(--texto-s);
+.pedido-card.estado-nuevo       { border-left-color: var(--naranja); }
+.pedido-card.estado-confirmado  { border-left-color: var(--azul); }
+.pedido-card.estado-en_camino   { border-left-color: var(--verde); }
+.pedido-card.estado-entregado   { border-left-color: var(--gris-3); }
+.pedido-card.estado-cancelado   { border-left-color: var(--rojo); opacity:0.7; }
+
+.pedido-head {
+  display:flex; align-items:center; gap:12px;
+  padding:14px 16px 10px; cursor:pointer;
+}
+.pedido-num {
+  font-family:'Paytone One',sans-serif;
+  font-size:0.85rem; color:var(--texto-s);
+  flex-shrink:0;
+}
+.pedido-cliente { flex:1; min-width:0; }
+.pedido-cliente-nombre { font-weight:800; font-size:0.95rem; }
+.pedido-cliente-dir    { font-size:0.78rem; color:var(--texto-s); margin-top:1px; }
+.pedido-total {
+  font-family:'Paytone One',sans-serif;
+  font-size:1.1rem; color:var(--naranja-d); flex-shrink:0;
+}
+.pedido-chevron { color:var(--gris-3); transition:transform 0.2s; font-size:1rem; }
+.pedido-card.open .pedido-chevron { transform:rotate(180deg); }
+
+/* CHIPS */
+.chips-row { display:flex; gap:6px; flex-wrap:wrap; padding:0 16px 10px; }
+.chip {
+  font-size:0.72rem; font-weight:700;
+  padding:3px 10px; border-radius:99px;
+}
+.chip-naranja { background:var(--naranja-l); color:var(--naranja-d); }
+.chip-azul    { background:var(--azul-l);    color:var(--azul-d); }
+.chip-verde   { background:#D5F5E3;           color:#1E8449; }
+.chip-gris    { background:var(--gris-1);     color:var(--texto-s); }
+.chip-rojo    { background:#FADBD8;           color:#922B21; }
+
+/* DETALLE EXPANDIBLE */
+.pedido-detalle { display:none; border-top:1px solid var(--gris-1); }
+.pedido-card.open .pedido-detalle { display:block; }
+
+.items-lista { padding:12px 16px; }
+.item-row {
+  display:flex; align-items:center; gap:10px;
+  padding:6px 0; border-bottom:1px solid var(--gris-1);
+  font-size:0.85rem;
+}
+.item-row:last-child { border-bottom:none; }
+.item-cant {
+  width:28px; height:28px; border-radius:8px;
+  background:var(--naranja-l); color:var(--naranja-d);
+  display:flex; align-items:center; justify-content:center;
+  font-weight:800; font-size:0.85rem; flex-shrink:0;
+}
+.item-nombre { flex:1; font-weight:700; }
+.item-precio { font-weight:800; color:var(--naranja-d); }
+
+/* CADETE INFO */
+.cadete-info {
+  margin:0 16px 12px;
+  background:var(--azul-l); border-radius:10px;
+  padding:12px 14px; display:flex; align-items:center; gap:10px;
+}
+.cadete-info-ico { font-size:1.4rem; }
+.cadete-info-txt { flex:1; }
+.cadete-info-nombre { font-weight:800; font-size:0.88rem; color:var(--azul-d); }
+.cadete-info-sub    { font-size:0.75rem; color:var(--azul); }
+.cadete-wa-btn {
+  background:var(--verde); color:#fff;
+  padding:6px 14px; border-radius:99px;
+  font-weight:800; font-size:0.78rem;
+  text-decoration:none; flex-shrink:0;
+}
+
+/* ACCIONES */
+.pedido-acciones {
+  padding:10px 16px 14px;
+  display:flex; gap:8px; flex-wrap:wrap;
+}
+.btn-accion {
+  padding:8px 16px; border-radius:99px;
+  border:none; font-family:'Nunito',sans-serif;
+  font-weight:800; font-size:0.8rem; cursor:pointer;
+  text-decoration:none; transition:all 0.15s;
+  display:inline-block;
+}
+.btn-confirmar { background:#D5F5E3; color:#1E8449; }
+.btn-confirmar:hover { background:var(--verde); color:#fff; }
+.btn-cancelar  { background:#FADBD8; color:#922B21; }
+.btn-cancelar:hover  { background:var(--rojo); color:#fff; }
+.btn-notificar { background:var(--naranja-l); color:var(--naranja-d); }
+.btn-notificar:hover { background:var(--naranja); color:#fff; }
+
+/* EMPTY */
+.empty { text-align:center; padding:60px 20px; color:var(--texto-s); }
+.empty-icon { font-size:3.5rem; margin-bottom:12px; }
+
+/* MODAL NOTIFICAR */
+.modal-overlay {
+  display:none; position:fixed; inset:0;
+  background:rgba(0,0,0,0.55); z-index:300;
+  align-items:flex-end; justify-content:center;
+}
+.modal-overlay.open { display:flex; }
+.modal {
+  background:var(--blanco); border-radius:20px 20px 0 0;
+  padding:24px 20px; width:100%; max-width:500px;
+  max-height:80vh; overflow-y:auto;
+}
+.modal-titulo { font-family:'Paytone One',sans-serif; font-size:1.1rem; margin-bottom:16px; }
+.cadete-notif-item {
+  display:flex; align-items:center; gap:12px;
+  padding:12px; border-radius:12px; background:var(--gris-1);
+  margin-bottom:8px;
+}
+.cadete-notif-info { flex:1; }
+.cadete-notif-nombre { font-weight:800; font-size:0.9rem; }
+.cadete-notif-sub    { font-size:0.75rem; color:var(--texto-s); }
+.btn-wa-cadete {
+  background:#25D366; color:#fff;
+  padding:8px 16px; border-radius:99px;
+  font-weight:800; font-size:0.8rem;
+  text-decoration:none; flex-shrink:0;
 }
 {% endblock %}
 
 {% block content %}
-<div class="pedidos-header">
-  <div class="pedidos-container" style="padding:0;">
-    <h1>📋 Pedidos de {{ restaurante.nombre_local }}</h1>
-    <p>Gestioná los pedidos que recibiste</p>
+<div class="page-header">
+  <div style="flex:1;">
+    <h1>📋 Historial de pedidos</h1>
+    <p>{{ restaurante.nombre_local }} · {{ pedidos|length }} pedidos</p>
+  </div>
+  <a href="{{ url_for('restaurante_panel') }}" class="back-btn">← Mi panel</a>
+</div>
+
+<!-- STATS -->
+{% set en_curso    = pedidos | selectattr('estado', 'in', ['nuevo','confirmado','en_camino']) | list | length %}
+{% set entregados  = pedidos | selectattr('estado', 'equalto', 'entregado') | list | length %}
+{% set total_ventas= pedidos | selectattr('estado', 'ne', 'cancelado') | sum(attribute='total') %}
+<div class="stats-bar">
+  <div class="stat-mini">
+    <div class="stat-mini-num">{{ en_curso }}</div>
+    <div class="stat-mini-label">En curso</div>
+  </div>
+  <div class="stat-mini">
+    <div class="stat-mini-num">{{ entregados }}</div>
+    <div class="stat-mini-label">Entregados</div>
+  </div>
+  <div class="stat-mini">
+    <div class="stat-mini-num">{{ pedidos|length }}</div>
+    <div class="stat-mini-label">Total pedidos</div>
+  </div>
+  <div class="stat-mini">
+    <div class="stat-mini-num">${{ total_ventas|int }}</div>
+    <div class="stat-mini-label">Facturado</div>
   </div>
 </div>
 
-<div class="pedidos-container">
-  {% with msgs = get_flashed_messages(with_categories=true) %}
-    {% for cat, msg in msgs %}
-      <div class="alert alert-{{ cat }}" style="margin-bottom:16px;">{{ msg }}</div>
-    {% endfor %}
-  {% endwith %}
+<!-- FILTROS -->
+<div class="filtros">
+  <button class="filtro-btn activo" onclick="filtrar(this,'')">Todos</button>
+  <button class="filtro-btn" onclick="filtrar(this,'nuevo')">⏳ Nuevos</button>
+  <button class="filtro-btn" onclick="filtrar(this,'confirmado')">✔ Confirmados</button>
+  <button class="filtro-btn" onclick="filtrar(this,'en_camino')">🛵 En camino</button>
+  <button class="filtro-btn" onclick="filtrar(this,'entregado')">✅ Entregados</button>
+  <input class="search-input" type="text" placeholder="🔍 Buscar cliente..." oninput="buscar(this.value)">
+</div>
 
-  <!-- Filtros -->
-  <div class="filtros">
-    <button class="filtro-btn activo" data-filtro="todos">📋 Todos</button>
-    <button class="filtro-btn" data-filtro="nuevo">🆕 Nuevos</button>
-    <button class="filtro-btn" data-filtro="confirmado">✅ Confirmados</button>
-    <button class="filtro-btn" data-filtro="en_camino">🛵 En camino</button>
-    <button class="filtro-btn" data-filtro="entregado">🎉 Entregados</button>
-    <button class="filtro-btn" data-filtro="cancelado">❌ Cancelados</button>
-  </div>
-
+<div class="container-lg">
   {% if pedidos %}
     {% for p in pedidos %}
-      <div class="pedido-card" data-estado="{{ p.estado }}">
-        <div class="pedido-card-header">
-          <span class="pedido-id">Pedido #{{ p.id }}</span>
-          <span class="pedido-fecha">{{ p.fecha_pedido[:16] }}</span>
-          <span class="pedido-total">${{ p.total|int }}</span>
-          <span class="pedido-estado estado-{{ p.estado|replace('_','-') }}">
-            {% if p.estado == 'nuevo' %}🆕 Nuevo
-            {% elif p.estado == 'confirmado' %}✅ Confirmado
-            {% elif p.estado == 'en_camino' %}🛵 En camino
-            {% elif p.estado == 'entregado' %}🎉 Entregado
-            {% elif p.estado == 'cancelado' %}❌ Cancelado
-            {% else %}{{ p.estado }}{% endif %}
-          </span>
+      {% set its = items_por_pedido.get(p.id, []) %}
+      <div class="pedido-card estado-{{ p.estado }}" id="pc-{{ p.id }}" data-estado="{{ p.estado }}"
+           data-cliente="{{ (p.nombre_cliente_anonimo or p.nombre_cliente or '') | lower }}">
+
+        <!-- CABECERA (clickeable para expandir) -->
+        <div class="pedido-head" onclick="toggleCard({{ p.id }})">
+          <div class="pedido-num">#{{ p.id }}</div>
+          <div class="pedido-cliente">
+            <div class="pedido-cliente-nombre">
+              {{ p.nombre_cliente or p.nombre_cliente_anonimo or 'Cliente anónimo' }}
+            </div>
+            <div class="pedido-cliente-dir">
+              {{ p.fecha_pedido|fecha }} ·
+              {{ '🛵 Delivery' if p.tipo_entrega == 'delivery' else '🏪 Retiro' }}
+            </div>
+          </div>
+          <div class="pedido-total">${{ p.total|int }}</div>
+          <span class="pedido-chevron">▾</span>
         </div>
 
-        <div class="pedido-cliente">
-          <span class="cliente-nombre">👤 {{ p.cliente_nombre or p.nombre_cliente_anonimo or 'Cliente anónimo' }}</span>
-          {% if p.cliente_tel %}
-            <span class="cliente-tel">📱 {{ p.cliente_tel }}</span>
-          {% endif %}
-          {% if p.telefono_cliente_anonimo %}
-            <span class="cliente-tel">📱 {{ p.telefono_cliente_anonimo }}</span>
-          {% endif %}
-          {% if p.tipo_entrega == 'delivery' and p.cadete_nombre %}
-            <span class="cliente-tel">🛵 Cadete: {{ p.cadete_nombre }} ({{ p.cadete_vehiculo or 'moto' }}) - {{ p.cadete_tel }}</span>
-          {% endif %}
-        </div>
-
-        {% if items_por_pedido.get(p.id) %}
-          <div class="pedido-items">
-            {% for item in items_por_pedido[p.id] %}
-              <div class="item-row">
-                <span class="item-nombre">{{ item.cantidad }}x {{ item.nombre_producto }}</span>
-                <span class="item-precio">${{ item.subtotal|int }}</span>
-              </div>
-            {% endfor %}
-          </div>
-        {% endif %}
-
-        {% if p.tipo_entrega == 'delivery' and p.direccion_entrega %}
-          <div class="pedido-direccion">
-            📍 {{ p.direccion_entrega }}
-          </div>
-        {% endif %}
-
-        {% if p.notas %}
-          <div class="pedido-notas">
-            💬 Notas: {{ p.notas }}
-          </div>
-        {% endif %}
-
-        <div class="pedido-actions">
+        <!-- CHIPS ESTADO -->
+        <div class="chips-row">
           {% if p.estado == 'nuevo' %}
-            <a href="{{ url_for('restaurante_cambiar_estado', pedido_id=p.id, nuevo_estado='confirmado') }}" class="btn-estado btn-confirmar">✅ Confirmar pedido</a>
-            <a href="{{ url_for('restaurante_cambiar_estado', pedido_id=p.id, nuevo_estado='cancelado') }}" class="btn-estado btn-cancelar">❌ Cancelar</a>
+            <span class="chip chip-naranja">⏳ Nuevo</span>
           {% elif p.estado == 'confirmado' %}
-            {% if p.tipo_entrega == 'delivery' %}
-              <a href="#" class="btn-estado btn-cadete" onclick="notificarCadetes({{ p.id }}, this)">📢 Notificar cadetes</a>
-            {% else %}
-              <a href="{{ url_for('restaurante_cambiar_estado', pedido_id=p.id, nuevo_estado='entregado') }}" class="btn-estado btn-entregar">🎉 Marcar como entregado (retiro)</a>
-            {% endif %}
-            <a href="{{ url_for('restaurante_cambiar_estado', pedido_id=p.id, nuevo_estado='cancelado') }}" class="btn-estado btn-cancelar">❌ Cancelar</a>
+            <span class="chip chip-azul">✔ Confirmado</span>
           {% elif p.estado == 'en_camino' %}
-            <span class="btn-estado btn-entregado">🛵 En camino (cadete)</span>
-            <a href="{{ url_for('restaurante_cambiar_estado', pedido_id=p.id, nuevo_estado='entregado') }}" class="btn-estado btn-entregar">🎉 Marcar entregado</a>
+            <span class="chip chip-verde">🛵 En camino</span>
           {% elif p.estado == 'entregado' %}
-            <span class="btn-estado btn-entregado">✅ Entregado</span>
+            <span class="chip chip-gris">✅ Entregado</span>
           {% elif p.estado == 'cancelado' %}
-            <span class="btn-estado btn-cancelar">❌ Cancelado</span>
+            <span class="chip chip-rojo">✕ Cancelado</span>
           {% endif %}
+          {% if p.tipo_entrega == 'delivery' %}
+            <span class="chip chip-azul">📍 {{ p.direccion_entrega or 'Sin dirección' }}</span>
+          {% endif %}
+          {% if p.cadete_nombre %}
+            <span class="chip chip-verde">🛵 {{ p.cadete_nombre }}</span>
+          {% endif %}
+        </div>
+
+        <!-- DETALLE EXPANDIBLE -->
+        <div class="pedido-detalle">
+
+          <!-- ITEMS -->
+          <div class="items-lista">
+            {% if its %}
+              {% for it in its %}
+                <div class="item-row">
+                  <div class="item-cant">{{ it.cantidad }}</div>
+                  <div class="item-nombre">{{ it.nombre_producto }}</div>
+                  <div class="item-precio">${{ it.subtotal|int }}</div>
+                </div>
+              {% endfor %}
+              <div style="display:flex;justify-content:space-between;padding:10px 0 2px;font-weight:800;font-size:0.9rem;">
+                <span>Total</span>
+                <span style="color:var(--naranja-d);">${{ p.total|int }}</span>
+              </div>
+              {% if p.notas %}
+                <div style="background:var(--naranja-l);border-radius:8px;padding:8px 12px;font-size:0.8rem;color:var(--naranja-d);font-weight:700;margin-top:8px;">
+                  💬 {{ p.notas }}
+                </div>
+              {% endif %}
+            {% else %}
+              <p style="color:var(--texto-s);font-size:0.85rem;">Sin detalle de items.</p>
+            {% endif %}
+          </div>
+
+          <!-- CADETE ASIGNADO -->
+          {% if p.cadete_nombre %}
+            <div class="cadete-info">
+              <div class="cadete-info-ico">🛵</div>
+              <div class="cadete-info-txt">
+                <div class="cadete-info-nombre">{{ p.cadete_nombre }}</div>
+                <div class="cadete-info-sub">{{ p.cadete_vehiculo or 'moto' }} · Cadete asignado</div>
+              </div>
+              {% if p.cadete_tel %}
+                <a class="cadete-wa-btn"
+                   href="https://wa.me/549{{ p.cadete_tel|replace('+','')|replace('-','')|replace(' ','') }}"
+                   target="_blank">WhatsApp</a>
+              {% endif %}
+            </div>
+          {% endif %}
+
+          <!-- ACCIONES -->
+          <div class="pedido-acciones">
+            {% if p.estado == 'nuevo' %}
+              <a class="btn-accion btn-confirmar"
+                 href="{{ url_for('restaurante_cambiar_estado', pedido_id=p.id, nuevo_estado='confirmado') }}">
+                ✔ Confirmar pedido
+              </a>
+              <a class="btn-accion btn-cancelar"
+                 href="{{ url_for('restaurante_cambiar_estado', pedido_id=p.id, nuevo_estado='cancelado') }}"
+                 onclick="return confirm('¿Cancelar este pedido?')">
+                ✕ Cancelar
+              </a>
+            {% endif %}
+            {% if p.estado == 'confirmado' and p.tipo_entrega == 'delivery' and not p.cadete_id %}
+              <button class="btn-accion btn-notificar"
+                      onclick="notificarCadetes({{ p.id }})">
+                🛵 Notificar cadetes
+              </button>
+            {% endif %}
+            {% if p.estado in ['confirmado','en_camino'] %}
+              <button class="btn-accion" style="background:var(--azul-l);color:var(--azul-d);"
+                      onclick="marcarEnCamino({{ p.id }}, this)">
+                🛵 Marcar "En camino"
+              </button>
+            {% endif %}
+            {% if p.estado == 'en_camino' %}
+              <a class="btn-accion" style="background:#D5F5E3;color:#1E8449;"
+                 href="{{ url_for('restaurante_cambiar_estado', pedido_id=p.id, nuevo_estado='entregado') }}">
+                ✅ Marcar entregado
+              </a>
+            {% endif %}
+          </div>
+
         </div>
       </div>
     {% endfor %}
   {% else %}
-    <div class="empty-pedidos">
-      <div style="font-size:3rem;margin-bottom:12px;">📭</div>
-      <h3 style="font-weight:800;">Todavía no tenés pedidos</h3>
-      <p>Cuando los clientes hagan pedidos aparecerán acá.</p>
+    <div class="empty">
+      <div class="empty-icon">📋</div>
+      <h4 style="font-weight:800;margin-bottom:6px;">Sin pedidos todavía</h4>
+      <p>Cuando lleguen los primeros pedidos van a aparecer acá.</p>
     </div>
   {% endif %}
 </div>
 
-<script>
-// Filtros por estado
-const filtros = document.querySelectorAll('.filtro-btn');
-const cards = document.querySelectorAll('.pedido-card');
-filtros.forEach(btn => {
-  btn.addEventListener('click', () => {
-    filtros.forEach(b => b.classList.remove('activo'));
-    btn.classList.add('activo');
-    const filtro = btn.dataset.filtro;
-    cards.forEach(card => {
-      if (filtro === 'todos') card.style.display = '';
-      else if (card.dataset.estado === filtro) card.style.display = '';
-      else card.style.display = 'none';
-    });
-  });
-});
+<!-- MODAL NOTIFICAR CADETES -->
+<div class="modal-overlay" id="modal-cadetes">
+  <div class="modal">
+    <div class="modal-titulo">🛵 Notificar cadetes disponibles</div>
+    <div id="modal-cadetes-body">
+      <p style="color:var(--texto-s);font-size:0.85rem;">Buscando cadetes disponibles...</p>
+    </div>
+    <button onclick="document.getElementById('modal-cadetes').classList.remove('open')"
+            style="margin-top:16px;width:100%;padding:12px;border:2px solid var(--gris-2);border-radius:99px;background:none;font-weight:700;cursor:pointer;font-family:'Nunito',sans-serif;">
+      Cerrar
+    </button>
+  </div>
+</div>
+{% endblock %}
 
-async function notificarCadetes(pedidoId, btn) {
-  btn.disabled = true;
-  btn.textContent = '⏳ Enviando...';
+{% block extra_scripts %}
+<script>
+// Toggle expandir card
+function toggleCard(id) {
+  document.getElementById('pc-' + id).classList.toggle('open');
+}
+
+// Filtrar por estado
+function filtrar(btn, estado) {
+  document.querySelectorAll('.filtro-btn').forEach(b => b.classList.remove('activo'));
+  btn.classList.add('activo');
+  document.querySelectorAll('.pedido-card').forEach(c => {
+    const ok = !estado || c.dataset.estado === estado;
+    c.style.display = ok ? '' : 'none';
+  });
+}
+
+// Buscar por cliente
+function buscar(q) {
+  const val = q.toLowerCase();
+  document.querySelectorAll('.pedido-card').forEach(c => {
+    c.style.display = c.dataset.cliente.includes(val) ? '' : 'none';
+  });
+}
+
+// Notificar cadetes via WA
+async function notificarCadetes(pedidoId) {
+  document.getElementById('modal-cadetes').classList.add('open');
+  document.getElementById('modal-cadetes-body').innerHTML =
+    '<p style="color:var(--texto-s);font-size:0.85rem;">Buscando cadetes disponibles...</p>';
+
   try {
-    const res = await fetch(`/api/notificar-cadetes/${pedidoId}`);
+    const res  = await fetch(`/api/notificar-cadetes/${pedidoId}`);
     const data = await res.json();
-    if (data.cadetes && data.cadetes.length) {
-      let msg = 'Cadetes disponibles:\n';
-      data.cadetes.forEach(c => {
-        msg += `\n${c.nombre} (${c.vehiculo}): ${c.link}`;
-      });
-      alert(msg);
-    } else {
-      alert('No hay cadetes disponibles en este momento.');
+
+    if (!data.cadetes || data.cadetes.length === 0) {
+      document.getElementById('modal-cadetes-body').innerHTML =
+        '<div style="text-align:center;padding:20px;color:var(--texto-s);">😔 No hay cadetes disponibles en este momento.</div>';
+      return;
     }
+
+    document.getElementById('modal-cadetes-body').innerHTML =
+      data.cadetes.map(c => `
+        <div class="cadete-notif-item">
+          <div class="cadete-notif-info">
+            <div class="cadete-notif-nombre">${c.nombre}</div>
+            <div class="cadete-notif-sub">${c.vehiculo || 'moto'}</div>
+          </div>
+          <a class="btn-wa-cadete" href="${c.link}" target="_blank">
+            📱 Notificar
+          </a>
+        </div>
+      `).join('');
   } catch(e) {
-    alert('Error al notificar cadetes.');
-  } finally {
-    btn.disabled = false;
-    btn.textContent = '📢 Notificar cadetes';
+    document.getElementById('modal-cadetes-body').innerHTML =
+      '<p style="color:var(--rojo);">Error al buscar cadetes.</p>';
   }
 }
+
+async function marcarEnCamino(id, btn) {
+  btn.disabled = true;
+  const orig = btn.textContent;
+  btn.textContent = '⏳ Actualizando...';
+  try {
+    const res  = await fetch('/pedido/' + id + '/en-camino', { method: 'POST' });
+    const data = await res.json();
+    if (data.ok) {
+      btn.textContent = '✅ Marcado como en camino';
+      setTimeout(() => location.reload(), 1200);
+    } else {
+      btn.textContent = orig;
+      btn.disabled = false;
+    }
+  } catch(e) {
+    btn.textContent = orig;
+    btn.disabled = false;
+  }
+}
+
+// Cerrar modal clickeando afuera
+document.getElementById('modal-cadetes').addEventListener('click', function(e) {
+  if (e.target === this) this.classList.remove('open');
+});
+
+// Auto-expandir pedidos nuevos
+document.querySelectorAll('.pedido-card.estado-nuevo, .pedido-card.estado-confirmado').forEach(c => {
+  c.classList.add('open');
+});
 </script>
 {% endblock %}

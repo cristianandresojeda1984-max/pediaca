@@ -305,7 +305,7 @@
               <div class="pedido-local-ico">🍽️</div>
               <div>
                 <div class="pedido-local-nombre">{{ p.nombre_local }}</div>
-                <div class="pedido-fecha">{{ p.fecha_pedido[:16].replace('T',' ') }}</div>
+                <div class="pedido-fecha">{{ p.fecha_pedido|fecha }}</div>
               </div>
             </div>
             <div class="pedido-total">${{ p.total|int }}</div>
