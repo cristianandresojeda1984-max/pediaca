@@ -14,6 +14,12 @@
 <meta property="og:locale"      content="es_AR">
 <meta name="twitter:card"       content="summary">
 <link rel="canonical"           href="{% block canonical %}https://pediaca.ar{% endblock %}">
+<link rel="manifest"            href="/static/manifest.json">
+<link rel="icon"                href="/static/img/logo_pediaca.png" type="image/png">
+<meta name="theme-color"        content="#F39C12">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="PediAcá">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&family=Paytone+One&display=swap" rel="stylesheet">
 <style>
@@ -163,6 +169,7 @@ body {
     <span class="navbar-brand-text">Pedi<span>Acá</span></span>
   </a>
   <div class="navbar-spacer"></div>
+  <a href="{{ url_for('buscar_productos') }}" class="navbar-btn" style="padding:8px 12px;color:var(--texto-s);" title="Buscar platos">🔍</a>
   {% if session.get('user_id') %}
     <a href="{{ url_for('dashboard') }}" class="navbar-btn navbar-btn-outline">Mi cuenta</a>
     <a href="{{ url_for('logout') }}" class="navbar-btn navbar-btn-filled">Salir</a>

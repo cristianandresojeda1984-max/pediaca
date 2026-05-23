@@ -213,11 +213,16 @@ app.jinja_env.filters["fecha_corta"] = lambda v: formato_fecha(v, "%Y-%m-%d")
 @app.route("/")
 def home():
     restaurantes = query("""
-        SELECT r.*, u.telefono
+        SELECT r.*, u.telefono,
+               COALESCE(AVG(v.estrellas), 0) AS rating,
+               COUNT(DISTINCT p.id) AS total_pedidos
         FROM restaurantes r
         JOIN usuarios u ON u.id = r.usuario_id
+        LEFT JOIN valoraciones v ON v.restaurante_id = r.id
+        LEFT JOIN pedidos p ON p.restaurante_id = r.id AND p.estado = 'entregado'
         WHERE r.estado = 'aprobado'
-        ORDER BY r.nombre_local
+        GROUP BY r.id, u.telefono
+        ORDER BY r.abierto DESC, r.nombre_local
     """)
     auspiciantes = query("""
         SELECT * FROM auspiciantes
@@ -258,10 +263,24 @@ def ver_local(restaurante_id):
         ORDER BY categoria_id, orden
     """, (restaurante_id,))
 
+    # Valoraciones del local
+    valoraciones_pub = query("""
+        SELECT v.estrellas, v.comentario, v.fecha
+        FROM valoraciones v
+        WHERE v.restaurante_id = ?
+        ORDER BY v.fecha DESC LIMIT 10
+    """, (restaurante_id,))
+
+    rating_avg = 0
+    if valoraciones_pub:
+        rating_avg = sum(v["estrellas"] for v in valoraciones_pub) / len(valoraciones_pub)
+
     return render_template("ver_local.html",
                            restaurante=restaurante,
                            categorias=categorias,
-                           productos=productos)
+                           productos=productos,
+                           valoraciones=valoraciones_pub,
+                           rating_avg=rating_avg)
 
 
 # ── REGISTRO ──────────────────────────────────────────────────────────────────
@@ -1781,6 +1800,104 @@ def terminos():
 def privacidad():
     return render_template("privacidad.html")
 
+
+
+@app.route("/buscar")
+def buscar_productos():
+    q = request.args.get("q", "").strip()
+    resultados = []
+    if q and len(q) >= 2:
+        resultados = query("""
+            SELECT p.nombre AS prod_nombre, p.descripcion, p.precio, p.foto_url,
+                   r.id AS restaurante_id, r.nombre_local, r.categoria,
+                   r.logo_url, r.hace_envio, r.abierto
+            FROM productos p
+            JOIN restaurantes r ON r.id = p.restaurante_id
+            WHERE p.disponible = 1
+              AND r.estado = 'aprobado'
+              AND (LOWER(p.nombre) LIKE %s OR LOWER(p.descripcion) LIKE %s)
+            ORDER BY r.abierto DESC, p.nombre
+            LIMIT 40
+        """ if USE_POSTGRES else """
+            SELECT p.nombre AS prod_nombre, p.descripcion, p.precio, p.foto_url,
+                   r.id AS restaurante_id, r.nombre_local, r.categoria,
+                   r.logo_url, r.hace_envio, r.abierto
+            FROM productos p
+            JOIN restaurantes r ON r.id = p.restaurante_id
+            WHERE p.disponible = 1
+              AND r.estado = 'aprobado'
+              AND (LOWER(p.nombre) LIKE ? OR LOWER(p.descripcion) LIKE ?)
+            ORDER BY r.abierto DESC, p.nombre
+            LIMIT 40
+        """, (f"%{q.lower()}%", f"%{q.lower()}%"))
+    return render_template("buscar.html", q=q, resultados=resultados)
+
+
+@app.route("/api/buscar-productos")
+def api_buscar_productos():
+    q = request.args.get("q", "").strip()
+    if not q or len(q) < 2:
+        return jsonify({"resultados": []})
+    like = f"%{q.lower()}%"
+    rows = query("""
+        SELECT p.nombre AS prod_nombre, p.precio, p.foto_url,
+               r.id AS restaurante_id, r.nombre_local, r.abierto
+        FROM productos p
+        JOIN restaurantes r ON r.id = p.restaurante_id
+        WHERE p.disponible = 1 AND r.estado = 'aprobado'
+          AND LOWER(p.nombre) LIKE %s
+        ORDER BY r.abierto DESC, p.nombre LIMIT 8
+    """ if USE_POSTGRES else """
+        SELECT p.nombre AS prod_nombre, p.precio, p.foto_url,
+               r.id AS restaurante_id, r.nombre_local, r.abierto
+        FROM productos p
+        JOIN restaurantes r ON r.id = p.restaurante_id
+        WHERE p.disponible = 1 AND r.estado = 'aprobado'
+          AND LOWER(p.nombre) LIKE ?
+        ORDER BY r.abierto DESC, p.nombre LIMIT 8
+    """, (like,))
+    return jsonify({"resultados": [dict(r) for r in rows]})
+
+
+@app.route("/mi-local/foto/logo/borrar", methods=["POST"])
+@login_required
+@rol_required("restaurante")
+def borrar_logo():
+    restaurante = get_restaurante_aprobado()
+    if not restaurante:
+        return redirect(url_for("restaurante_panel"))
+    execute("UPDATE restaurantes SET logo_url=NULL WHERE id=?", (restaurante["id"],))
+    flash("Logo eliminado.", "success")
+    return redirect(url_for("restaurante_panel") + "#sec-fotos")
+
+@app.route("/mi-local/foto/banner/borrar", methods=["POST"])
+@login_required
+@rol_required("restaurante")
+def borrar_banner():
+    restaurante = get_restaurante_aprobado()
+    if not restaurante:
+        return redirect(url_for("restaurante_panel"))
+    execute("UPDATE restaurantes SET banner_url=NULL WHERE id=?", (restaurante["id"],))
+    flash("Banner eliminado.", "success")
+    return redirect(url_for("restaurante_panel") + "#sec-fotos")
+
+
+@app.route("/mi-cuenta/baja", methods=["GET", "POST"])
+@login_required
+def darse_de_baja():
+    if request.method == "POST":
+        from werkzeug.security import check_password_hash
+        password = request.form.get("password", "")
+        usuario  = query("SELECT * FROM usuarios WHERE id=?", (session["user_id"],), one=True)
+        if not check_password_hash(usuario["password_hash"], password):
+            flash("Contraseña incorrecta.", "danger")
+            return redirect(url_for("darse_de_baja"))
+        # Desactivar cuenta
+        execute("UPDATE usuarios SET activo=0 WHERE id=?", (session["user_id"],))
+        session.clear()
+        flash("Tu cuenta fue desactivada. Lamentamos verte ir.", "info")
+        return redirect(url_for("home"))
+    return render_template("darse_de_baja.html")
 
 # ── SETUP INICIAL (uso único para crear admin en producción) ──────────────────
 

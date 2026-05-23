@@ -630,6 +630,11 @@ select.form-control { appearance: none; cursor: pointer; }
         </div>
         <button class="btn btn-primary btn-block" type="submit">📤 Subir logo</button>
       </form>
+      {% if restaurante.logo_url %}
+        <form method="POST" action="{{ url_for('borrar_logo') }}" onsubmit="return confirm('¿Borrar el logo?')" style="margin-top:8px;">
+          <button class="btn btn-outline btn-block btn-sm" type="submit" style="color:var(--rojo);border-color:var(--rojo);">🗑️ Borrar logo</button>
+        </form>
+      {% endif %}
     </div>
 
     <div class="card">
@@ -647,6 +652,11 @@ select.form-control { appearance: none; cursor: pointer; }
         </div>
         <button class="btn btn-primary btn-block" type="submit">📤 Subir banner</button>
       </form>
+      {% if restaurante.banner_url %}
+        <form method="POST" action="{{ url_for('borrar_banner') }}" onsubmit="return confirm('¿Borrar el banner?')" style="margin-top:8px;">
+          <button class="btn btn-outline btn-block btn-sm" type="submit" style="color:var(--rojo);border-color:var(--rojo);">🗑️ Borrar banner</button>
+        </form>
+      {% endif %}
     </div>
 
     <!-- Fotos de productos -->

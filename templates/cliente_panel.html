@@ -452,6 +452,15 @@
       </div>
     </form>
 
+    <div class="perfil-card" style="border-left:3px solid var(--rojo);">
+      <div class="perfil-titulo" style="color:var(--rojo);">⚠️ Zona de peligro</div>
+      <p style="font-size:0.85rem;color:var(--texto-s);margin-bottom:12px;">Una vez que des de baja tu cuenta, no podrás volver a acceder.</p>
+      <a href="{{ url_for('darse_de_baja') }}"
+         style="display:block;text-align:center;background:#FADBD8;color:#922B21;padding:10px;border-radius:99px;font-weight:800;font-size:0.85rem;text-decoration:none;">
+        Darme de baja
+      </a>
+    </div>
+
     <div class="perfil-card">
       <div class="perfil-titulo">🔒 Cambiar contraseña</div>
       <form method="POST" action="{{ url_for('cliente_cambiar_password') }}">

@@ -321,8 +321,12 @@
       <span class="hero-chip"><span>🌮</span>Locales de Rosario</span>
     </div>
     <div class="search-wrap">
-      <input class="search-input" type="text" id="buscador"
-             placeholder="🔍  Buscá un local o tipo de comida..." autocomplete="off">
+      <form action="/buscar" method="GET" id="form-buscar">
+        <input class="search-input" name="q" id="buscador"
+               placeholder="🔍  Buscá un plato, local o tipo de comida..."
+               autocomplete="off" oninput="autocompleteBuscar(this.value)">
+        <div id="autocomplete-drop" style="display:none;position:absolute;top:100%;left:0;right:0;background:#fff;border-radius:14px;box-shadow:0 8px 32px rgba(0,0,0,0.2);z-index:100;margin-top:6px;overflow:hidden;"></div>
+      </form>
     </div>
   </div>
 </section>
@@ -364,33 +368,29 @@
            data-nombre="{{ r.nombre_local | lower }}"
            data-cat="{{ r.categoria or '' }}">
 
-          <div class="local-banner">
-            {% if r.banner_url %}
-              <img src="{{ url_imagen(r.banner_url) }}" alt="">
+          <div class="local-banner" style="display:flex;align-items:center;justify-content:center;">
+            {% if r.logo_url %}
+              <img src="{{ url_imagen(r.logo_url) }}" alt="{{ r.nombre_local }}"
+                   style="width:90px;height:90px;border-radius:18px;object-fit:cover;box-shadow:0 4px 16px rgba(0,0,0,0.15);">
             {% else %}
-              <div class="local-banner-placeholder">
-                {% if r.categoria == 'Pizzería' %}🍕
-                {% elif r.categoria == 'Hamburguesería' %}🍔
-                {% elif r.categoria == 'Sushi' %}🍣
-                {% elif r.categoria == 'Heladería' %}🍦
-                {% elif r.categoria == 'Bar' %}🍺
-                {% elif r.categoria == 'Panadería' %}🥐
-                {% elif r.categoria == 'Empanadas' %}🥟
-                {% else %}🍽️{% endif %}
+              <div class="local-logo-placeholder" style="width:90px;height:90px;font-size:2rem;border-radius:18px;">
+                {{ r.nombre_local[0] | upper }}
               </div>
             {% endif %}
-            <div class="local-logo-wrap">
-              {% if r.logo_url %}
-                <img class="local-logo" src="{{ url_imagen(r.logo_url) }}" alt="">
-              {% else %}
-                <div class="local-logo-placeholder">{{ r.nombre_local[0] | upper }}</div>
-              {% endif %}
-            </div>
           </div>
 
           <div class="local-body">
             <div class="local-nombre">{{ r.nombre_local }}</div>
             <div class="local-cat">{{ r.categoria or 'Restaurante' }}{% if r.direccion %} · {{ r.direccion }}{% endif %}</div>
+            {% if r.rating and r.rating > 0 %}
+              <div style="display:flex;align-items:center;gap:6px;margin-bottom:6px;">
+                <span style="color:#F39C12;font-size:0.85rem;">★</span>
+                <span style="font-weight:800;font-size:0.82rem;">{{ "%.1f"|format(r.rating) }}</span>
+                {% if r.total_pedidos > 0 %}
+                  <span style="color:var(--texto-s);font-size:0.75rem;">· {{ r.total_pedidos }} pedido{{ 's' if r.total_pedidos != 1 else '' }}</span>
+                {% endif %}
+              </div>
+            {% endif %}
             <div class="local-tags">
               {% if r.hace_envio %}
                 <span class="local-tag tag-envio">🛵 Delivery{% if r.costo_envio == 0 %} gratis{% endif %}</span>
@@ -466,6 +466,37 @@ function filtrarCat(btn, cat) {
   actualizar();
 }
 
-document.getElementById('buscador').addEventListener('input', actualizar);
+// Autocomplete de búsqueda por producto
+let _acTimer = null;
+async function autocompleteBuscar(q) {
+  actualizar(); // Filtrar locales también
+  const drop = document.getElementById('autocomplete-drop');
+  if (!q || q.length < 2) { drop.style.display = 'none'; return; }
+  clearTimeout(_acTimer);
+  _acTimer = setTimeout(async () => {
+    try {
+      const res  = await fetch('/api/buscar-productos?q=' + encodeURIComponent(q));
+      const data = await res.json();
+      if (!data.resultados.length) { drop.style.display = 'none'; return; }
+      drop.innerHTML = data.resultados.map(r => `
+        <a href="/local/${r.restaurante_id}" style="display:flex;align-items:center;gap:10px;padding:10px 16px;text-decoration:none;color:#1A1A2E;border-bottom:1px solid #f0f2f5;transition:background 0.1s;" onmouseover="this.style.background='#FEF3DC'" onmouseout="this.style.background=''"  >
+          <div style="font-size:1.2rem;flex-shrink:0;">🍽️</div>
+          <div style="flex:1;min-width:0;">
+            <div style="font-weight:800;font-size:0.88rem;">${r.prod_nombre}</div>
+            <div style="font-size:0.75rem;color:#6C757D;">${r.nombre_local}${!r.abierto ? ' · <span style=color:#922B21>Cerrado</span>' : ''}</div>
+          </div>
+          <div style="font-weight:800;color:#D68910;font-size:0.88rem;">$${Math.round(r.precio).toLocaleString('es-AR')}</div>
+        </a>
+      `).join('') + `<a href="/buscar?q=${encodeURIComponent(q)}" style="display:block;padding:10px 16px;text-align:center;font-weight:800;font-size:0.82rem;color:#2980B9;text-decoration:none;background:#D6EAF8;">Ver todos los resultados →</a>`;
+      drop.style.display = '';
+    } catch(e) {}
+  }, 300);
+}
+
+document.addEventListener('click', e => {
+  if (!e.target.closest('.search-wrap')) {
+    document.getElementById('autocomplete-drop').style.display = 'none';
+  }
+});
 </script>
 {% endblock %}

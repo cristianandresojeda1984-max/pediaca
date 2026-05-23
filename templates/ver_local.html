@@ -867,8 +867,36 @@
       </div>
     {% endif %}
 
-    <div style="height: 100px;"></div>
+
+    <!-- VALORACIONES PÚBLICAS -->
+    {% if valoraciones %}
+      <div style="padding:0 16px 24px;">
+        <div style="font-family:'Paytone One',sans-serif;font-size:1rem;margin-bottom:12px;display:flex;align-items:center;gap:8px;">
+          ⭐ Valoraciones
+          <span style="font-family:'Nunito',sans-serif;font-size:0.82rem;font-weight:700;color:var(--texto-s);">
+            {{ "%.1f"|format(rating_avg) }} · {{ valoraciones|length }} opinión{{ 'es' if valoraciones|length != 1 else '' }}
+          </span>
+        </div>
+        {% for v in valoraciones %}
+          <div style="background:var(--blanco);border-radius:12px;padding:12px 14px;margin-bottom:8px;box-shadow:var(--sombra-s);">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;">
+              <span style="color:#F39C12;font-size:0.9rem;">
+                {% for i in range(v.estrellas) %}★{% endfor %}{% for i in range(5-v.estrellas) %}☆{% endfor %}
+              </span>
+              <span style="font-size:0.72rem;color:var(--gris-3);">{{ v.fecha|fecha_corta }}</span>
+            </div>
+            {% if v.comentario %}
+              <p style="font-size:0.82rem;color:var(--texto-s);line-height:1.5;">{{ v.comentario }}</p>
+            {% endif %}
+          </div>
+        {% endfor %}
+      </div>
+    {% endif %}
+
+    <div style="height:100px;"></div>
   </div>
+
+
 
   <!-- ── CARRITO ─────────────────────────────────────────── -->
   <div class="carrito-wrap" id="carritoWrap">

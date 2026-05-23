@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+{% block title %}Darse de baja — PediAcá{% endblock %}
+
+{% block extra_styles %}
+.baja-page { min-height:calc(100vh - 60px); background:linear-gradient(135deg,#1A1A2E,#0F3460); display:flex; align-items:center; justify-content:center; padding:32px 16px; }
+.baja-card { background:#fff; border-radius:20px; padding:36px 28px; width:100%; max-width:420px; box-shadow:0 20px 60px rgba(0,0,0,0.3); text-align:center; }
+.form-group { margin-bottom:14px; text-align:left; }
+.form-label { display:block; font-size:0.73rem; font-weight:800; text-transform:uppercase; letter-spacing:0.4px; color:var(--texto-s); margin-bottom:6px; }
+.form-control { width:100%; padding:12px 16px; border:2px solid var(--gris-2); border-radius:10px; font-size:0.95rem; font-family:'Nunito',sans-serif; font-weight:600; background:var(--gris-1); outline:none; transition:all 0.2s; }
+.form-control:focus { border-color:var(--rojo); background:#fff; }
+.btn-baja { width:100%; background:var(--rojo); color:#fff; border:none; border-radius:99px; padding:14px; font-family:'Nunito',sans-serif; font-weight:800; font-size:1rem; cursor:pointer; margin-top:6px; transition:all 0.2s; }
+.btn-baja:hover { background:#c0392b; }
+{% endblock %}
+
+{% block content %}
+<div class="baja-page">
+  <div class="baja-card">
+    <div style="font-size:3rem;margin-bottom:12px;">😢</div>
+    <h2 style="font-family:'Paytone One',sans-serif;font-size:1.4rem;margin-bottom:8px;">¿Querés darte de baja?</h2>
+    <p style="color:var(--texto-s);font-size:0.88rem;margin-bottom:24px;line-height:1.6;">
+      Tu cuenta quedará desactivada y no podrás acceder más. Esta acción no se puede deshacer.
+    </p>
+
+    {% with msgs = get_flashed_messages(with_categories=true) %}
+      {% for cat, msg in msgs %}
+        <div class="alert alert-{{ cat }}" style="margin-bottom:12px;text-align:left;">{{ msg }}</div>
+      {% endfor %}
+    {% endwith %}
+
+    <form method="POST">
+      <div class="form-group">
+        <label class="form-label">Confirmá tu contraseña</label>
+        <input class="form-control" type="password" name="password" placeholder="Tu contraseña actual" required autofocus>
+      </div>
+      <button class="btn-baja" type="submit">Sí, quiero darme de baja</button>
+    </form>
+
+    <div style="margin-top:16px;">
+      <a href="{{ url_for('dashboard') }}" style="color:var(--texto-s);font-size:0.88rem;font-weight:700;text-decoration:none;">
+        ← Cancelar, quiero quedarme
+      </a>
+    </div>
+  </div>
+</div>
+{% endblock %}

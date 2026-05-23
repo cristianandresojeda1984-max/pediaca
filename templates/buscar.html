@@ -1,0 +1,135 @@
+{% extends "base.html" %}
+{% block title %}Buscar "{{ q }}" — PediAcá{% endblock %}
+
+{% block extra_styles %}
+.buscar-hero {
+  background: linear-gradient(135deg, #1A1A2E, #0F3460);
+  padding: 32px 20px;
+}
+.buscar-hero h1 {
+  font-family:'Paytone One',sans-serif;
+  color:#fff; font-size:1.4rem; margin-bottom:14px;
+}
+.buscar-input-wrap { position:relative; max-width:600px; }
+.buscar-input {
+  width:100%; padding:14px 52px 14px 20px;
+  border:none; border-radius:99px;
+  font-size:1rem; font-family:'Nunito',sans-serif;
+  font-weight:600; outline:none; color:var(--texto);
+  box-shadow:0 6px 24px rgba(0,0,0,0.25);
+}
+.buscar-btn {
+  position:absolute; right:6px; top:50%;
+  transform:translateY(-50%);
+  background:var(--naranja); border:none;
+  border-radius:99px; width:38px; height:38px;
+  cursor:pointer; font-size:1rem;
+  display:flex; align-items:center; justify-content:center;
+}
+
+.container-lg { max-width:860px; margin:0 auto; padding:20px 16px 80px; }
+
+.resultado-card {
+  background:var(--blanco);
+  border-radius:14px;
+  box-shadow:var(--sombra-s);
+  margin-bottom:10px;
+  display:flex;
+  align-items:center;
+  gap:14px;
+  padding:14px 16px;
+  text-decoration:none;
+  color:inherit;
+  transition:all 0.15s;
+}
+.resultado-card:hover { transform:translateY(-2px); box-shadow:var(--sombra-m); }
+.resultado-foto {
+  width:64px; height:64px;
+  border-radius:12px;
+  object-fit:cover;
+  flex-shrink:0;
+  background:var(--gris-1);
+  display:flex; align-items:center; justify-content:center;
+  font-size:1.8rem;
+}
+.resultado-foto img { width:100%; height:100%; object-fit:cover; border-radius:12px; }
+.resultado-info { flex:1; min-width:0; }
+.resultado-nombre { font-weight:800; font-size:0.95rem; margin-bottom:2px; }
+.resultado-desc   { font-size:0.78rem; color:var(--texto-s); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.resultado-local  { font-size:0.78rem; color:var(--azul); font-weight:700; margin-top:4px; }
+.resultado-precio { font-family:'Paytone One',sans-serif; font-size:1rem; color:var(--naranja-d); flex-shrink:0; }
+.cerrado-badge    { font-size:0.68rem; background:#FADBD8; color:#922B21; padding:2px 8px; border-radius:99px; font-weight:800; margin-left:6px; }
+
+.empty { text-align:center; padding:60px 20px; color:var(--texto-s); }
+.empty-icon { font-size:3.5rem; margin-bottom:12px; }
+{% endblock %}
+
+{% block content %}
+<div class="buscar-hero">
+  <h1>🔍 Buscar en el menú</h1>
+  <form action="{{ url_for('buscar_productos') }}" method="GET">
+    <div class="buscar-input-wrap">
+      <input class="buscar-input" name="q" value="{{ q }}"
+             placeholder="Ej: milanesa, pizza, sushi..." autofocus>
+      <button class="buscar-btn" type="submit">🔍</button>
+    </div>
+  </form>
+</div>
+
+<div class="container-lg">
+  {% if q %}
+    {% if resultados %}
+      <div style="font-weight:700;color:var(--texto-s);margin-bottom:14px;font-size:0.88rem;">
+        {{ resultados|length }} resultado{{ 's' if resultados|length != 1 else '' }} para "<strong>{{ q }}</strong>"
+      </div>
+      {% for r in resultados %}
+        <a href="{{ url_for('ver_local', restaurante_id=r.restaurante_id) }}" class="resultado-card">
+          <div class="resultado-foto">
+            {% if r.foto_url %}
+              <img src="{{ url_imagen(r.foto_url) }}" alt="{{ r.prod_nombre }}">
+            {% else %}
+              🍽️
+            {% endif %}
+          </div>
+          <div class="resultado-info">
+            <div class="resultado-nombre">
+              {{ r.prod_nombre }}
+              {% if not r.abierto %}
+                <span class="cerrado-badge">Cerrado</span>
+              {% endif %}
+            </div>
+            {% if r.descripcion %}
+              <div class="resultado-desc">{{ r.descripcion }}</div>
+            {% endif %}
+            <div class="resultado-local">
+              {% if r.logo_url %}
+                <img src="{{ url_imagen(r.logo_url) }}" style="width:16px;height:16px;border-radius:4px;object-fit:cover;vertical-align:middle;margin-right:4px;">
+              {% endif %}
+              {{ r.nombre_local }} · {{ r.categoria or 'Restaurante' }}
+            </div>
+          </div>
+          <div class="resultado-precio">{{ r.precio | pesos }}</div>
+        </a>
+      {% endfor %}
+
+    {% else %}
+      <div class="empty">
+        <div class="empty-icon">😕</div>
+        <h3 style="font-weight:800;margin-bottom:8px;">Sin resultados para "{{ q }}"</h3>
+        <p>Probá con otro término o explorá los locales disponibles.</p>
+        <a href="{{ url_for('home') }}"
+           style="display:inline-block;margin-top:16px;background:var(--naranja);color:#fff;padding:12px 28px;border-radius:99px;font-weight:800;text-decoration:none;">
+          Ver todos los locales →
+        </a>
+      </div>
+    {% endif %}
+
+  {% else %}
+    <div class="empty">
+      <div class="empty-icon">🔍</div>
+      <h3 style="font-weight:800;margin-bottom:8px;">¿Qué se te antoja?</h3>
+      <p>Buscá por plato, ingrediente o tipo de comida.</p>
+    </div>
+  {% endif %}
+</div>
+{% endblock %}
