@@ -149,17 +149,6 @@ body {
 .mt-2 { margin-top: 16px; }
 .mt-3 { margin-top: 24px; }
 
-
-/* ── NAVBAR MOBILE ───────────────────────────────────────── */
-.btn-icon { display: none; }
-@media (max-width: 480px) {
-  .navbar-logo { height: 34px; width: 34px; }
-  .navbar-brand-text { font-size: 1.1rem; }
-  .navbar-btn { padding: 7px 12px; font-size: 0.78rem; }
-  .btn-text { display: none; }
-  .btn-icon { display: inline; }
-}
-
 {% block extra_styles %}{% endblock %}
 </style>
 </head>
@@ -175,19 +164,11 @@ body {
   </a>
   <div class="navbar-spacer"></div>
   {% if session.get('user_id') %}
-    <a href="{{ url_for('dashboard') }}" class="navbar-btn navbar-btn-outline">
-      <span class="btn-text">Mi cuenta</span><span class="btn-icon">👤</span>
-    </a>
-    <a href="{{ url_for('logout') }}" class="navbar-btn navbar-btn-filled">
-      <span class="btn-text">Salir</span><span class="btn-icon">🚪</span>
-    </a>
+    <a href="{{ url_for('dashboard') }}" class="navbar-btn navbar-btn-outline">Mi cuenta</a>
+    <a href="{{ url_for('logout') }}" class="navbar-btn navbar-btn-filled">Salir</a>
   {% else %}
-    <a href="{{ url_for('login') }}" class="navbar-btn navbar-btn-outline">
-      <span class="btn-text">Ingresar</span><span class="btn-icon">👤</span>
-    </a>
-    <a href="{{ url_for('registro') }}" class="navbar-btn navbar-btn-filled">
-      <span class="btn-text">Registrarse</span><span class="btn-icon">✚</span>
-    </a>
+    <a href="{{ url_for('login') }}" class="navbar-btn navbar-btn-outline">Ingresar</a>
+    <a href="{{ url_for('registro') }}" class="navbar-btn navbar-btn-filled">Registrarse</a>
   {% endif %}
 </nav>
 

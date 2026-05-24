@@ -330,30 +330,30 @@
   <!-- ── SIDEBAR ────────────────────────────────────────── -->
   <aside class="admin-sidebar" id="sidebar">
     <div class="sidebar-label">Panel</div>
-    <button class="sidebar-link activo" onclick="mostrar('inicio')">
+    <button class="sidebar-link activo" onclick=\"mostrar('inicio', this)\">
       <span class="sidebar-icon">📊</span> Inicio
     </button>
 
     <div class="sidebar-label">Gestión</div>
-    <button class="sidebar-link" onclick="mostrar('solicitudes')">
+    <button class="sidebar-link" onclick=\"mostrar('solicitudes', this)\">
       <span class="sidebar-icon">⏳</span> Solicitudes
       {% set n = pendientes_restaurantes|length + pendientes_cadetes|length %}
       {% if n > 0 %}
         <span style="background:var(--rojo);color:#fff;border-radius:99px;padding:1px 8px;font-size:0.72rem;margin-left:auto;">{{ n }}</span>
       {% endif %}
     </button>
-    <button class="sidebar-link" onclick="mostrar('locales')">
+    <button class="sidebar-link" onclick=\"mostrar('locales', this)\">
       <span class="sidebar-icon">🏪</span> Locales
     </button>
-    <button class="sidebar-link" onclick="mostrar('cadetes')">
+    <button class="sidebar-link" onclick=\"mostrar('cadetes', this)\">
       <span class="sidebar-icon">🛵</span> Cadetes
     </button>
-    <button class="sidebar-link" onclick="mostrar('pedidos')">
+    <button class="sidebar-link" onclick=\"mostrar('pedidos', this)\">
       <span class="sidebar-icon">📋</span> Pedidos
     </button>
 
     <div class="sidebar-label">Sistema</div>
-    <button class="sidebar-link" onclick="mostrar('solicitudes')">
+    <button class="sidebar-link" onclick=\"mostrar('solicitudes', this)\">
       <span class="sidebar-icon">📊</span> Métricas
       <a href="{{ url_for('admin_metricas') }}" target="_blank" style="margin-left:auto;font-size:0.7rem;opacity:0.6;">↗</a>
     </button>
@@ -397,7 +397,7 @@
 
       {% set n_pend = pendientes_restaurantes|length + pendientes_cadetes|length %}
       {% if n_pend > 0 %}
-        <div style="background:#FEF3DC;border-radius:12px;padding:16px 20px;display:flex;align-items:center;gap:12px;margin-bottom:20px;cursor:pointer;" onclick="mostrar('solicitudes')">
+        <div style="background:#FEF3DC;border-radius:12px;padding:16px 20px;display:flex;align-items:center;gap:12px;margin-bottom:20px;cursor:pointer;" onclick=\"mostrar('solicitudes', this)\">
           <span style="font-size:1.5rem;">⏳</span>
           <div>
             <div style="font-weight:800;">Tenés {{ n_pend }} solicitud{{ 'es' if n_pend != 1 else '' }} pendiente{{ 's' if n_pend != 1 else '' }}</div>
@@ -708,12 +708,12 @@
 
 {% block extra_scripts %}
 <script>
-function mostrar(nombre) {
+function mostrar(nombre, el) {
   document.querySelectorAll('.admin-seccion').forEach(s => s.classList.remove('activo'));
   document.querySelectorAll('.sidebar-link').forEach(l => l.classList.remove('activo'));
-  document.getElementById('sec-' + nombre).classList.add('activo');
-  event.currentTarget.classList.add('activo');
-  // cerrar sidebar mobile
+  const sec = document.getElementById('sec-' + nombre);
+  if (sec) sec.classList.add('activo');
+  if (el) el.classList.add('activo');
   if (window.innerWidth <= 700) {
     document.getElementById('sidebar').classList.remove('open');
   }
