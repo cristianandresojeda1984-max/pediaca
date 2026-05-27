@@ -249,7 +249,7 @@ def ver_local(restaurante_id):
         return redirect(url_for("home"))
 
     categorias = query("""
-        SELECT c.*, GROUP_CONCAT(p.id, ',') AS producto_ids
+        SELECT c.*, STRING_AGG(p.id::text, ',') AS producto_ids
         FROM categorias_menu c
         LEFT JOIN productos p ON p.categoria_id = c.id AND p.disponible = 1
         WHERE c.restaurante_id = ?
