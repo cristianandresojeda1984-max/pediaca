@@ -4,7 +4,7 @@
 {% block extra_styles %}
 /* ── HERO ──────────────────────────────────────────────── */
 .hero {
-  background: linear-gradient(135deg, #1A1A2E 0%, #16213E 60%, #0F3460 100%);
+  background: linear-gradient(135deg, #1A1A2E 0%, #16213E 60%, #1B4332 100%);
   padding: 48px 20px 56px;
   text-align: center;
   position: relative;
@@ -15,7 +15,7 @@
   position: absolute;
   inset: 0;
   background: radial-gradient(ellipse at 30% 50%, rgba(243,156,18,0.15) 0%, transparent 60%),
-              radial-gradient(ellipse at 70% 30%, rgba(41,128,185,0.12) 0%, transparent 60%);
+              radial-gradient(ellipse at 70% 30%, rgba(39,174,96,0.10) 0%, transparent 60%);
 }
 .hero-content { position: relative; z-index: 1; }
 .hero-titulo {
@@ -162,7 +162,7 @@
 }
 .local-banner {
   height: 130px;
-  background: linear-gradient(135deg, var(--naranja-l), var(--azul-l));
+  background: linear-gradient(135deg, var(--naranja-l), #d5f5e3);
   position: relative;
   overflow: hidden;
 }
@@ -354,6 +354,19 @@
     {% endif %}
   {% endfor %}
 
+  <!-- ACCESO A PROMOCIONES -->
+  <a href="#promociones" id="btn-promos"
+     style="display:flex;align-items:center;gap:12px;background:linear-gradient(135deg,#FFF3CD,#FDEBD0);border-radius:14px;padding:14px 18px;margin-bottom:20px;text-decoration:none;border:1.5px solid #F9CA24;transition:transform 0.15s;"
+     onmouseover="this.style.transform='translateY(-2px)'"
+     onmouseout="this.style.transform=''">
+    <span style="font-size:1.8rem;">🎉</span>
+    <div style="flex:1;">
+      <div style="font-weight:800;font-size:0.95rem;color:#7D6608;">Promociones activas</div>
+      <div style="font-size:0.78rem;color:#9A7D0A;font-weight:600;">Mirá los descuentos y ofertas de los locales</div>
+    </div>
+    <span style="font-weight:800;color:#7D6608;font-size:1rem;">→</span>
+  </a>
+
   <!-- LOCALES -->
   <h2 class="seccion-titulo">
     Locales disponibles
@@ -435,6 +448,40 @@
     <h3>¿Tenés un local?</h3>
     <p>Sumá tu negocio gratis. Tus clientes van a poder ver tu menú y pedirte directo por WhatsApp — sin que pagues ninguna comisión.</p>
     <a href="{{ url_for('registro') }}?rol=restaurante" class="cta-btn">Sumar mi local gratis →</a>
+  </div>
+
+  <!-- SECCIÓN PROMOCIONES -->
+  <div id="promociones" style="margin-top:8px;scroll-margin-top:80px;">
+    <h2 class="seccion-titulo">
+      🎉 Promociones
+    </h2>
+    {% set hay_promos = namespace(value=false) %}
+    {% for r in restaurantes %}
+      {# Las promos vienen del contexto global si el backend las pasa, sino mostramos link a cada local #}
+    {% endfor %}
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:14px;">
+      {% for r in restaurantes %}
+        <a href="{{ url_for('ver_local', restaurante_id=r.id) }}#promociones"
+           style="display:flex;align-items:center;gap:12px;background:#fff;border-radius:12px;padding:14px;text-decoration:none;color:inherit;box-shadow:0 2px 10px rgba(0,0,0,0.07);border-left:4px solid var(--naranja);transition:transform 0.15s;"
+           onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform=''">
+          {% if r.logo_url %}
+            <img src="{{ url_imagen(r.logo_url) }}" style="width:44px;height:44px;border-radius:10px;object-fit:cover;flex-shrink:0;">
+          {% else %}
+            <div style="width:44px;height:44px;border-radius:10px;background:var(--naranja);display:flex;align-items:center;justify-content:center;color:#fff;font-weight:800;font-size:1.1rem;flex-shrink:0;">{{ r.nombre_local[0]|upper }}</div>
+          {% endif %}
+          <div style="flex:1;min-width:0;">
+            <div style="font-weight:800;font-size:0.88rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ r.nombre_local }}</div>
+            <div style="font-size:0.75rem;color:var(--texto-s);font-weight:600;">Ver promociones →</div>
+          </div>
+        </a>
+      {% endfor %}
+    </div>
+    {% if not restaurantes %}
+      <div class="empty-state">
+        <div class="empty-icon">🎉</div>
+        <div class="empty-titulo">Próximamente habrá promociones</div>
+      </div>
+    {% endif %}
   </div>
 
 </div>

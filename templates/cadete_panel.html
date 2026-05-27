@@ -3,7 +3,7 @@
 
 {% block extra_styles %}
 .cadete-hero {
-  background: linear-gradient(135deg, #1A1A2E 0%, #0F3460 100%);
+  background: linear-gradient(135deg, #1A1A2E 0%, #1E3A5F 100%);
   padding: 28px 20px 32px;
   position: relative;
   overflow: hidden;
@@ -27,7 +27,7 @@
   width: 58px;
   height: 58px;
   border-radius: 16px;
-  background: linear-gradient(135deg, var(--azul), var(--azul-d));
+  background: linear-gradient(135deg, #1E3A5F, #0F2A46);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -251,10 +251,10 @@ input:checked + .disp-track::after { transform: translateX(24px); }
 .form-group   { margin-bottom: 14px; }
 .form-label   { display:block; font-size:0.73rem; font-weight:800; text-transform:uppercase; letter-spacing:0.4px; color:var(--texto-s); margin-bottom:6px; }
 .form-control { width:100%; padding:11px 14px; border:2px solid var(--gris-2); border-radius:10px; font-size:0.92rem; font-family:'Nunito',sans-serif; font-weight:600; background:var(--gris-1); color:var(--texto); outline:none; transition:all 0.2s; }
-.form-control:focus { border-color:var(--azul); background:var(--blanco); box-shadow:0 0 0 3px rgba(41,128,185,0.1); }
+.form-control:focus { border-color:var(--azul); background:var(--blanco); box-shadow:0 0 0 3px rgba(30,58,95,0.1); }
 .btn-guardar {
   width: 100%;
-  background: linear-gradient(135deg, var(--azul), var(--azul-d));
+  background: linear-gradient(135deg, #1E3A5F, #0F2A46);
   color: #fff;
   border: none;
   border-radius: 99px;
@@ -264,9 +264,9 @@ input:checked + .disp-track::after { transform: translateX(24px); }
   font-size: 0.95rem;
   cursor: pointer;
   transition: all 0.2s;
-  box-shadow: 0 4px 16px rgba(41,128,185,0.3);
+  box-shadow: 0 4px 16px rgba(30,58,95,0.3);
 }
-.btn-guardar:hover { transform: translateY(-1px); box-shadow: 0 6px 20px rgba(41,128,185,0.4); }
+.btn-guardar:hover { transform: translateY(-1px); box-shadow: 0 6px 20px rgba(30,58,95,0.4); }
 .vehiculo-row { display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin-bottom:14px; }
 .v-opt { border:2px solid var(--gris-2); border-radius:10px; padding:10px 6px; background:var(--gris-1); cursor:pointer; text-align:center; font-family:'Nunito',sans-serif; transition:all 0.15s; }
 .v-opt:hover, .v-opt.activo { border-color:var(--azul); background:var(--azul-l); }

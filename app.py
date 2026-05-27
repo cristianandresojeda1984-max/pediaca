@@ -249,7 +249,7 @@ def ver_local(restaurante_id):
         return redirect(url_for("home"))
 
     categorias = query("""
-        SELECT c.*, STRING_AGG(p.id::text, ',') AS producto_ids
+        SELECT c.*, GROUP_CONCAT(p.id, ',') AS producto_ids
         FROM categorias_menu c
         LEFT JOIN productos p ON p.categoria_id = c.id AND p.disponible = 1
         WHERE c.restaurante_id = ?
@@ -564,12 +564,19 @@ def restaurante_panel():
         ORDER BY v.fecha DESC
     """, (restaurante["id"],))
 
+    promociones = query("""
+        SELECT * FROM promociones
+        WHERE restaurante_id = ?
+        ORDER BY fecha_creacion DESC
+    """, (restaurante["id"],))
+
     return render_template("restaurante_panel.html",
                            restaurante=restaurante,
                            categorias=categorias,
                            productos=productos,
                            sabores_map=sabores_map,
-                           valoraciones=valoraciones)
+                           valoraciones=valoraciones,
+                           promociones=promociones)
 
 
 @app.route("/mi-local/editar", methods=["POST"])
@@ -603,7 +610,8 @@ def restaurante_editar():
           tiempo_estimado, restaurante["id"]))
 
     flash("Datos del local actualizados.", "success")
-    return redirect(url_for("restaurante_panel"))
+    tab = request.form.get("tab", "sec-info")
+    return redirect(url_for("restaurante_panel") + f"#{tab}")
 
 
 @app.route("/mi-local/categoria/nueva", methods=["POST"])
@@ -621,7 +629,8 @@ def categoria_nueva():
             VALUES (?, ?, (SELECT COALESCE(MAX(orden),0)+1 FROM categorias_menu WHERE restaurante_id=?))
         """, (restaurante["id"], nombre, restaurante["id"]))
         flash(f"Categoría '{nombre}' creada.", "success")
-    return redirect(url_for("restaurante_panel"))
+    tab = request.form.get("tab", "sec-menu")
+    return redirect(url_for("restaurante_panel") + f"#{tab}")
 
 
 @app.route("/mi-local/producto/nuevo", methods=["POST"])
@@ -653,7 +662,8 @@ def producto_nuevo():
     """, (restaurante["id"], categoria_id, nombre, descripcion, precio, disponible, foto_url))
 
     flash(f"Producto '{nombre}' agregado.", "success")
-    return redirect(url_for("restaurante_panel"))
+    tab = request.form.get("tab", "sec-menu")
+    return redirect(url_for("restaurante_panel") + f"#{tab}")
 
 
 # ── CARGA MASIVA ───────────────────────────────────────────────────────────────
@@ -861,7 +871,7 @@ def producto_eliminar(prod_id):
     execute("DELETE FROM productos WHERE id = ? AND restaurante_id = ?",
             (prod_id, restaurante["id"]))
     flash("Producto eliminado.", "success")
-    return redirect(url_for("restaurante_panel"))
+    return redirect(url_for("restaurante_panel") + "#sec-menu")
 
 
 # ── PANEL CADETE ──────────────────────────────────────────────────────────────
@@ -1485,7 +1495,7 @@ def subir_logo():
         flash("Logo actualizado.", "success")
     else:
         flash("Archivo inválido. Usá PNG, JPG o WEBP.", "danger")
-    return redirect(url_for("restaurante_panel"))
+    return redirect(url_for("restaurante_panel") + "#sec-fotos")
 
 
 @app.route("/mi-local/foto/banner", methods=["POST"])
@@ -1503,7 +1513,7 @@ def subir_banner():
         flash("Banner actualizado.", "success")
     else:
         flash("Archivo inválido. Usá PNG, JPG o WEBP.", "danger")
-    return redirect(url_for("restaurante_panel"))
+    return redirect(url_for("restaurante_panel") + "#sec-fotos")
 
 
 @app.route("/mi-local/producto/<int:prod_id>/foto", methods=["POST"])
@@ -1521,7 +1531,7 @@ def subir_foto_producto(prod_id):
         flash("Foto del producto actualizada.", "success")
     else:
         flash("Archivo inválido.", "danger")
-    return redirect(url_for("restaurante_panel"))
+    return redirect(url_for("restaurante_panel") + "#sec-menu")
 
 
 # ── PROMOCIONES ───────────────────────────────────────────────────────────────
@@ -1530,17 +1540,8 @@ def subir_foto_producto(prod_id):
 @login_required
 @rol_required("restaurante")
 def promociones_panel():
-    restaurante = get_restaurante_aprobado()
-    if not restaurante:
-        return redirect(url_for("restaurante_panel"))
-    promociones = query("""
-        SELECT * FROM promociones
-        WHERE restaurante_id = ?
-        ORDER BY fecha_creacion DESC
-    """, (restaurante["id"],))
-    return render_template("promociones.html",
-                           restaurante=restaurante,
-                           promociones=promociones)
+    # Redirigir al panel principal, pestaña promociones
+    return redirect(url_for("restaurante_panel") + "#sec-promociones")
 
 
 @app.route("/mi-local/promocion/nueva", methods=["POST"])
@@ -1561,7 +1562,7 @@ def promocion_nueva():
 
     if not titulo:
         flash("El título es obligatorio.", "danger")
-        return redirect(url_for("promociones_panel"))
+        return redirect(url_for("restaurante_panel") + "#sec-promociones")
 
     execute("""
         INSERT INTO promociones
@@ -1570,7 +1571,7 @@ def promocion_nueva():
     """, (restaurante["id"], titulo, descripcion, imagen_url,
           descuento_pct, fecha_inicio, fecha_fin))
     flash(f"Promoción '{titulo}' creada.", "success")
-    return redirect(url_for("promociones_panel"))
+    return redirect(url_for("restaurante_panel") + "#sec-promociones")
 
 
 @app.route("/mi-local/promocion/<int:promo_id>/toggle")
@@ -1584,7 +1585,7 @@ def promocion_toggle(promo_id):
         UPDATE promociones SET activa = 1 - activa
         WHERE id = ? AND restaurante_id = ?
     """, (promo_id, restaurante["id"]))
-    return redirect(url_for("promociones_panel"))
+    return redirect(url_for("restaurante_panel") + "#sec-promociones")
 
 
 @app.route("/mi-local/promocion/<int:promo_id>/eliminar", methods=["POST"])
@@ -1597,7 +1598,7 @@ def promocion_eliminar(promo_id):
     execute("DELETE FROM promociones WHERE id=? AND restaurante_id=?",
             (promo_id, restaurante["id"]))
     flash("Promoción eliminada.", "success")
-    return redirect(url_for("promociones_panel"))
+    return redirect(url_for("restaurante_panel") + "#sec-promociones")
 
 
 @app.route("/mi-local/promocion/<int:promo_id>/editar", methods=["POST"])
@@ -1618,7 +1619,7 @@ def promocion_editar(promo_id):
     promo = query("SELECT * FROM promociones WHERE id=? AND restaurante_id=?",
                   (promo_id, restaurante["id"]), one=True)
     if not promo:
-        return redirect(url_for("promociones_panel"))
+        return redirect(url_for("restaurante_panel") + "#sec-promociones")
 
     nueva_imagen = guardar_imagen(archivo, "promociones") if archivo and archivo.filename else promo["imagen_url"]
 
@@ -1630,7 +1631,7 @@ def promocion_editar(promo_id):
     """, (titulo, descripcion, nueva_imagen, descuento_pct,
           fecha_inicio, fecha_fin, promo_id, restaurante["id"]))
     flash("Promoción actualizada.", "success")
-    return redirect(url_for("promociones_panel"))
+    return redirect(url_for("restaurante_panel") + "#sec-promociones")
 
 
 # ── PRODUCTO EDITAR ───────────────────────────────────────────────────────────
@@ -1656,7 +1657,8 @@ def producto_editar(prod_id):
     """, (nombre, descripcion, precio, categoria_id, disponible,
           prod_id, restaurante["id"]))
     flash("Producto actualizado.", "success")
-    return redirect(url_for("restaurante_panel"))
+    tab = request.form.get("tab", "sec-menu")
+    return redirect(url_for("restaurante_panel") + f"#{tab}")
 
 
 # ── TOGGLE ABIERTO/CERRADO ────────────────────────────────────────────────────
@@ -1898,6 +1900,27 @@ def darse_de_baja():
         flash("Tu cuenta fue desactivada. Lamentamos verte ir.", "info")
         return redirect(url_for("home"))
     return render_template("darse_de_baja.html")
+
+
+@app.route("/mi-local/baja", methods=["GET", "POST"])
+@login_required
+@rol_required("restaurante")
+def restaurante_darse_de_baja():
+    """Baja para restaurantes — accesible y visible desde el panel del local."""
+    if request.method == "POST":
+        from werkzeug.security import check_password_hash
+        password = request.form.get("password", "")
+        usuario  = query("SELECT * FROM usuarios WHERE id=?", (session["user_id"],), one=True)
+        if not check_password_hash(usuario["password_hash"], password):
+            flash("Contraseña incorrecta.", "danger")
+            return redirect(url_for("restaurante_darse_de_baja"))
+        # Desactivar cuenta y suspender el local
+        execute("UPDATE usuarios SET activo=0 WHERE id=?", (session["user_id"],))
+        execute("UPDATE restaurantes SET estado='suspendido' WHERE usuario_id=?", (session["user_id"],))
+        session.clear()
+        flash("Tu local fue dado de baja. Podés volver cuando quieras registrándote de nuevo.", "info")
+        return redirect(url_for("home"))
+    return render_template("restaurante_baja.html")
 
 # ── SETUP INICIAL (uso único para crear admin en producción) ──────────────────
 

@@ -356,11 +356,21 @@ input:checked + .toggle-slider::after { transform: translateX(18px); }
   margin-bottom: 16px;
   font-size: 0.9rem;
   font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
 }
 .alert-success { background: #d4edda; color: #155724; }
 .alert-danger  { background: #f8d7da; color: #721c24; }
 .alert-info    { background: #d1ecf1; color: #0c5460; }
 .alert-warning { background: #fff3cd; color: #856404; }
+.alert-close {
+  background: none; border: none; cursor: pointer;
+  font-size: 1.1rem; color: inherit; opacity: 0.55;
+  flex-shrink: 0; line-height: 1; padding: 0;
+}
+.alert-close:hover { opacity: 1; }
 
 /* ── SELECT ────────────────────────────────────────────────── */
 select.form-control { appearance: none; cursor: pointer; }
@@ -445,13 +455,13 @@ select.form-control { appearance: none; cursor: pointer; }
 
 <!-- NAV TABS -->
 <div class="nav-tabs">
-  <div class="nav-tab activo" onclick="mostrarSeccion('inicio')">📊 Inicio</div>
-  <div class="nav-tab" onclick="mostrarSeccion('perfil')">🏪 Mi Local</div>
-  <div class="nav-tab" onclick="mostrarSeccion('fotos')">📷 Fotos</div>
-  <div class="nav-tab" onclick="mostrarSeccion('menu')">🍕 Menú</div>
-  <div class="nav-tab" onclick="mostrarSeccion('promociones')">🎉 Promociones</div>
+  <div class="nav-tab activo" onclick="mostrarSeccion('inicio', this)">📊 Inicio</div>
+  <div class="nav-tab" onclick="mostrarSeccion('perfil', this)">🏪 Mi Local</div>
+  <div class="nav-tab" onclick="mostrarSeccion('fotos', this)">📷 Fotos</div>
+  <div class="nav-tab" onclick="mostrarSeccion('menu', this)">🍕 Menú</div>
+  <div class="nav-tab" onclick="mostrarSeccion('promociones', this)">🎉 Promociones</div>
   <a class="nav-tab" href="/mi-local/pedidos" style="text-decoration:none;">📋 Pedidos</a>
-  <button class="nav-tab" onclick="mostrarSeccion('valoraciones')">⭐ Valoraciones</button>
+  <button class="nav-tab" onclick="mostrarSeccion('valoraciones', this)">⭐ Valoraciones</button>
 </div>
 
 <div class="container">
@@ -459,7 +469,10 @@ select.form-control { appearance: none; cursor: pointer; }
   <!-- FLASH MESSAGES -->
   {% with msgs = get_flashed_messages(with_categories=true) %}
     {% for cat, msg in msgs %}
-      <div class="alert alert-{{ cat }}">{{ msg }}</div>
+      <div class="alert alert-{{ cat }}">
+        <span>{{ msg }}</span>
+        <button class="alert-close" onclick="this.parentElement.remove()">✕</button>
+      </div>
     {% endfor %}
   {% endwith %}
 
@@ -552,13 +565,27 @@ select.form-control { appearance: none; cursor: pointer; }
       </a>
     </div>
 
-  </div><!-- /inicio -->
+    <div class="card" style="border-top:3px solid var(--gris-2);margin-top:24px;">
+      <div class="card-titulo" style="color:var(--gris-3);font-size:0.9rem;">⚙️ Administrar cuenta</div>
+      <p style="font-size:0.83rem;color:var(--gris-3);margin-bottom:14px;line-height:1.5;">
+        Podés darte de baja en cualquier momento, sin costos ni letra chica. Tu local se desactivará y podrás volver cuando quieras.
+      </p>
+      <a href="{{ url_for('restaurante_darse_de_baja') }}"
+         class="btn btn-outline btn-sm"
+         style="color:var(--rojo);border-color:var(--rojo);"
+         onclick="return confirm('¿Seguro que querés iniciar el proceso de baja?')">
+        🚪 Dar de baja mi local
+      </a>
+    </div>
+
+  </div><!-- /sec-inicio -->
 
   <!-- ══ PERFIL ═══════════════════════════════════════════════ -->
   <div class="seccion" id="sec-perfil">
     <div class="card">
       <div class="card-titulo">🏪 Datos del local</div>
       <form method="POST" action="{{ url_for('restaurante_editar') }}">
+        <input type="hidden" name="tab" value="sec-perfil">
         <div class="form-group">
           <label>Nombre del local *</label>
           <input class="form-control" name="nombre_local" value="{{ restaurante.nombre_local }}" required>
@@ -701,6 +728,7 @@ select.form-control { appearance: none; cursor: pointer; }
     <div class="card">
       <div class="card-titulo">📂 Categorías del menú</div>
       <form method="POST" action="{{ url_for('categoria_nueva') }}" style="display:flex;gap:10px;">
+        <input type="hidden" name="tab" value="sec-menu">
         <input class="form-control" name="nombre" placeholder="Ej: Pizzas, Bebidas, Postres" required>
         <button class="btn btn-primary" type="submit">+ Agregar</button>
       </form>
@@ -726,6 +754,7 @@ select.form-control { appearance: none; cursor: pointer; }
       <!-- TAB: UN PRODUCTO -->
       <div id="panel-uno">
         <form method="POST" action="{{ url_for('producto_nuevo') }}" enctype="multipart/form-data">
+          <input type="hidden" name="tab" value="sec-menu">
           <div class="form-row">
             <div class="form-group">
               <label>Nombre *</label>
@@ -1139,12 +1168,30 @@ select.form-control { appearance: none; cursor: pointer; }
 
 <script>
 // ── TABS ───────────────────────────────────────────────────────
-function mostrarSeccion(nombre) {
+function mostrarSeccion(nombre, btn) {
   document.querySelectorAll('.seccion').forEach(s => s.classList.remove('activo'));
   document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('activo'));
   document.getElementById('sec-' + nombre).classList.add('activo');
-  event.currentTarget.classList.add('activo');
+  if (btn) btn.classList.add('activo');
 }
+
+// Al cargar, activar la sección del hash si existe
+(function() {
+  const hash = window.location.hash.replace('#', '');
+  if (hash) {
+    const seccion = document.getElementById(hash);
+    if (seccion && seccion.classList.contains('seccion')) {
+      const nombre = hash.replace('sec-', '');
+      // Buscar el tab correspondiente
+      const tabs = document.querySelectorAll('.nav-tab');
+      tabs.forEach(t => {
+        if (t.getAttribute('onclick') && t.getAttribute('onclick').includes("'" + nombre + "'")) {
+          mostrarSeccion(nombre, t);
+        }
+      });
+    }
+  }
+})();
 
 // ── DELIVERY TOGGLE ────────────────────────────────────────────
 function toggleEnvio() {
@@ -1319,15 +1366,6 @@ document.getElementById('tab-masivo').addEventListener('click', () => {
     agregarRenglon(); agregarRenglon(); agregarRenglon();
   }
 });
-
-// Auto-ocultar alertas
-setTimeout(() => {
-  document.querySelectorAll('.alert').forEach(a => {
-    a.style.transition = 'opacity 0.5s';
-    a.style.opacity = '0';
-    setTimeout(() => a.remove(), 500);
-  });
-}, 3500);
 </script>
 
 </body>

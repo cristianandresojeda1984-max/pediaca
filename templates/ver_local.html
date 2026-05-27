@@ -716,6 +716,9 @@
     {% endif %}
     <span class="info-chip">📱 Pedí por WhatsApp</span>
     <span class="info-chip" style="color:var(--verde);">✅ Sin comisiones</span>
+    {% if promociones is defined and promociones | selectattr('activa') | list %}
+      <a href="#promos-strip" class="info-chip" style="color:var(--naranja-d);text-decoration:none;font-weight:800;background:var(--naranja-l);border-radius:99px;padding:8px 14px;">🎉 Promociones</a>
+    {% endif %}
   </div>
   {% if categorias %}
     <div class="cat-nav" id="catNav">
@@ -738,7 +741,7 @@
     {% set promos = [] %}
     {% if promociones is defined %}{% set promos = promociones %}{% endif %}
     {% if promos %}
-      <div class="promos-strip">
+      <div class="promos-strip" id="promos-strip">
         {% for promo in promos %}
           {% if promo.activa %}
             <div class="promo-card">

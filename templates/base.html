@@ -22,14 +22,14 @@
 html { scroll-behavior: smooth; }
 
 :root {
-  --naranja:    #F39C12;
-  --naranja-d:  #D68910;
-  --naranja-l:  #FEF3DC;
-  --azul:       #2980B9;
-  --azul-d:     #1A5276;
-  --azul-l:     #D6EAF8;
-  --rojo:       #E74C3C;
-  --verde:      #27AE60;
+      --naranja: #EA580C;
+      --naranja-d: #C2410C;
+      --naranja-l: #FEF3C7;
+      --azul: #1E3A5F;
+      --azul-d: #0F2A46;
+      --azul-l: #DCE8F5;
+      --rojo: #E74C3C;
+      --verde: #27AE60;
   --blanco:     #FFFFFF;
   --fondo:      #F8F9FA;
   --gris-1:     #F0F2F5;
@@ -123,7 +123,7 @@ body {
 }
 .alert-success { background: #D5F5E3; color: #1E8449; }
 .alert-danger  { background: #FADBD8; color: #922B21; }
-.alert-info    { background: #D6EAF8; color: #1A5276; }
+.alert-info    { background: #D6EAF8; color: #0F2A46; }
 .alert-warning { background: #FDEBD0; color: #784212; }
 
 /* ── FOOTER ──────────────────────────────────────────────── */
@@ -249,6 +249,64 @@ function urlBase64ToUint8Array(base64String) {
   const raw     = window.atob(base64);
   return new Uint8Array([...raw].map(c => c.charCodeAt(0)));
 }
+</script>
+
+
+<!-- MODAL DE PROMOCIONES -->
+<div class="promo-modal-overlay" id="promoModal">
+  <div class="promo-modal">
+    <div class="promo-modal-header">
+      <span>🎁 Promociones destacadas</span>
+      <button class="promo-modal-close" onclick="cerrarPromoModal()">✕</button>
+    </div>
+    <div id="promoModalContent">
+      <p style="text-align:center;color:var(--texto-s);padding:20px;">Cargando promociones...</p>
+    </div>
+  </div>
+</div>
+
+<script>
+async function mostrarPromociones() {
+  const modal = document.getElementById('promoModal');
+  modal.classList.add('open');
+  
+  // Obtener promociones (de todos los locales o del actual)
+  const url = window.location.pathname.includes('/local/') 
+    ? '/api/promociones-local' + window.location.pathname.replace('/local', '')
+    : '/api/promociones-destacadas';
+  
+  try {
+    const res = await fetch(url);
+    const data = await res.json();
+    const content = document.getElementById('promoModalContent');
+    
+    if (!data.promociones || data.promociones.length === 0) {
+      content.innerHTML = '<p style="text-align:center;color:var(--texto-s);padding:20px;">😢 No hay promociones activas en este momento.</p>';
+      return;
+    }
+    
+    content.innerHTML = data.promociones.map(promo => `
+      <div class="promo-card-modal">
+        <div class="promo-titulo-modal">${promo.titulo}</div>
+        ${promo.descripcion ? `<div class="promo-desc-modal">${promo.descripcion}</div>` : ''}
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-top:8px;">
+          ${promo.descuento_pct > 0 ? `<span class="promo-pct-modal">-${promo.descuento_pct}% OFF</span>` : ''}
+          <span style="font-size:0.7rem;color:var(--texto-s);">${promo.nombre_local || ''}</span>
+        </div>
+      </div>
+    `).join('');
+  } catch(e) {
+    document.getElementById('promoModalContent').innerHTML = '<p style="text-align:center;color:var(--rojo);padding:20px;">Error al cargar promociones</p>';
+  }
+}
+
+function cerrarPromoModal() {
+  document.getElementById('promoModal').classList.remove('open');
+}
+
+document.getElementById('promoModal')?.addEventListener('click', function(e) {
+  if (e.target === this) cerrarPromoModal();
+});
 </script>
 
 </body>

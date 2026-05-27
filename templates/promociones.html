@@ -1,0 +1,424 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<title>Promociones — {{ restaurante.nombre_local }}</title>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --rojo:    #e74c3c;
+  --rojo-d:  #c0392b;
+  --verde:   #27ae60;
+  --naranja: #f39c12;
+  --naranja-d: #d68910;
+  --naranja-l: #fef9e7;
+  --gris-1:  #f4f6f9;
+  --gris-2:  #e9ecef;
+  --gris-3:  #adb5bd;
+  --texto:   #2c3e50;
+  --blanco:  #ffffff;
+  --sombra:  0 2px 12px rgba(0,0,0,0.08);
+}
+
+body {
+  font-family: 'Segoe UI', system-ui, sans-serif;
+  background: var(--gris-1);
+  color: var(--texto);
+  min-height: 100vh;
+}
+
+/* ── HEADER ── */
+.header {
+  background: var(--rojo);
+  color: #fff;
+  padding: 0 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 56px;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+}
+.header-brand { font-weight: 800; font-size: 1.1rem; }
+.header-brand span { opacity: 0.75; font-weight: 400; font-size: 0.82rem; display: block; line-height: 1; }
+.header-back {
+  background: rgba(255,255,255,0.2);
+  border: none;
+  color: #fff;
+  padding: 6px 14px;
+  border-radius: 6px;
+  font-size: 0.82rem;
+  cursor: pointer;
+  text-decoration: none;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* ── CONTAINER ── */
+.container { max-width: 700px; margin: 0 auto; padding: 20px 16px 80px; }
+
+/* ── CARDS ── */
+.card {
+  background: var(--blanco);
+  border-radius: 12px;
+  padding: 20px;
+  box-shadow: var(--sombra);
+  margin-bottom: 16px;
+}
+.card-titulo {
+  font-size: 1rem;
+  font-weight: 700;
+  margin-bottom: 16px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* ── FORM ── */
+.form-group { margin-bottom: 14px; }
+.form-group label {
+  display: block;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--gris-3);
+  margin-bottom: 5px;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+.form-control {
+  width: 100%;
+  padding: 10px 14px;
+  border: 1.5px solid var(--gris-2);
+  border-radius: 8px;
+  font-size: 0.95rem;
+  font-family: inherit;
+  background: var(--gris-1);
+  color: var(--texto);
+  transition: border-color 0.2s;
+}
+.form-control:focus { outline: none; border-color: var(--naranja); background: var(--blanco); }
+textarea.form-control { resize: vertical; min-height: 80px; }
+.form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+
+/* ── BOTONES ── */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 20px;
+  border: none;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: inherit;
+  transition: all 0.15s;
+  text-decoration: none;
+}
+.btn-primary  { background: var(--rojo);   color: #fff; }
+.btn-primary:hover { background: var(--rojo-d); }
+.btn-warning  { background: var(--naranja); color: #fff; }
+.btn-warning:hover { background: var(--naranja-d); }
+.btn-outline  { background: transparent; border: 1.5px solid var(--gris-2); color: var(--texto); }
+.btn-sm       { padding: 6px 12px; font-size: 0.8rem; }
+.btn-block    { width: 100%; justify-content: center; margin-top: 8px; }
+
+/* ── ALERTAS ── */
+.alert {
+  padding: 12px 16px;
+  border-radius: 8px;
+  margin-bottom: 16px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+.alert-success { background: #d4edda; color: #155724; }
+.alert-danger  { background: #f8d7da; color: #721c24; }
+.alert-info    { background: #d1ecf1; color: #0c5460; }
+.alert-warning { background: #fff3cd; color: #856404; }
+.alert-close {
+  background: none; border: none; cursor: pointer;
+  font-size: 1.1rem; color: inherit; opacity: 0.55;
+  flex-shrink: 0; line-height: 1; padding: 0;
+}
+.alert-close:hover { opacity: 1; }
+
+/* ── BADGE ── */
+.badge {
+  display: inline-block;
+  padding: 3px 10px;
+  border-radius: 99px;
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+.badge-ok  { background: #d4edda; color: #155724; }
+.badge-off { background: #f8d7da; color: #721c24; }
+
+/* ── PROMO CARD ── */
+.promo-card {
+  background: var(--blanco);
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: var(--sombra);
+  margin-bottom: 14px;
+  border-left: 4px solid var(--naranja);
+  transition: box-shadow 0.2s;
+}
+.promo-card:hover { box-shadow: 0 4px 20px rgba(0,0,0,0.12); }
+.promo-card.inactiva { border-left-color: var(--gris-2); opacity: 0.65; }
+.promo-img { width: 100%; height: 140px; object-fit: cover; display: block; }
+.promo-body { padding: 14px 16px; }
+.promo-titulo { font-weight: 800; font-size: 1rem; margin-bottom: 4px; }
+.promo-desc { font-size: 0.85rem; color: var(--gris-3); margin-bottom: 10px; line-height: 1.5; }
+.promo-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+}
+.promo-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+.descuento-badge {
+  background: var(--naranja);
+  color: #fff;
+  font-weight: 800;
+  font-size: 0.82rem;
+  padding: 3px 12px;
+  border-radius: 99px;
+}
+
+/* ── MODAL ── */
+.modal-overlay {
+  display: none;
+  position: fixed; inset: 0;
+  background: rgba(0,0,0,0.5);
+  z-index: 200;
+  align-items: flex-end;
+  justify-content: center;
+}
+.modal-overlay.open { display: flex; }
+.modal {
+  background: var(--blanco);
+  border-radius: 16px 16px 0 0;
+  padding: 24px 20px;
+  width: 100%;
+  max-width: 600px;
+  max-height: 92vh;
+  overflow-y: auto;
+}
+.modal-titulo {
+  font-size: 1.1rem;
+  font-weight: 700;
+  margin-bottom: 20px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.modal-close {
+  background: var(--gris-2);
+  border: none;
+  width: 30px; height: 30px;
+  border-radius: 50%;
+  font-size: 1rem;
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+}
+
+/* ── EMPTY ── */
+.empty {
+  text-align: center;
+  padding: 60px 20px;
+  color: var(--gris-3);
+}
+.empty-icon { font-size: 3.5rem; margin-bottom: 12px; }
+.empty-titulo { font-weight: 800; font-size: 1.05rem; color: var(--texto); margin-bottom: 6px; }
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<div class="header">
+  <div class="header-brand">
+    🎉 Promociones
+    <span>{{ restaurante.nombre_local }}</span>
+  </div>
+  <a href="{{ url_for('restaurante_panel') }}#sec-inicio" class="header-back">← Volver</a>
+</div>
+
+<div class="container">
+
+  <!-- FLASH MESSAGES -->
+  {% with msgs = get_flashed_messages(with_categories=true) %}
+    {% for cat, msg in msgs %}
+      <div class="alert alert-{{ cat }}">
+        <span>{{ msg }}</span>
+        <button class="alert-close" onclick="this.parentElement.remove()">✕</button>
+      </div>
+    {% endfor %}
+  {% endwith %}
+
+  <!-- NUEVA PROMOCIÓN -->
+  <div class="card">
+    <div class="card-titulo">➕ Nueva promoción</div>
+    <form method="POST" action="{{ url_for('promocion_nueva') }}" enctype="multipart/form-data">
+      <div class="form-group">
+        <label>Título *</label>
+        <input class="form-control" name="titulo" placeholder="Ej: 2x1 en pizzas los martes" required>
+      </div>
+      <div class="form-group">
+        <label>Descripción</label>
+        <textarea class="form-control" name="descripcion" placeholder="Detallá las condiciones de la promo..."></textarea>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Descuento %</label>
+          <input class="form-control" type="number" name="descuento_pct" min="0" max="100" value="0" placeholder="0">
+        </div>
+        <div class="form-group">
+          <label>Imagen (opcional)</label>
+          <input class="form-control" type="file" name="imagen" accept="image/*">
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Válida desde</label>
+          <input class="form-control" type="date" name="fecha_inicio">
+        </div>
+        <div class="form-group">
+          <label>Válida hasta</label>
+          <input class="form-control" type="date" name="fecha_fin">
+        </div>
+      </div>
+      <button class="btn btn-warning btn-block" type="submit">🎉 Crear promoción</button>
+    </form>
+  </div>
+
+  <!-- LISTA DE PROMOCIONES -->
+  {% if promociones %}
+    <div style="font-size:0.82rem;font-weight:700;color:var(--gris-3);text-transform:uppercase;letter-spacing:0.4px;margin-bottom:10px;">
+      {{ promociones|length }} promoción{{ 'es' if promociones|length != 1 else '' }}
+    </div>
+    {% for promo in promociones %}
+      <div class="promo-card {{ '' if promo.activa else 'inactiva' }}">
+        {% if promo.imagen_url %}
+          <img class="promo-img" src="{{ url_imagen(promo.imagen_url) }}" alt="{{ promo.titulo }}">
+        {% endif %}
+        <div class="promo-body">
+          <div class="promo-titulo">{{ promo.titulo }}</div>
+          {% if promo.descripcion %}
+            <div class="promo-desc">{{ promo.descripcion }}</div>
+          {% endif %}
+          <div class="promo-meta">
+            <span class="badge {{ 'badge-ok' if promo.activa else 'badge-off' }}">
+              {{ '✔ Activa' if promo.activa else '⏸ Inactiva' }}
+            </span>
+            {% if promo.descuento_pct > 0 %}
+              <span class="descuento-badge">-{{ promo.descuento_pct }}%</span>
+            {% endif %}
+            {% if promo.fecha_inicio or promo.fecha_fin %}
+              <span style="font-size:0.78rem;color:var(--gris-3);">
+                {% if promo.fecha_inicio %}Desde {{ promo.fecha_inicio|fecha_corta }}{% endif %}
+                {% if promo.fecha_fin %} hasta {{ promo.fecha_fin|fecha_corta }}{% endif %}
+              </span>
+            {% endif %}
+          </div>
+          <div class="promo-actions">
+            <a href="{{ url_for('promocion_toggle', promo_id=promo.id) }}"
+               class="btn btn-outline btn-sm">
+              {{ '⏸ Desactivar' if promo.activa else '▶ Activar' }}
+            </a>
+            <button class="btn btn-outline btn-sm"
+              onclick="abrirEditar({{ promo.id }}, '{{ promo.titulo|e }}', '{{ promo.descripcion|e }}', {{ promo.descuento_pct }}, '{{ promo.fecha_inicio or '' }}', '{{ promo.fecha_fin or '' }}')">
+              ✏️ Editar
+            </button>
+            <form method="POST" action="{{ url_for('promocion_eliminar', promo_id=promo.id) }}"
+                  onsubmit="return confirm('¿Eliminar esta promoción?')" style="display:inline;">
+              <button class="btn btn-outline btn-sm" type="submit"
+                      style="color:var(--rojo);border-color:var(--rojo);">🗑️</button>
+            </form>
+          </div>
+        </div>
+      </div>
+    {% endfor %}
+
+  {% else %}
+    <div class="empty">
+      <div class="empty-icon">🎉</div>
+      <div class="empty-titulo">Todavía no tenés promociones</div>
+      <p style="font-size:0.85rem;">Creá tu primera promo arriba y aparecerá en tu menú.</p>
+    </div>
+  {% endif %}
+
+</div><!-- /container -->
+
+<!-- MODAL EDITAR PROMO -->
+<div class="modal-overlay" id="modal-editar">
+  <div class="modal">
+    <div class="modal-titulo">
+      ✏️ Editar promoción
+      <button class="modal-close" onclick="cerrarModal()">✕</button>
+    </div>
+    <form method="POST" id="form-editar" enctype="multipart/form-data">
+      <div class="form-group">
+        <label>Título *</label>
+        <input class="form-control" name="titulo" id="e-titulo" required>
+      </div>
+      <div class="form-group">
+        <label>Descripción</label>
+        <textarea class="form-control" name="descripcion" id="e-descripcion"></textarea>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Descuento %</label>
+          <input class="form-control" type="number" name="descuento_pct" id="e-descuento" min="0" max="100">
+        </div>
+        <div class="form-group">
+          <label>Nueva imagen (opcional)</label>
+          <input class="form-control" type="file" name="imagen" accept="image/*">
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Desde</label>
+          <input class="form-control" type="date" name="fecha_inicio" id="e-inicio">
+        </div>
+        <div class="form-group">
+          <label>Hasta</label>
+          <input class="form-control" type="date" name="fecha_fin" id="e-fin">
+        </div>
+      </div>
+      <button class="btn btn-warning btn-block" type="submit">💾 Guardar cambios</button>
+    </form>
+  </div>
+</div>
+
+<script>
+function abrirEditar(id, titulo, desc, descPct, inicio, fin) {
+  document.getElementById('form-editar').action = '/mi-local/promocion/' + id + '/editar';
+  document.getElementById('e-titulo').value     = titulo;
+  document.getElementById('e-descripcion').value= desc || '';
+  document.getElementById('e-descuento').value  = descPct;
+  document.getElementById('e-inicio').value     = inicio || '';
+  document.getElementById('e-fin').value        = fin || '';
+  document.getElementById('modal-editar').classList.add('open');
+}
+
+function cerrarModal() {
+  document.getElementById('modal-editar').classList.remove('open');
+}
+
+document.getElementById('modal-editar').addEventListener('click', function(e) {
+  if (e.target === this) cerrarModal();
+});
+</script>
+
+</body>
+</html>
