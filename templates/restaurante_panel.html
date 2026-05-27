@@ -930,27 +930,34 @@ select.form-control { appearance: none; cursor: pointer; }
   </div><!-- /menu -->
 
   <!-- ══ PROMOCIONES ══════════════════════════════════════════ -->
+  
   <div class="seccion" id="sec-promociones">
-
     <div class="card">
-      <div class="card-titulo">🎉 Nueva promoción</div>
-      <form method="POST" action="{{ url_for('promocion_nueva') }}" enctype="multipart/form-data">
+      <div class="card-titulo">🎉 Crear nueva promoción</div>
+      <form method="POST" action="/mi-local/promocion/nueva" enctype="multipart/form-data">
         <div class="form-group">
           <label>Título *</label>
-          <input class="form-control" name="titulo" placeholder="Ej: 2x1 en pizzas los martes" required>
+          <input class="form-control" name="titulo" required>
         </div>
         <div class="form-group">
           <label>Descripción</label>
-          <textarea class="form-control" name="descripcion" placeholder="Detallá las condiciones..."></textarea>
+          <textarea class="form-control" name="descripcion" rows="2"></textarea>
         </div>
         <div class="form-row">
           <div class="form-group">
-            <label>Descuento %</label>
-            <input class="form-control" type="number" name="descuento_pct" min="0" max="100" value="0" placeholder="0">
+            <label>Tipo de descuento</label>
+            <select class="form-control" name="tipo_descuento" id="tipoDescuento" onchange="toggleTipoDescuento()">
+              <option value="porcentaje">% Porcentaje</option>
+              <option value="monto">💰 Monto fijo</option>
+            </select>
           </div>
-          <div class="form-group">
-            <label>Imagen</label>
-            <input class="form-control" type="file" name="imagen" accept="image/*">
+          <div class="form-group" id="campoPorcentaje">
+            <label>% Descuento</label>
+            <input class="form-control" type="number" name="descuento_pct" min="0" max="100" value="0">
+          </div>
+          <div class="form-group" id="campoMonto" style="display:none;">
+            <label>$ Monto fijo</label>
+            <input class="form-control" type="number" name="descuento_monto" min="0" value="0">
           </div>
         </div>
         <div class="form-row">
@@ -963,64 +970,62 @@ select.form-control { appearance: none; cursor: pointer; }
             <input class="form-control" type="date" name="fecha_fin">
           </div>
         </div>
-        <button class="btn btn-warning btn-block" type="submit">🎉 Crear promoción</button>
+        <div class="form-group">
+          <label>Imagen (opcional)</label>
+          <input class="form-control" type="file" name="imagen" accept="image/*">
+        </div>
+        <button class="btn btn-primary btn-block" type="submit">🎁 Crear promoción</button>
       </form>
     </div>
 
-    <!-- Lista de promociones -->
-    {% if promociones %}
-      {% for promo in promociones %}
-        <div class="promo-card {{ '' if promo.activa else 'inactiva' }}">
-          {% if promo.imagen_url %}
-            <img class="promo-img" src="{{ url_imagen(promo.imagen_url) }}" alt="{{ promo.titulo }}">
-          {% endif %}
-          <div class="promo-header">
-            <div>
-              <div class="promo-titulo">{{ promo.titulo }}</div>
-              {% if promo.fecha_inicio or promo.fecha_fin %}
-                <div style="font-size:0.78rem;color:#adb5bd;">
-                  {% if promo.fecha_inicio %}Desde {{ promo.fecha_inicio }}{% endif %}
-                  {% if promo.fecha_fin %} hasta {{ promo.fecha_fin }}{% endif %}
-                </div>
+    <div class="card">
+      <div class="card-titulo">📋 Mis promociones</div>
+      {% if promociones %}
+        {% for promo in promociones %}
+          <div style="border:1px solid #ddd; border-radius:10px; padding:12px; margin-bottom:12px;">
+            <div style="font-weight:800;">{{ promo.titulo }}</div>
+            {% if promo.descripcion %}<div style="font-size:0.85rem; color:#666;">{{ promo.descripcion }}</div>{% endif %}
+            <div style="margin-top:8px;">
+              {% if promo.tipo_descuento == 'porcentaje' and promo.descuento_pct > 0 %}
+                <span style="background:#EA580C; color:white; padding:2px 10px; border-radius:99px;">{{ promo.descuento_pct }}% OFF</span>
+              {% elif promo.tipo_descuento == 'monto' and promo.descuento_monto > 0 %}
+                <span style="background:#EA580C; color:white; padding:2px 10px; border-radius:99px;">${{ promo.descuento_monto }} OFF</span>
               {% endif %}
-            </div>
-            <div style="display:flex;align-items:center;gap:8px;">
-              {% if promo.descuento_pct > 0 %}
-                <span class="descuento-badge">-{{ promo.descuento_pct }}%</span>
-              {% endif %}
-              <span class="badge {{ 'badge-ok' if promo.activa else 'badge-off' }}">
-                {{ '✔ Activa' if promo.activa else 'Inactiva' }}
+              <span style="background:{% if promo.activa %}#27AE60{% else %}#95A5A6{% endif %}; color:white; padding:2px 10px; border-radius:99px;">
+                {{ 'Activa' if promo.activa else 'Inactiva' }}
               </span>
             </div>
+            <div style="margin-top:10px;">
+              <a href="/mi-local/promocion/{{ promo.id }}/toggle" style="font-size:0.75rem; margin-right:8px;">{% if promo.activa %}Desactivar{% else %}Activar{% endif %}</a>
+              <form method="POST" action="/mi-local/promocion/{{ promo.id }}/eliminar" style="display:inline;" onsubmit="return confirm('¿Eliminar esta promoción?')">
+                <button type="submit" style="background:#FADBD8; border:none; padding:4px 12px; border-radius:99px; cursor:pointer;">Eliminar</button>
+              </form>
+            </div>
           </div>
-          {% if promo.descripcion %}
-            <div class="promo-desc">{{ promo.descripcion }}</div>
-          {% endif %}
-          <div style="display:flex;gap:8px;padding:0 16px 12px;">
-            <a href="{{ url_for('promocion_toggle', promo_id=promo.id) }}"
-               class="btn btn-outline btn-sm">
-              {{ '⏸ Desactivar' if promo.activa else '▶ Activar' }}
-            </a>
-            <button class="btn btn-outline btn-sm"
-              onclick="abrirEditarPromo({{ promo.id }}, '{{ promo.titulo|e }}', '{{ promo.descripcion|e }}', {{ promo.descuento_pct }}, '{{ promo.fecha_inicio or '' }}', '{{ promo.fecha_fin or '' }}')">
-              ✏️ Editar
-            </button>
-            <form method="POST" action="{{ url_for('promocion_eliminar', promo_id=promo.id) }}"
-                  onsubmit="return confirm('¿Eliminar esta promoción?')">
-              <button class="btn btn-outline btn-sm" type="submit">🗑️</button>
-            </form>
-          </div>
+        {% endfor %}
+      {% else %}
+        <div style="text-align:center; padding:40px; color:#999;">
+          <div style="font-size:3rem;">🎁</div>
+          <div>No hay promociones aún. Creá una con el formulario de arriba.</div>
         </div>
-      {% endfor %}
-    {% else %}
-      <div class="empty">
-        <div class="empty-icon">🎉</div>
-        No tenés promociones activas.
-      </div>
-    {% endif %}
+      {% endif %}
+    </div>
+  </div>
 
-
-  </div><!-- /promociones -->
+<script>
+function toggleTipoDescuento() {
+  const tipo = document.getElementById('tipoDescuento').value;
+  const campoPorcentaje = document.getElementById('campoPorcentaje');
+  const campoMonto = document.getElementById('campoMonto');
+  if (tipo === 'porcentaje') {
+    campoPorcentaje.style.display = '';
+    campoMonto.style.display = 'none';
+  } else {
+    campoPorcentaje.style.display = 'none';
+    campoMonto.style.display = '';
+  }
+}
+</script>
 
   <!-- ══ VALORACIONES ════════════════════════════════════ -->
   <div class="seccion" id="sec-valoraciones">

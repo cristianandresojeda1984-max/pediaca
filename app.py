@@ -1551,28 +1551,31 @@ def promocion_nueva():
     restaurante = get_restaurante_aprobado()
     if not restaurante:
         return redirect(url_for("restaurante_panel"))
-
-    titulo        = request.form.get("titulo", "").strip()
-    descripcion   = request.form.get("descripcion", "").strip()
+    
+    titulo = request.form.get("titulo", "").strip()
+    descripcion = request.form.get("descripcion", "").strip()
+    tipo_descuento = request.form.get("tipo_descuento", "porcentaje")
     descuento_pct = int(request.form.get("descuento_pct", 0) or 0)
-    fecha_inicio  = request.form.get("fecha_inicio") or None
-    fecha_fin     = request.form.get("fecha_fin") or None
-    archivo       = request.files.get("imagen")
-    imagen_url    = guardar_imagen(archivo, "promociones") if archivo else None
-
+    descuento_monto = int(request.form.get("descuento_monto", 0) or 0)
+    fecha_inicio = request.form.get("fecha_inicio") or None
+    fecha_fin = request.form.get("fecha_fin") or None
+    archivo = request.files.get("imagen")
+    imagen_url = guardar_imagen(archivo, "promociones") if archivo and archivo.filename else None
+    
     if not titulo:
         flash("El título es obligatorio.", "danger")
         return redirect(url_for("restaurante_panel") + "#sec-promociones")
-
+    
     execute("""
         INSERT INTO promociones
-            (restaurante_id, titulo, descripcion, imagen_url, descuento_pct, fecha_inicio, fecha_fin)
-        VALUES (?,?,?,?,?,?,?)
-    """, (restaurante["id"], titulo, descripcion, imagen_url,
-          descuento_pct, fecha_inicio, fecha_fin))
+            (restaurante_id, titulo, descripcion, imagen_url, tipo_descuento,
+             descuento_pct, descuento_monto, fecha_inicio, fecha_fin, activa)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 1)
+    """, (restaurante["id"], titulo, descripcion, imagen_url, tipo_descuento,
+          descuento_pct, descuento_monto, fecha_inicio, fecha_fin))
+    
     flash(f"Promoción '{titulo}' creada.", "success")
     return redirect(url_for("restaurante_panel") + "#sec-promociones")
-
 
 @app.route("/mi-local/promocion/<int:promo_id>/toggle")
 @login_required
@@ -1608,33 +1611,35 @@ def promocion_editar(promo_id):
     restaurante = get_restaurante_aprobado()
     if not restaurante:
         return redirect(url_for("restaurante_panel"))
-
-    titulo        = request.form.get("titulo", "").strip()
-    descripcion   = request.form.get("descripcion", "").strip()
+    
+    titulo = request.form.get("titulo", "").strip()
+    descripcion = request.form.get("descripcion", "").strip()
+    tipo_descuento = request.form.get("tipo_descuento", "porcentaje")
     descuento_pct = int(request.form.get("descuento_pct", 0) or 0)
-    fecha_inicio  = request.form.get("fecha_inicio") or None
-    fecha_fin     = request.form.get("fecha_fin") or None
-    archivo       = request.files.get("imagen")
-
+    descuento_monto = int(request.form.get("descuento_monto", 0) or 0)
+    fecha_inicio = request.form.get("fecha_inicio") or None
+    fecha_fin = request.form.get("fecha_fin") or None
+    archivo = request.files.get("imagen")
+    
     promo = query("SELECT * FROM promociones WHERE id=? AND restaurante_id=?",
                   (promo_id, restaurante["id"]), one=True)
     if not promo:
-        return redirect(url_for("restaurante_panel") + "#sec-promociones")
-
+        return redirect(url_for("restaurante_panel"))
+    
     nueva_imagen = guardar_imagen(archivo, "promociones") if archivo and archivo.filename else promo["imagen_url"]
-
+    
     execute("""
         UPDATE promociones SET
             titulo=?, descripcion=?, imagen_url=?,
-            descuento_pct=?, fecha_inicio=?, fecha_fin=?
+            tipo_descuento=?, descuento_pct=?, descuento_monto=?,
+            fecha_inicio=?, fecha_fin=?
         WHERE id=? AND restaurante_id=?
-    """, (titulo, descripcion, nueva_imagen, descuento_pct,
-          fecha_inicio, fecha_fin, promo_id, restaurante["id"]))
+    """, (titulo, descripcion, nueva_imagen, tipo_descuento,
+          descuento_pct, descuento_monto, fecha_inicio, fecha_fin,
+          promo_id, restaurante["id"]))
+    
     flash("Promoción actualizada.", "success")
     return redirect(url_for("restaurante_panel") + "#sec-promociones")
-
-
-# ── PRODUCTO EDITAR ───────────────────────────────────────────────────────────
 
 @app.route("/mi-local/producto/<int:prod_id>/editar", methods=["POST"])
 @login_required
