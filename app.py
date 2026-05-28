@@ -29,6 +29,37 @@ VAPID_EMAIL       = os.environ.get("VAPID_CLAIMS_EMAIL", "admin@pediaca.ar")
 
 # ── CONFIGURACIÓN ─────────────────────────────────────────────────────────────
 app = Flask(__name__)
+
+# Crear tabla configuraciones si no existe (para producción)
+try:
+    execute("""
+        CREATE TABLE IF NOT EXISTS configuraciones (
+            id SERIAL PRIMARY KEY,
+            clave TEXT UNIQUE,
+            valor TEXT,
+            tipo TEXT DEFAULT 'text',
+            actualizado TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    """)
+    defaults = [
+        ('hero_tipo', 'gradiente', 'text'),
+        ('hero_imagen_url', '', 'text'),
+        ('hero_blur', '6', 'number'),
+        ('hero_opacidad_overlay', '75', 'number'),
+        ('hero_color_overlay', '#1E3A5F', 'text'),
+        ('hero_gradiente', '135deg, #1A1A2E, #1E3A5F', 'text'),
+        ('usar_overlay', 'true', 'text'),
+    ]
+    for clave, valor, tipo in defaults:
+        execute("""
+            INSERT INTO configuraciones (clave, valor, tipo)
+            VALUES (?, ?, ?)
+            ON CONFLICT (clave) DO NOTHING
+        """, (clave, valor, tipo))
+    print("✅ Tabla configuraciones verificada/creada")
+except Exception as e:
+    print(f"⚠️ Error al crear tabla configuraciones: {e}")
+
 app.secret_key = os.environ.get("SECRET_KEY", "dev-key-cambiar-en-produccion")
 
 DB_PATH       = os.environ.get("DB_PATH", "pediaca.db")
