@@ -974,7 +974,25 @@ select.form-control { appearance: none; cursor: pointer; }
           <label>Imagen (opcional)</label>
           <input class="form-control" type="file" name="imagen" accept="image/*">
         </div>
-        <button class="btn btn-primary btn-block" type="submit">🎁 Crear promoción</button>
+        
+                        <div class="form-group">
+                            <label>🎁 Producto asociado (opcional)</label>
+                            <select class="form-control" name="producto_id">
+                                <option value="">-- Sin producto específico --</option>
+                                {% for producto in productos %}
+                                <option value="{{ producto.id }}">{{ producto.nombre }} ({{ producto.precio | pesos }})</option>
+                                {% endfor %}
+                            </select>
+                            <div class="info-text">Si seleccionás un producto, al hacer clic en la promo se agregará al carrito</div>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label>💰 Precio con descuento (opcional)</label>
+                            <input class="form-control" type="number" name="precio_con_descuento" placeholder="Dejar vacío para calcular automático">
+                            <div class="info-text">Ej: Si el producto vale $5000 y querés que salga $3500</div>
+                        </div>
+
+                        <button class="btn btn-primary btn-block" type="submit">🎁 Crear promoción</button>
       </form>
     </div>
 

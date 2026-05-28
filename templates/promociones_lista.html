@@ -1,0 +1,174 @@
+{% extends "base.html" %}
+{% block title %}Todas las promociones - PediAcá{% endblock %}
+
+{% block extra_styles %}
+.promos-header {
+    background: linear-gradient(135deg, #1A1A2E, #1E3A5F);
+    padding: 48px 20px;
+    text-align: center;
+}
+.promos-header h1 {
+    font-family: 'Paytone One', sans-serif;
+    font-size: 2rem;
+    color: white;
+    margin-bottom: 12px;
+}
+.promos-header p {
+    color: rgba(255,255,255,0.7);
+    font-size: 1rem;
+}
+.promos-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 24px;
+    padding: 40px 20px;
+    max-width: 1200px;
+    margin: 0 auto;
+}
+.promo-card-full {
+    background: white;
+    border-radius: 20px;
+    overflow: hidden;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+    transition: transform 0.2s, box-shadow 0.2s;
+    text-decoration: none;
+    color: inherit;
+    display: block;
+}
+.promo-card-full:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 12px 30px rgba(0,0,0,0.15);
+}
+.promo-imagen {
+    width: 100%;
+    height: 180px;
+    object-fit: cover;
+}
+.promo-body {
+    padding: 20px;
+}
+.promo-titulo {
+    font-weight: 800;
+    font-size: 1.1rem;
+    margin-bottom: 6px;
+}
+.promo-descripcion {
+    font-size: 0.85rem;
+    color: #6c757d;
+    margin-bottom: 12px;
+}
+.promo-local {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 12px;
+}
+.promo-logo {
+    width: 28px;
+    height: 28px;
+    border-radius: 8px;
+    object-fit: cover;
+}
+.promo-local-nombre {
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: #1E3A5F;
+}
+.promo-descuento {
+    display: inline-block;
+    background: linear-gradient(135deg, #EA580C, #C2410C);
+    color: white;
+    padding: 4px 12px;
+    border-radius: 99px;
+    font-size: 0.75rem;
+    font-weight: 800;
+    margin-bottom: 12px;
+}
+.promo-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 12px;
+    padding-top: 12px;
+    border-top: 1px solid #e9ecef;
+}
+.promo-fecha {
+    font-size: 0.7rem;
+    color: #adb5bd;
+}
+.promo-ver {
+    font-size: 0.8rem;
+    font-weight: 700;
+    color: #EA580C;
+}
+.empty-promos {
+    text-align: center;
+    padding: 80px 20px;
+    color: #6c757d;
+}
+.empty-promos-icon {
+    font-size: 4rem;
+    margin-bottom: 16px;
+}
+.empty-promos h3 {
+    font-weight: 800;
+    margin-bottom: 8px;
+    color: #1a1a2e;
+}
+{% endblock %}
+
+{% block content %}
+<div class="promos-header">
+    <h1>🎁 Todas las promociones</h1>
+    <p>Descubrí los descuentos y ofertas de los locales de Rosario</p>
+</div>
+
+<div class="promos-grid">
+    {% if promociones %}
+        {% for promo in promociones %}
+        <a href="/local/{{ promo.restaurante_id }}" class="promo-card-full">
+            {% if promo.imagen_url %}
+            <img class="promo-imagen" src="{{ url_imagen(promo.imagen_url) }}" alt="{{ promo.titulo }}">
+            {% else %}
+            <div class="promo-imagen" style="background: linear-gradient(135deg, #EA580C, #C2410C); display: flex; align-items: center; justify-content: center;">
+                <span style="font-size: 3rem;">🎁</span>
+            </div>
+            {% endif %}
+            <div class="promo-body">
+                <div class="promo-descuento">{{ promo.descuento_texto }}</div>
+                <div class="promo-titulo">{{ promo.titulo }}</div>
+                {% if promo.descripcion %}
+                <div class="promo-descripcion">{{ promo.descripcion[:100] }}{% if promo.descripcion|length > 100 %}...{% endif %}</div>
+                {% endif %}
+                <div class="promo-local">
+                    {% if promo.logo_url %}
+                    <img class="promo-logo" src="{{ url_imagen(promo.logo_url) }}" alt="">
+                    {% else %}
+                    <div class="promo-logo" style="background: #EA580C; display: flex; align-items: center; justify-content: center; color: white;">🍽️</div>
+                    {% endif %}
+                    <span class="promo-local-nombre">{{ promo.nombre_local }}</span>
+                    <span style="font-size: 0.7rem; color: #adb5bd;">· {{ promo.categoria or 'Restaurante' }}</span>
+                </div>
+                <div class="promo-footer">
+                    <span class="promo-fecha">
+                        {% if promo.fecha_fin %}
+                            Válida hasta {{ promo.fecha_fin }}
+                        {% else %}
+                            Oferta por tiempo limitado
+                        {% endif %}
+                    </span>
+                    <span class="promo-ver">Ver local →</span>
+                </div>
+            </div>
+        </a>
+        {% endfor %}
+    {% else %}
+        <div class="empty-promos">
+            <div class="empty-promos-icon">🎁</div>
+            <h3>No hay promociones activas</h3>
+            <p>En este momento no hay promociones vigentes. Volvé a consultar pronto.</p>
+            <a href="/" style="display: inline-block; margin-top: 16px; background: #EA580C; color: white; padding: 12px 24px; border-radius: 99px; text-decoration: none; font-weight: 700;">Ver locales →</a>
+        </div>
+    {% endif %}
+</div>
+{% endblock %}

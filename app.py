@@ -27,7 +27,6 @@ VAPID_PRIVATE_KEY = os.environ.get("VAPID_PRIVATE_KEY", "LS0tLS1CRUdJTiBFQyBQUkl
 VAPID_EMAIL       = os.environ.get("VAPID_CLAIMS_EMAIL", "admin@pediaca.ar")
 
 
-
 # ── CONFIGURACIÓN ─────────────────────────────────────────────────────────────
 app = Flask(__name__)
 app.secret_key = os.environ.get("SECRET_KEY", "dev-key-cambiar-en-produccion")
@@ -67,7 +66,6 @@ os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 def _enviar_push(subscription_info, payload):
     """Envía una notificación push a una suscripción."""
     try:
-        # Decodificar private key de base64 a PEM si es necesario
         pk = VAPID_PRIVATE_KEY
         if not pk.startswith("-----"):
             pk_bytes = base64.urlsafe_b64decode(pk + "==")
@@ -82,9 +80,7 @@ def _enviar_push(subscription_info, payload):
         return True
     except WebPushException as e:
         if "410" in str(e) or "404" in str(e):
-            # Suscripción expirada, limpiar
-            execute("DELETE FROM push_subscriptions WHERE endpoint=?",
-                    (subscription_info.get("endpoint",""),))
+            execute("DELETE FROM push_subscriptions WHERE endpoint=?", (subscription_info.get("endpoint",""),))
         return False
     except Exception:
         return False
@@ -195,12 +191,10 @@ def formato_pesos(valor):
     return f"${valor:,.0f}".replace(",", ".")
 
 def formato_fecha(valor, formato="%Y-%m-%d %H:%M"):
-    """Formatea fecha tanto si es string como datetime."""
     if not valor:
         return ""
     if hasattr(valor, 'strftime'):
         return valor.strftime(formato)
-    # Es string
     return str(valor)[:len(formato.replace("%Y","0000").replace("%m","00").replace("%d","00").replace("%H","00").replace("%M","00"))]
 
 app.jinja_env.filters["pesos"]  = formato_pesos
@@ -230,9 +224,18 @@ def home():
           AND (fecha_inicio IS NULL OR fecha_inicio <= CURRENT_DATE)
           AND (fecha_fin   IS NULL OR fecha_fin   >= CURRENT_DATE)
     """)
-    return render_template("home.html",
-                           restaurantes=restaurantes,
-                           auspiciantes=auspiciantes)
+    
+    promociones_destacadas = query("""
+        SELECT p.*, r.nombre_local, r.id as restaurante_id
+        FROM promociones p
+        JOIN restaurantes r ON r.id = p.restaurante_id
+        WHERE p.activa = 1
+          AND r.estado = 'aprobado'
+        ORDER BY p.fecha_creacion DESC
+        LIMIT 10
+    """)
+
+    return render_template("home.html", restaurantes=restaurantes, auspiciantes=auspiciantes, promociones_destacadas=promociones_destacadas)
 
 
 @app.route("/local/<int:restaurante_id>")
@@ -249,7 +252,7 @@ def ver_local(restaurante_id):
         return redirect(url_for("home"))
 
     categorias = query("""
-        SELECT c.*, STRING_AGG(p.id::text, ',') AS producto_ids
+        SELECT c.*, GROUP_CONCAT(p.id, ',') AS producto_ids
         FROM categorias_menu c
         LEFT JOIN productos p ON p.categoria_id = c.id AND p.disponible = 1
         WHERE c.restaurante_id = ?
@@ -263,7 +266,6 @@ def ver_local(restaurante_id):
         ORDER BY categoria_id, orden
     """, (restaurante_id,))
 
-    # Valoraciones del local
     valoraciones_pub = query("""
         SELECT v.estrellas, v.comentario, v.fecha
         FROM valoraciones v
@@ -275,15 +277,47 @@ def ver_local(restaurante_id):
     if valoraciones_pub:
         rating_avg = sum(v["estrellas"] for v in valoraciones_pub) / len(valoraciones_pub)
 
+    promociones = query("""
+        SELECT * FROM promociones
+        WHERE restaurante_id = ? AND activa = 1
+        ORDER BY fecha_creacion DESC
+    """, (restaurante_id,))
+
     return render_template("ver_local.html",
                            restaurante=restaurante,
                            categorias=categorias,
                            productos=productos,
                            valoraciones=valoraciones_pub,
-                           rating_avg=rating_avg)
-
+                           rating_avg=rating_avg,
+                           promociones=promociones)
 
 # ── REGISTRO ──────────────────────────────────────────────────────────────────
+
+
+
+@app.route("/promociones")
+def ver_promociones():
+    """Muestra todas las promociones activas de todos los locales"""
+    promociones = query("""
+        SELECT p.*, r.nombre_local, r.id as restaurante_id, r.logo_url, r.categoria
+        FROM promociones p
+        JOIN restaurantes r ON r.id = p.restaurante_id
+        WHERE p.activa = 1
+          AND r.estado = 'aprobado'
+          AND r.abierto = 1
+        ORDER BY p.fecha_creacion DESC
+    """)
+    
+    # Agrupar por tipo de descuento para mostrar
+    for promo in promociones:
+        if promo['tipo_descuento'] == 'porcentaje' and promo['descuento_pct']:
+            promo['descuento_texto'] = f"{promo['descuento_pct']}% OFF"
+        elif promo['descuento_monto']:
+            promo['descuento_texto'] = f"${promo['descuento_monto']} OFF"
+        else:
+            promo['descuento_texto'] = "Oferta especial"
+    
+    return render_template("promociones_lista.html", promociones=promociones)
 
 @app.route("/registro", methods=["GET", "POST"])
 def registro():
@@ -296,7 +330,6 @@ def registro():
         password2 = request.form.get("password2", "")
         rol       = request.form.get("rol", "cliente")
 
-        # Validaciones
         if not all([nombre, apellido, email, password]):
             flash("Completá todos los campos obligatorios.", "danger")
             return redirect(url_for("registro"))
@@ -318,14 +351,12 @@ def registro():
             flash("Ya existe una cuenta con ese email.", "warning")
             return redirect(url_for("registro"))
 
-        # Crear usuario
         password_hash = generate_password_hash(password)
         user_id = execute("""
             INSERT INTO usuarios (nombre, apellido, email, telefono, password_hash, rol)
             VALUES (?, ?, ?, ?, ?, ?)
         """, (nombre, apellido, email, telefono, password_hash, rol))
 
-        # Crear perfil según rol
         if rol == "cliente":
             execute("INSERT INTO clientes (usuario_id) VALUES (?)", (user_id,))
             flash("¡Cuenta creada! Ya podés iniciar sesión.", "success")
@@ -398,7 +429,7 @@ def logout():
     return redirect(url_for("home"))
 
 
-# ── DASHBOARD (despacha según rol) ────────────────────────────────────────────
+# ── DASHBOARD ─────────────────────────────────────────────────────────────────
 
 @app.route("/dashboard")
 @login_required
@@ -416,14 +447,12 @@ def dashboard():
 # ── PANEL RESTAURANTE ─────────────────────────────────────────────────────────
 
 def get_restaurante_aprobado():
-    """Devuelve el restaurante si está aprobado, o None."""
     return query("""
         SELECT * FROM restaurantes
         WHERE usuario_id = ? AND estado = 'aprobado'
     """, (session["user_id"],), one=True)
 
 def get_restaurante_any():
-    """Devuelve el restaurante sin importar su estado."""
     return query(
         "SELECT * FROM restaurantes WHERE usuario_id = ?",
         (session["user_id"],), one=True
@@ -444,7 +473,6 @@ def push_subscribe():
     auth     = data.get("keys", {}).get("auth")
     if not all([endpoint, p256dh, auth]):
         return jsonify({"error": "Datos incompletos"}), 400
-    # Upsert
     existe = query("SELECT id FROM push_subscriptions WHERE endpoint=?", (endpoint,), one=True)
     if existe:
         execute("UPDATE push_subscriptions SET p256dh=?, auth=?, usuario_id=? WHERE endpoint=?",
@@ -471,7 +499,6 @@ def service_worker():
 
 
 def guardar_imagen(archivo, subcarpeta=""):
-    """Guarda imagen en Cloudinary (si está configurado) o localmente."""
     if not archivo or archivo.filename == "":
         return None
     if not allowed_file(archivo.filename):
@@ -489,9 +516,7 @@ def guardar_imagen(archivo, subcarpeta=""):
             return resultado["secure_url"]
         except Exception as e:
             print(f"❌ Error Cloudinary: {type(e).__name__}: {e}")
-            # Fallback a local
 
-    # Almacenamiento local
     import uuid, time
     filename = secure_filename(archivo.filename)
     ext      = filename.rsplit(".", 1)[1].lower()
@@ -503,7 +528,6 @@ def guardar_imagen(archivo, subcarpeta=""):
 
 
 def url_imagen(ruta):
-    """Devuelve la URL correcta de una imagen (Cloudinary o local)."""
     if not ruta:
         return None
     if ruta.startswith("http"):
@@ -518,13 +542,11 @@ app.jinja_env.globals["url_imagen"] = url_imagen
 @login_required
 @rol_required("restaurante")
 def restaurante_panel():
-    # Primero chequear si el local existe (puede estar pendiente)
     restaurante_raw = get_restaurante_any()
     if not restaurante_raw:
         flash("No encontramos tu local.", "danger")
         return redirect(url_for("home"))
 
-    # Si está pendiente o suspendido, mostrar pantalla de espera
     if restaurante_raw["estado"] != "aprobado":
         return render_template("restaurante_espera.html",
                                restaurante=restaurante_raw)
@@ -548,7 +570,6 @@ def restaurante_panel():
         ORDER BY p.categoria_id, p.orden
     """, (restaurante["id"],))
 
-    # Cargar sabores por producto
     sabores_map = {}
     if productos:
         ids = ",".join(str(p["id"]) for p in productos)
@@ -610,8 +631,7 @@ def restaurante_editar():
           tiempo_estimado, restaurante["id"]))
 
     flash("Datos del local actualizados.", "success")
-    tab = request.form.get("tab", "sec-info")
-    return redirect(url_for("restaurante_panel") + f"#{tab}")
+    return redirect(url_for("restaurante_panel"))
 
 
 @app.route("/mi-local/categoria/nueva", methods=["POST"])
@@ -629,8 +649,7 @@ def categoria_nueva():
             VALUES (?, ?, (SELECT COALESCE(MAX(orden),0)+1 FROM categorias_menu WHERE restaurante_id=?))
         """, (restaurante["id"], nombre, restaurante["id"]))
         flash(f"Categoría '{nombre}' creada.", "success")
-    tab = request.form.get("tab", "sec-menu")
-    return redirect(url_for("restaurante_panel") + f"#{tab}")
+    return redirect(url_for("restaurante_panel"))
 
 
 @app.route("/mi-local/producto/nuevo", methods=["POST"])
@@ -650,7 +669,6 @@ def producto_nuevo():
     categoria_id = request.form.get("categoria_id") or None
     disponible   = 1 if request.form.get("disponible") else 0
 
-    # Foto inline
     foto_url = None
     archivo  = request.files.get("foto")
     if archivo and archivo.filename:
@@ -662,8 +680,7 @@ def producto_nuevo():
     """, (restaurante["id"], categoria_id, nombre, descripcion, precio, disponible, foto_url))
 
     flash(f"Producto '{nombre}' agregado.", "success")
-    tab = request.form.get("tab", "sec-menu")
-    return redirect(url_for("restaurante_panel") + f"#{tab}")
+    return redirect(url_for("restaurante_panel"))
 
 
 # ── CARGA MASIVA ───────────────────────────────────────────────────────────────
@@ -672,14 +689,12 @@ def producto_nuevo():
 @login_required
 @rol_required("restaurante")
 def carga_masiva():
-    """Acepta JSON (renglones manuales), CSV o Excel."""
     restaurante = get_restaurante_aprobado()
     if not restaurante:
         return jsonify({"error": "No autorizado"}), 403
 
     productos_data = []
 
-    # ── Renglones manuales (JSON) ──────────────────────────────
     if request.is_json:
         rows = request.get_json().get("productos", [])
         for r in rows:
@@ -693,7 +708,6 @@ def carga_masiva():
                 "categoria":   str(r.get("categoria", "")).strip(),
             })
 
-    # ── Archivo CSV o Excel ────────────────────────────────────
     else:
         archivo = request.files.get("archivo")
         if not archivo:
@@ -723,7 +737,6 @@ def carga_masiva():
             rows = list(ws.iter_rows(values_only=True))
             if not rows:
                 return jsonify({"error": "Archivo vacío"}), 400
-            # Primera fila = encabezados
             headers = [str(h or "").lower().strip() for h in rows[0]]
             def _col(row, *names):
                 for n in names:
@@ -747,7 +760,6 @@ def carga_masiva():
     if not productos_data:
         return jsonify({"error": "No se encontraron productos válidos"}), 400
 
-    # Mapear categorías por nombre
     cats = query("SELECT id, nombre FROM categorias_menu WHERE restaurante_id=?",
                  (restaurante["id"],))
     cat_map = {c["nombre"].lower().strip(): c["id"] for c in cats}
@@ -768,7 +780,6 @@ def carga_masiva():
 @login_required
 @rol_required("restaurante")
 def descargar_plantilla():
-    """Genera un Excel de ejemplo para carga masiva."""
     import openpyxl
     from flask import send_file
     wb = openpyxl.Workbook()
@@ -783,7 +794,6 @@ def descargar_plantilla():
     ]
     for e in ejemplos:
         ws.append(e)
-    # Ancho de columnas
     for col, ancho in [("A", 30), ("B", 40), ("C", 12), ("D", 20)]:
         ws.column_dimensions[col].width = ancho
 
@@ -803,7 +813,6 @@ def sabor_nuevo(prod_id):
     restaurante = get_restaurante_aprobado()
     if not restaurante:
         return redirect(url_for("restaurante_panel"))
-    # Verificar que el producto es del restaurante
     prod = query("SELECT id FROM productos WHERE id=? AND restaurante_id=?",
                  (prod_id, restaurante["id"]), one=True)
     if not prod:
@@ -871,7 +880,33 @@ def producto_eliminar(prod_id):
     execute("DELETE FROM productos WHERE id = ? AND restaurante_id = ?",
             (prod_id, restaurante["id"]))
     flash("Producto eliminado.", "success")
-    return redirect(url_for("restaurante_panel") + "#sec-menu")
+    return redirect(url_for("restaurante_panel"))
+
+
+# ── PRODUCTO EDITAR ───────────────────────────────────────────────────────────
+
+@app.route("/mi-local/producto/<int:prod_id>/editar", methods=["POST"])
+@login_required
+@rol_required("restaurante")
+def producto_editar(prod_id):
+    restaurante = get_restaurante_aprobado()
+    if not restaurante:
+        return redirect(url_for("restaurante_panel"))
+
+    nombre       = request.form.get("nombre", "").strip()
+    descripcion  = request.form.get("descripcion", "").strip()
+    precio       = float(request.form.get("precio", 0) or 0)
+    categoria_id = request.form.get("categoria_id") or None
+    disponible   = 1 if request.form.get("disponible") else 0
+
+    execute("""
+        UPDATE productos SET
+            nombre=?, descripcion=?, precio=?, categoria_id=?, disponible=?
+        WHERE id=? AND restaurante_id=?
+    """, (nombre, descripcion, precio, categoria_id, disponible,
+          prod_id, restaurante["id"]))
+    flash("Producto actualizado.", "success")
+    return redirect(url_for("restaurante_panel"))
 
 
 # ── PANEL CADETE ──────────────────────────────────────────────────────────────
@@ -938,7 +973,6 @@ def cliente_panel():
         ORDER BY p.fecha_pedido DESC LIMIT 30
     """, (session["user_id"],))
 
-    # Locales más pedidos (frecuentes)
     locales_frecuentes = query("""
         SELECT r.*, COUNT(p.id) as veces
         FROM pedidos p
@@ -987,12 +1021,10 @@ def cliente_editar_perfil():
 @login_required
 @rol_required("cliente")
 def cliente_cambiar_password():
-    # Si alguien entra por GET, redirigir al panel
     if request.method == "GET":
         flash("Usá el formulario para cambiar tu contraseña.", "info")
         return redirect(url_for("cliente_panel"))
     
-    # Si es POST, procesar el cambio
     from werkzeug.security import check_password_hash, generate_password_hash
     actual = request.form.get("password_actual", "")
     nueva  = request.form.get("password_nueva", "")
@@ -1157,7 +1189,6 @@ def whatsapp_link():
     nombre_cliente = data.get("nombre_cliente", "").strip()
     tel_cliente    = data.get("tel_cliente", "").strip()
 
-    # Validaciones obligatorias
     if not nombre_cliente:
         return jsonify({"error": "El nombre es obligatorio"}), 400
     if tipo_entrega == "delivery" and not direccion:
@@ -1170,7 +1201,6 @@ def whatsapp_link():
     if not restaurante or not items:
         return jsonify({"error": "Datos inválidos"}), 400
 
-    # Armar mensaje para el local
     total = sum(i["cantidad"] * i["precio"] for i in items)
     lineas = [f"🛵 *Nuevo pedido — {restaurante['nombre_local']}*\n"]
     lineas.append(f"👤 *Cliente:* {nombre_cliente}")
@@ -1192,7 +1222,6 @@ def whatsapp_link():
     numero     = _limpiar_numero(restaurante["whatsapp"])
     link       = _wa_link(numero, mensaje)
 
-    # Guardar pedido
     cliente_id = session.get("user_id")
     nom_anon   = nombre_cliente if not cliente_id else None
     tel_anon   = tel_cliente    if not cliente_id else None
@@ -1216,7 +1245,7 @@ def whatsapp_link():
     return jsonify({"link": link, "pedido_id": pedido_id})
 
 
-# ── API: STATUS DEL PEDIDO (polling cliente) ──────────────────────────────────
+# ── API: STATUS DEL PEDIDO ───────────────────────────────────────────────────
 
 @app.route("/api/pedido/<int:pedido_id>/status")
 def pedido_status(pedido_id):
@@ -1265,7 +1294,6 @@ def restaurante_pedidos():
         LIMIT 100
     """, (restaurante["id"],))
 
-    # Items por pedido
     items_por_pedido = {}
     if pedidos:
         ids = ",".join(str(p["id"]) for p in pedidos)
@@ -1300,7 +1328,6 @@ def restaurante_cambiar_estado(pedido_id, nuevo_estado):
         WHERE id=? AND restaurante_id=?
     """, (nuevo_estado, pedido_id, restaurante["id"]))
 
-    # Si confirman → notificar cadetes por push
     if nuevo_estado == "confirmado":
         pedido = query("SELECT * FROM pedidos WHERE id=?", (pedido_id,), one=True)
         if pedido and pedido["tipo_entrega"] == "delivery":
@@ -1319,7 +1346,6 @@ def restaurante_cambiar_estado(pedido_id, nuevo_estado):
 @login_required
 @rol_required("restaurante")
 def notificar_cadetes(pedido_id):
-    """Devuelve links WA para notificar a cada cadete disponible."""
     restaurante = get_restaurante_aprobado()
     if not restaurante:
         return jsonify({"error": "No autorizado"}), 403
@@ -1363,7 +1389,6 @@ def notificar_cadetes(pedido_id):
 @app.route("/pedido/<int:pedido_id>/en-camino", methods=["POST"])
 @login_required
 def marcar_en_camino(pedido_id):
-    """Restaurante o cadete marcan el pedido como en camino."""
     rol = session.get("rol")
 
     if rol == "restaurante":
@@ -1392,6 +1417,7 @@ def marcar_en_camino(pedido_id):
 
     return jsonify({"ok": True})
 
+
 # ── CADETE: ACEPTAR PEDIDO ────────────────────────────────────────────────────
 
 @app.route("/cadete/aceptar/<int:pedido_id>", methods=["POST"])
@@ -1405,7 +1431,6 @@ def cadete_aceptar_pedido(pedido_id):
     if not cadete:
         return jsonify({"error": "No autorizado"}), 403
 
-    # Verificar que no está tomado
     pedido = query(
         "SELECT * FROM pedidos WHERE id=? AND cadete_id IS NULL AND estado='confirmado'",
         (pedido_id,), one=True
@@ -1419,7 +1444,6 @@ def cadete_aceptar_pedido(pedido_id):
         WHERE id=? AND cadete_id IS NULL
     """, (cadete["id"], pedido_id))
 
-    # Verificar que lo grabamos nosotros (race condition)
     check = query("SELECT cadete_id FROM pedidos WHERE id=?", (pedido_id,), one=True)
     if check["cadete_id"] != cadete["id"]:
         return jsonify({"ok": False, "msg": "El pedido ya fue tomado por otro cadete"}), 409
@@ -1431,7 +1455,6 @@ def cadete_aceptar_pedido(pedido_id):
 @login_required
 @rol_required("cadete")
 def pedidos_nuevos_cadete():
-    """Polling: devuelve pedidos de delivery sin cadete asignado."""
     pedidos = query("""
         SELECT p.id, p.total, p.direccion_entrega, p.fecha_pedido,
                r.nombre_local, r.direccion AS local_direccion, r.whatsapp
@@ -1495,7 +1518,7 @@ def subir_logo():
         flash("Logo actualizado.", "success")
     else:
         flash("Archivo inválido. Usá PNG, JPG o WEBP.", "danger")
-    return redirect(url_for("restaurante_panel") + "#sec-fotos")
+    return redirect(url_for("restaurante_panel"))
 
 
 @app.route("/mi-local/foto/banner", methods=["POST"])
@@ -1513,7 +1536,7 @@ def subir_banner():
         flash("Banner actualizado.", "success")
     else:
         flash("Archivo inválido. Usá PNG, JPG o WEBP.", "danger")
-    return redirect(url_for("restaurante_panel") + "#sec-fotos")
+    return redirect(url_for("restaurante_panel"))
 
 
 @app.route("/mi-local/producto/<int:prod_id>/foto", methods=["POST"])
@@ -1531,18 +1554,10 @@ def subir_foto_producto(prod_id):
         flash("Foto del producto actualizada.", "success")
     else:
         flash("Archivo inválido.", "danger")
-    return redirect(url_for("restaurante_panel") + "#sec-menu")
+    return redirect(url_for("restaurante_panel"))
 
 
 # ── PROMOCIONES ───────────────────────────────────────────────────────────────
-
-@app.route("/mi-local/promociones")
-@login_required
-@rol_required("restaurante")
-def promociones_panel():
-    # Redirigir al panel principal, pestaña promociones
-    return redirect(url_for("restaurante_panel") + "#sec-promociones")
-
 
 @app.route("/mi-local/promocion/nueva", methods=["POST"])
 @login_required
@@ -1559,12 +1574,30 @@ def promocion_nueva():
     descuento_monto = int(request.form.get("descuento_monto", 0) or 0)
     fecha_inicio = request.form.get("fecha_inicio") or None
     fecha_fin = request.form.get("fecha_fin") or None
+    producto_id = request.form.get("producto_id") or None
+    precio_con_descuento = request.form.get("precio_con_descuento") or None
     archivo = request.files.get("imagen")
     imagen_url = guardar_imagen(archivo, "promociones") if archivo and archivo.filename else None
     
     if not titulo:
         flash("El título es obligatorio.", "danger")
         return redirect(url_for("restaurante_panel") + "#sec-promociones")
+    
+    if precio_con_descuento:
+        precio_con_descuento = int(precio_con_descuento)
+    
+    execute("""
+        INSERT INTO promociones
+            (restaurante_id, titulo, descripcion, imagen_url, tipo_descuento,
+             descuento_pct, descuento_monto, fecha_inicio, fecha_fin, activa,
+             producto_id, precio_con_descuento)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?, ?)
+    """, (restaurante["id"], titulo, descripcion, imagen_url, tipo_descuento,
+          descuento_pct, descuento_monto, fecha_inicio, fecha_fin,
+          producto_id, precio_con_descuento))
+    
+    flash(f"Promoción '{titulo}' creada.", "success")
+    return redirect(url_for("restaurante_panel") + "#sec-promociones")
     
     execute("""
         INSERT INTO promociones
@@ -1590,7 +1623,6 @@ def promocion_toggle(promo_id):
     """, (promo_id, restaurante["id"]))
     return redirect(url_for("restaurante_panel") + "#sec-promociones")
 
-
 @app.route("/mi-local/promocion/<int:promo_id>/eliminar", methods=["POST"])
 @login_required
 @rol_required("restaurante")
@@ -1602,7 +1634,6 @@ def promocion_eliminar(promo_id):
             (promo_id, restaurante["id"]))
     flash("Promoción eliminada.", "success")
     return redirect(url_for("restaurante_panel") + "#sec-promociones")
-
 
 @app.route("/mi-local/promocion/<int:promo_id>/editar", methods=["POST"])
 @login_required
@@ -1640,30 +1671,6 @@ def promocion_editar(promo_id):
     
     flash("Promoción actualizada.", "success")
     return redirect(url_for("restaurante_panel") + "#sec-promociones")
-
-@app.route("/mi-local/producto/<int:prod_id>/editar", methods=["POST"])
-@login_required
-@rol_required("restaurante")
-def producto_editar(prod_id):
-    restaurante = get_restaurante_aprobado()
-    if not restaurante:
-        return redirect(url_for("restaurante_panel"))
-
-    nombre       = request.form.get("nombre", "").strip()
-    descripcion  = request.form.get("descripcion", "").strip()
-    precio       = float(request.form.get("precio", 0) or 0)
-    categoria_id = request.form.get("categoria_id") or None
-    disponible   = 1 if request.form.get("disponible") else 0
-
-    execute("""
-        UPDATE productos SET
-            nombre=?, descripcion=?, precio=?, categoria_id=?, disponible=?
-        WHERE id=? AND restaurante_id=?
-    """, (nombre, descripcion, precio, categoria_id, disponible,
-          prod_id, restaurante["id"]))
-    flash("Producto actualizado.", "success")
-    tab = request.form.get("tab", "sec-menu")
-    return redirect(url_for("restaurante_panel") + f"#{tab}")
 
 
 # ── TOGGLE ABIERTO/CERRADO ────────────────────────────────────────────────────
@@ -1788,7 +1795,6 @@ def cadete_rechazar_pedido(pedido_id):
                    (session["user_id"],), one=True)
     if not cadete:
         return jsonify({"error": "No autorizado"}), 403
-    # Solo puede rechazar si lo tiene asignado
     execute("""
         UPDATE pedidos SET cadete_id=NULL, estado='confirmado',
                fecha_actualizado=NOW()
@@ -1806,7 +1812,6 @@ def terminos():
 @app.route("/privacidad")
 def privacidad():
     return render_template("privacidad.html")
-
 
 
 @app.route("/buscar")
@@ -1899,7 +1904,6 @@ def darse_de_baja():
         if not check_password_hash(usuario["password_hash"], password):
             flash("Contraseña incorrecta.", "danger")
             return redirect(url_for("darse_de_baja"))
-        # Desactivar cuenta
         execute("UPDATE usuarios SET activo=0 WHERE id=?", (session["user_id"],))
         session.clear()
         flash("Tu cuenta fue desactivada. Lamentamos verte ir.", "info")
@@ -1911,7 +1915,6 @@ def darse_de_baja():
 @login_required
 @rol_required("restaurante")
 def restaurante_darse_de_baja():
-    """Baja para restaurantes — accesible y visible desde el panel del local."""
     if request.method == "POST":
         from werkzeug.security import check_password_hash
         password = request.form.get("password", "")
@@ -1919,7 +1922,6 @@ def restaurante_darse_de_baja():
         if not check_password_hash(usuario["password_hash"], password):
             flash("Contraseña incorrecta.", "danger")
             return redirect(url_for("restaurante_darse_de_baja"))
-        # Desactivar cuenta y suspender el local
         execute("UPDATE usuarios SET activo=0 WHERE id=?", (session["user_id"],))
         execute("UPDATE restaurantes SET estado='suspendido' WHERE usuario_id=?", (session["user_id"],))
         session.clear()
@@ -1927,7 +1929,7 @@ def restaurante_darse_de_baja():
         return redirect(url_for("home"))
     return render_template("restaurante_baja.html")
 
-# ── SETUP INICIAL (uso único para crear admin en producción) ──────────────────
+# ── SETUP INICIAL ─────────────────────────────────────────────────────────────
 
 @app.route("/setup/<clave_secreta>")
 def setup_admin(clave_secreta):
@@ -1962,6 +1964,93 @@ def setup_admin(clave_secreta):
         </a>
     </body></html>
     """, 200
+
+
+# ── CONFIGURACION DEL SITIO (BANNER HERO) ─────────────────────────────────
+
+def get_config(clave):
+    try:
+        config = query("SELECT valor, tipo FROM configuraciones WHERE clave = ?", (clave,), one=True)
+        if not config:
+            return None
+        if config['tipo'] == 'number':
+            return int(config['valor']) if config['valor'] else 0
+        return config['valor']
+    except:
+        return None
+
+def set_config(clave, valor, tipo='text'):
+    try:
+        sql = "INSERT INTO configuraciones (clave, valor, tipo, actualizado) VALUES (?, ?, ?, CURRENT_TIMESTAMP) ON CONFLICT(clave) DO UPDATE SET valor = ?, actualizado = CURRENT_TIMESTAMP"
+        execute(sql, (clave, valor, tipo, valor))
+    except:
+        pass
+
+@app.context_processor
+def inject_config():
+    from functools import lru_cache
+    @lru_cache(maxsize=50)
+    def get_cached_config(clave):
+        return get_config(clave)
+    return dict(get_config=get_cached_config)
+
+@app.route("/admin/configuracion", methods=["GET", "POST"])
+@login_required
+@rol_required("admin")
+def admin_configuracion():
+    mensaje = None
+    
+    if request.method == "POST":
+        accion = request.form.get("accion", "")
+        
+        if accion == "borrar_imagen":
+            set_config("hero_tipo", "gradiente")
+            set_config("hero_imagen_url", "")
+            mensaje = ("success", "✅ Imagen eliminada.")
+        else:
+            hero_tipo = request.form.get("hero_tipo", "gradiente")
+            hero_blur = int(request.form.get("hero_blur", 6))
+            hero_opacidad = int(request.form.get("hero_opacidad_overlay", 75))
+            hero_color = request.form.get("hero_color_overlay", "#1E3A5F")
+            hero_gradiente = request.form.get("hero_gradiente", "135deg, #1A1A2E, #1E3A5F")
+            
+            set_config("hero_tipo", hero_tipo)
+            set_config("hero_blur", str(hero_blur), "number")
+            set_config("hero_opacidad_overlay", str(hero_opacidad), "number")
+            set_config("hero_color_overlay", hero_color)
+            set_config("usar_overlay", "true" if request.form.get("usar_overlay") == "true" else "false")
+            set_config("hero_gradiente", hero_gradiente)
+            
+            archivo = request.files.get("hero_imagen")
+            if archivo and archivo.filename:
+                from werkzeug.utils import secure_filename
+                import uuid, time
+                ext = archivo.filename.rsplit('.', 1)[1].lower()
+                if ext in ['png', 'jpg', 'jpeg', 'webp']:
+                    filename = f"hero_{int(time.time())}_{uuid.uuid4().hex[:8]}.{ext}"
+                    destino = os.path.join("static", "uploads", "hero")
+                    os.makedirs(destino, exist_ok=True)
+                    archivo.save(os.path.join(destino, filename))
+                    imagen_url = url_for("static", filename=f"uploads/hero/{filename}")
+                    set_config("hero_imagen_url", imagen_url)
+                    set_config("hero_tipo", "imagen")
+                    mensaje = ("success", "✅ Imagen subida.")
+                else:
+                    mensaje = ("danger", "❌ Formato no soportado.")
+            
+            if not mensaje:
+                mensaje = ("success", "✅ Configuracion guardada.")
+    
+    config = {
+        "hero_tipo": get_config("hero_tipo") or "gradiente",
+        "hero_imagen_url": get_config("hero_imagen_url") or "",
+        "hero_blur": get_config("hero_blur") or 6,
+        "hero_opacidad_overlay": get_config("hero_opacidad_overlay") or 75,
+        "hero_color_overlay": get_config("hero_color_overlay") or "#1E3A5F",
+        "hero_gradiente": get_config("hero_gradiente") or "135deg, #1A1A2E, #1E3A5F",
+    }
+    
+    return render_template("admin_configuracion.html", config=config, mensaje=mensaje)
 
 
 # ── MAIN ──────────────────────────────────────────────────────────────────────

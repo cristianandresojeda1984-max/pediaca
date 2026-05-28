@@ -307,34 +307,181 @@
   transition: transform 0.2s;
 }
 .cta-btn:hover { transform: scale(1.04); }
+
+/* ── PROMOCIONES SCROLL ───────────────────────────────────── */
+.promos-scroll {
+  display: flex;
+  gap: 16px;
+  overflow-x: auto;
+  padding: 8px 0 16px;
+  scrollbar-width: thin;
+}
+.promo-card-home {
+  flex: none;
+  width: 280px;
+  background: linear-gradient(135deg, #EA580C, #C2410C);
+  border-radius: 20px;
+  color: white;
+  box-shadow: 0 4px 12px rgba(234,88,12,0.3);
+  transition: transform 0.2s;
+}
+.promo-card-home:hover {
+  transform: translateY(-4px);
+}
 {% endblock %}
 
 {% block content %}
 <!-- HERO -->
-<section class="hero">
-  <div class="hero-content">
-    <h1 class="hero-titulo">Pedí a tu <span>local favorito</span><br>sin pagar de más</h1>
-    <p class="hero-sub">El menú llega directo a tu WhatsApp · Sin comisiones · Sin apps</p>
-    <div class="hero-chips">
-      <span class="hero-chip"><span>✅</span>Sin comisiones</span>
-      <span class="hero-chip"><span>📱</span>Directo al WhatsApp</span>
-      <span class="hero-chip"><span>🌮</span>Locales de Rosario</span>
+<style>
+.hero-dinamico {
+    position: relative;
+    padding: 60px 20px 70px;
+    text-align: center;
+    overflow: hidden;
+    min-height: 380px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.hero-bg-dinamico {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-size: cover;
+    background-position: center;
+    filter: blur({{ get_config('hero_blur')|default(6) }}px);
+    transform: scale(1.05);
+}
+.hero-overlay-dinamico {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: {{ get_config('hero_color_overlay')|default('#1E3A5F') }};
+    opacity: {{ (get_config('hero_opacidad_overlay')|default(75)) / 100 }};
+}
+.hero-content {
+    position: relative;
+    z-index: 2;
+    max-width: 800px;
+    margin: 0 auto;
+}
+</style>
+
+<style>
+.hero-dinamico {
+    position: relative;
+    padding: 60px 20px 70px;
+    text-align: center;
+    overflow: hidden;
+    min-height: 380px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.hero-bg-dinamico {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-size: cover;
+    background-position: center;
+    filter: blur({{ get_config('hero_blur')|default(6) }}px);
+    transform: scale(1.05);
+}
+.hero-overlay-dinamico {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: {{ get_config('hero_color_overlay')|default('#1E3A5F') }};
+    opacity: {{ (get_config('hero_opacidad_overlay')|default(75)) / 100 }};
+}
+.hero-content {
+    position: relative;
+    z-index: 2;
+    max-width: 800px;
+    margin: 0 auto;
+}
+/* Responsive */
+@media (max-width: 768px) {
+    .hero-dinamico {
+        padding: 40px 16px 50px;
+        min-height: 320px;
+    }
+    .hero-titulo {
+        font-size: 1.6rem;
+    }
+    .hero-sub {
+        font-size: 0.9rem;
+    }
+    .hero-chip {
+        font-size: 0.7rem;
+        padding: 4px 12px;
+    }
+    .search-input {
+        padding: 12px 50px 12px 16px;
+        font-size: 0.9rem;
+    }
+}
+@media (max-width: 480px) {
+    .hero-dinamico {
+        padding: 30px 12px 40px;
+        min-height: 280px;
+    }
+    .hero-titulo {
+        font-size: 1.3rem;
+    }
+    .hero-chips {
+        gap: 6px;
+    }
+}
+</style>
+
+<section class="hero-dinamico">
+    {% if get_config('hero_tipo') == 'imagen' and get_config('hero_imagen_url') %}
+        <div class="hero-bg-dinamico" style="background-image: url('{{ get_config('hero_imagen_url') }}');"></div>
+        <div class="hero-overlay-dinamico"></div>
+    {% else %}
+        <div style="position: absolute; inset: 0; background: linear-gradient({{ get_config('hero_gradiente')|default('135deg, #1A1A2E, #1E3A5F') }});"></div>
+    {% endif %}
+    
+    <div class="hero-content">
+        <h1 class="hero-titulo">Pedí a tu <span>local favorito</span><br>sin pagar de más</h1>
+        <p class="hero-sub">El menú llega directo a tu WhatsApp · Sin comisiones · Sin apps</p>
+        <div class="hero-chips">
+            <span class="hero-chip">✅ Sin comisiones</span>
+            <span class="hero-chip">📱 Directo al WhatsApp</span>
+            <span class="hero-chip">🌮 Locales de Rosario</span>
+        </div>
+        <div class="search-wrap">
+            <form action="/buscar" method="GET">
+                <input class="search-input" name="q" placeholder="🔍 Buscá un plato, local o tipo de comida..." autocomplete="off">
+            </form>
+        </div>
     </div>
-    <div class="search-wrap">
-      <form action="/buscar" method="GET" id="form-buscar">
-        <input class="search-input" name="q" id="buscador"
-               placeholder="🔍  Buscá un plato, local o tipo de comida..."
-               autocomplete="off" oninput="autocompleteBuscar(this.value)">
-        <div id="autocomplete-drop" style="display:none;position:absolute;top:100%;left:0;right:0;background:#fff;border-radius:14px;box-shadow:0 8px 32px rgba(0,0,0,0.2);z-index:100;margin-top:6px;overflow:hidden;"></div>
-      </form>
-    </div>
-  </div>
 </section>
 
 <div class="container">
 
   <!-- CATEGORIAS -->
-  <div class="cats-scroll" id="cats">
+  
+    <!-- Botón para ver todas las promociones -->
+    <a href="/promociones" style="display: flex; align-items: center; gap: 12px; background: linear-gradient(135deg, #EA580C, #C2410C); border-radius: 14px; padding: 16px 24px; margin-bottom: 24px; text-decoration: none; color: white; transition: transform 0.2s;" onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform=''">
+        <span style="font-size: 2rem;">🎁</span>
+        <div style="flex: 1;">
+            <div style="font-weight: 800; font-size: 1rem;">¡Ofertas y descuentos!</div>
+            <div style="font-size: 0.8rem; opacity: 0.9;">Mirá todas las promociones activas</div>
+        </div>
+        <span style="font-size: 1.2rem;">→</span>
+    </a>
+
+<div class="cats-scroll" id="cats">
     <button class="cat-btn activo" onclick="filtrarCat(this, '')">🍽️ Todos</button>
     {% set cats = ['Pizzería','Rotisería','Hamburguesería','Sushi','Empanadas','Panadería','Bar','Heladería','Vegano'] %}
     {% for c in cats %}
@@ -353,19 +500,6 @@
       </a>
     {% endif %}
   {% endfor %}
-
-  <!-- ACCESO A PROMOCIONES -->
-  <a href="#promociones" id="btn-promos"
-     style="display:flex;align-items:center;gap:12px;background:linear-gradient(135deg,#FFF3CD,#FDEBD0);border-radius:14px;padding:14px 18px;margin-bottom:20px;text-decoration:none;border:1.5px solid #F9CA24;transition:transform 0.15s;"
-     onmouseover="this.style.transform='translateY(-2px)'"
-     onmouseout="this.style.transform=''">
-    <span style="font-size:1.8rem;">🎉</span>
-    <div style="flex:1;">
-      <div style="font-weight:800;font-size:0.95rem;color:#7D6608;">Promociones activas</div>
-      <div style="font-size:0.78rem;color:#9A7D0A;font-weight:600;">Mirá los descuentos y ofertas de los locales</div>
-    </div>
-    <span style="font-weight:800;color:#7D6608;font-size:1rem;">→</span>
-  </a>
 
   <!-- LOCALES -->
   <h2 class="seccion-titulo">
@@ -443,45 +577,43 @@
     </div>
   {% endif %}
 
+  <!-- SECCIÓN PROMOCIONES DESTACADAS -->
+  {% if promociones_destacadas and promociones_destacadas|length > 0 %}
+  <div style="margin-top: 40px;">
+    <h2 class="seccion-titulo">
+      🎁 Promociones activas
+    </h2>
+    <div class="promos-scroll">
+      {% for promo in promociones_destacadas %}
+      <div class="promo-card-home">
+        {% if promo.imagen_url %}
+        <img src="{{ url_imagen(promo.imagen_url) }}" style="width: 100%; height: 120px; object-fit: cover; border-radius: 20px 20px 0 0;">
+        {% endif %}
+        <div style="padding: 16px;">
+          <div style="font-weight: 800; font-size: 0.95rem;">{{ promo.titulo }}</div>
+          {% if promo.descripcion %}
+          <div style="font-size: 0.7rem; opacity: 0.9; margin-top: 4px;">{{ promo.descripcion }}</div>
+          {% endif %}
+          <div style="margin-top: 10px;">
+            {% if promo.tipo_descuento == 'porcentaje' and promo.descuento_pct > 0 %}
+            <span style="background: rgba(255,255,255,0.2); border-radius: 99px; padding: 3px 10px; font-size: 0.7rem; font-weight: 800;">-{{ promo.descuento_pct }}% OFF</span>
+            {% elif promo.descuento_monto > 0 %}
+            <span style="background: rgba(255,255,255,0.2); border-radius: 99px; padding: 3px 10px; font-size: 0.7rem; font-weight: 800;">-${{ promo.descuento_monto }} OFF</span>
+            {% endif %}
+          </div>
+          <a href="/local/{{ promo.restaurante_id }}" style="display: inline-block; margin-top: 12px; color: white; font-weight: 700; text-decoration: none; font-size: 0.75rem;">Ver local →</a>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+  {% endif %}
+
   <!-- CTA PARA LOCALES -->
   <div class="cta-band">
     <h3>¿Tenés un local?</h3>
     <p>Sumá tu negocio gratis. Tus clientes van a poder ver tu menú y pedirte directo por WhatsApp — sin que pagues ninguna comisión.</p>
     <a href="{{ url_for('registro') }}?rol=restaurante" class="cta-btn">Sumar mi local gratis →</a>
-  </div>
-
-  <!-- SECCIÓN PROMOCIONES -->
-  <div id="promociones" style="margin-top:8px;scroll-margin-top:80px;">
-    <h2 class="seccion-titulo">
-      🎉 Promociones
-    </h2>
-    {% set hay_promos = namespace(value=false) %}
-    {% for r in restaurantes %}
-      {# Las promos vienen del contexto global si el backend las pasa, sino mostramos link a cada local #}
-    {% endfor %}
-    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:14px;">
-      {% for r in restaurantes %}
-        <a href="{{ url_for('ver_local', restaurante_id=r.id) }}#promociones"
-           style="display:flex;align-items:center;gap:12px;background:#fff;border-radius:12px;padding:14px;text-decoration:none;color:inherit;box-shadow:0 2px 10px rgba(0,0,0,0.07);border-left:4px solid var(--naranja);transition:transform 0.15s;"
-           onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform=''">
-          {% if r.logo_url %}
-            <img src="{{ url_imagen(r.logo_url) }}" style="width:44px;height:44px;border-radius:10px;object-fit:cover;flex-shrink:0;">
-          {% else %}
-            <div style="width:44px;height:44px;border-radius:10px;background:var(--naranja);display:flex;align-items:center;justify-content:center;color:#fff;font-weight:800;font-size:1.1rem;flex-shrink:0;">{{ r.nombre_local[0]|upper }}</div>
-          {% endif %}
-          <div style="flex:1;min-width:0;">
-            <div style="font-weight:800;font-size:0.88rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ r.nombre_local }}</div>
-            <div style="font-size:0.75rem;color:var(--texto-s);font-weight:600;">Ver promociones →</div>
-          </div>
-        </a>
-      {% endfor %}
-    </div>
-    {% if not restaurantes %}
-      <div class="empty-state">
-        <div class="empty-icon">🎉</div>
-        <div class="empty-titulo">Próximamente habrá promociones</div>
-      </div>
-    {% endif %}
   </div>
 
 </div>
@@ -491,16 +623,18 @@
 <script>
 const cards = document.querySelectorAll('.local-card');
 const badge = document.getElementById('count-badge');
+const buscador = document.getElementById('buscador');
 
 function actualizar() {
-  const q   = document.getElementById('buscador').value.toLowerCase().trim();
+  if (!buscador) return;
+  const q = buscador.value.toLowerCase().trim();
   const cat = document.querySelector('.cat-btn.activo')?.dataset.cat || '';
   let visible = 0;
   cards.forEach(c => {
     const matchNombre = c.dataset.nombre.includes(q);
-    const matchCat    = !cat || c.dataset.cat === cat;
-    const show        = matchNombre && matchCat;
-    c.style.display   = show ? '' : 'none';
+    const matchCat = !cat || c.dataset.cat === cat;
+    const show = matchNombre && matchCat;
+    c.style.display = show ? '' : 'none';
     if (show) visible++;
   });
   badge.textContent = visible + ' ' + (visible === 1 ? 'local' : 'locales');
@@ -513,20 +647,21 @@ function filtrarCat(btn, cat) {
   actualizar();
 }
 
-// Autocomplete de búsqueda por producto
+// Autocomplete
 let _acTimer = null;
 async function autocompleteBuscar(q) {
-  actualizar(); // Filtrar locales también
+  actualizar();
   const drop = document.getElementById('autocomplete-drop');
+  if (!drop) return;
   if (!q || q.length < 2) { drop.style.display = 'none'; return; }
   clearTimeout(_acTimer);
   _acTimer = setTimeout(async () => {
     try {
-      const res  = await fetch('/api/buscar-productos?q=' + encodeURIComponent(q));
+      const res = await fetch('/api/buscar-productos?q=' + encodeURIComponent(q));
       const data = await res.json();
       if (!data.resultados.length) { drop.style.display = 'none'; return; }
       drop.innerHTML = data.resultados.map(r => `
-        <a href="/local/${r.restaurante_id}" style="display:flex;align-items:center;gap:10px;padding:10px 16px;text-decoration:none;color:#1A1A2E;border-bottom:1px solid #f0f2f5;transition:background 0.1s;" onmouseover="this.style.background='#FEF3DC'" onmouseout="this.style.background=''"  >
+        <a href="/local/${r.restaurante_id}" style="display:flex;align-items:center;gap:10px;padding:10px 16px;text-decoration:none;color:#1A1A2E;border-bottom:1px solid #f0f2f5;" onmouseover="this.style.background='#FEF3DC'" onmouseout="this.style.background=''"  >
           <div style="font-size:1.2rem;flex-shrink:0;">🍽️</div>
           <div style="flex:1;min-width:0;">
             <div style="font-weight:800;font-size:0.88rem;">${r.prod_nombre}</div>
@@ -536,13 +671,14 @@ async function autocompleteBuscar(q) {
         </a>
       `).join('') + `<a href="/buscar?q=${encodeURIComponent(q)}" style="display:block;padding:10px 16px;text-align:center;font-weight:800;font-size:0.82rem;color:#2980B9;text-decoration:none;background:#D6EAF8;">Ver todos los resultados →</a>`;
       drop.style.display = '';
-    } catch(e) {}
+    } catch(e) { console.log(e); }
   }, 300);
 }
 
 document.addEventListener('click', e => {
-  if (!e.target.closest('.search-wrap')) {
-    document.getElementById('autocomplete-drop').style.display = 'none';
+  const drop = document.getElementById('autocomplete-drop');
+  if (drop && !e.target.closest('.search-wrap')) {
+    drop.style.display = 'none';
   }
 });
 </script>

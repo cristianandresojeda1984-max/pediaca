@@ -1355,5 +1355,18 @@ window.addEventListener('scroll', () => {
     }
   });
 }, { passive: true });
+
+    function compartirMenu() {
+        const url = window.location.href;
+        const nombre = document.querySelector('.hero-nombre')?.innerText || 'este local';
+        const texto = `Mirá el menú de ${nombre} en PediAcá: ${url}`;
+        if (navigator.share) {
+            navigator.share({ title: 'PediAcá', text: texto, url: url });
+        } else {
+            navigator.clipboard.writeText(texto);
+            alert('✅ Link copiado al portapapeles');
+        }
+    }
+
 </script>
 {% endblock %}

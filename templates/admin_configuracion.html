@@ -1,0 +1,323 @@
+{% extends "base.html" %}
+{% block title %}Configurar Hero - Admin{% endblock %}
+
+{% block extra_styles %}
+.config-card {
+    background: white;
+    border-radius: 24px;
+    padding: 28px;
+    margin-bottom: 24px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+}
+.config-titulo {
+    font-family: 'Paytone One', sans-serif;
+    font-size: 1.1rem;
+    margin-bottom: 20px;
+    padding-bottom: 12px;
+    border-bottom: 2px solid #f0f2f5;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+.preview-box {
+    border-radius: 20px;
+    overflow: hidden;
+    height: 220px;
+    position: relative;
+    border: 2px solid #e9ecef;
+}
+.preview-box > div {
+    transition: all 0.2s ease;
+}
+.info-text {
+    font-size: 0.75rem;
+    color: #6c757d;
+    margin-top: 6px;
+}
+.imagen-actual {
+    background: #f8f9fa;
+    border-radius: 12px;
+    padding: 12px;
+    margin-top: 12px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+.imagen-actual img {
+    height: 50px;
+    width: 80px;
+    object-fit: cover;
+    border-radius: 8px;
+}
+.slider-container {
+    margin-top: 16px;
+}
+.slider-label {
+    display: flex;
+    justify-content: space-between;
+    font-weight: 700;
+    font-size: 0.85rem;
+    margin-bottom: 8px;
+}
+.slider-label span:first-child { color: #2c3e50; }
+.slider-label span:last-child { color: #EA580C; font-weight: 800; }
+input[type="range"] {
+    width: 100%;
+    height: 6px;
+    -webkit-appearance: none;
+    background: #e9ecef;
+    border-radius: 3px;
+    outline: none;
+}
+input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: #EA580C;
+    cursor: pointer;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+}
+input[type="range"]::-webkit-slider-thumb:hover {
+    transform: scale(1.2);
+}
+input[type="color"] {
+    width: 100%;
+    height: 45px;
+    border: 2px solid #e9ecef;
+    border-radius: 12px;
+    cursor: pointer;
+    background: white;
+}
+.checkbox-overlay {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-top: 16px;
+    padding: 12px;
+    background: #f8f9fa;
+    border-radius: 12px;
+}
+.checkbox-overlay input {
+    width: 20px;
+    height: 20px;
+    cursor: pointer;
+    accent-color: #EA580C;
+}
+.grupo-campos {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 24px;
+    margin-top: 16px;
+}
+@media (max-width: 600px) {
+    .grupo-campos { grid-template-columns: 1fr; }
+}
+.valor-actual {
+    font-size: 0.7rem;
+    color: #6c757d;
+    margin-top: 4px;
+}
+{% endblock %}
+
+{% block content %}
+<div style="max-width: 800px; margin: 40px auto; padding: 0 20px;">
+    <h1 style="font-family: 'Paytone One', sans-serif; margin-bottom: 8px;">🎨 Hero de la página</h1>
+    <p style="color: #6c757d; margin-bottom: 32px;">Personalizá el fondo principal de PediAcá</p>
+
+    {% if mensaje %}
+    <div class="alert alert-{{ mensaje[0] }}" style="margin-bottom: 20px;">{{ mensaje[1] }}</div>
+    {% endif %}
+
+    <form method="POST" enctype="multipart/form-data" id="configForm">
+        <div class="config-card">
+            <div class="config-titulo">
+                <span>🖼️</span> Tipo de fondo
+            </div>
+            <select name="hero_tipo" class="form-control" id="tipoFondo" style="width: 100%; padding: 12px; border-radius: 12px; border: 2px solid #e9ecef;" onchange="toggleCampos()">
+                <option value="gradiente" {% if config.hero_tipo == 'gradiente' %}selected{% endif %}>🎨 Gradiente (color sólido)</option>
+                <option value="imagen" {% if config.hero_tipo == 'imagen' %}selected{% endif %}>📷 Imagen con desenfoque</option>
+            </select>
+        </div>
+
+        <div id="camposImagen" class="config-card" style="{% if config.hero_tipo != 'imagen' %}display:none;{% endif %}">
+            <div class="config-titulo">
+                <span>📤</span> Imagen de fondo
+            </div>
+            <input type="file" name="hero_imagen" class="form-control" accept="image/*" style="padding: 10px;">
+            <div class="info-text">Formatos: PNG, JPG, WEBP. Se ajustará automáticamente cubriendo todo el espacio.</div>
+            
+            {% if config.hero_imagen_url %}
+            <div class="imagen-actual">
+                <img src="{{ config.hero_imagen_url }}" alt="Imagen actual">
+                <span style="flex:1; font-size:0.85rem;">Imagen actual</span>
+                <button type="submit" name="accion" value="borrar_imagen" class="btn btn-danger btn-sm" style="padding: 6px 16px;" onclick="return confirm('¿Eliminar la imagen?')">🗑️ Eliminar</button>
+            </div>
+            {% endif %}
+
+            <div class="slider-container">
+                <div class="slider-label">
+                    <span>💨 Desenfoque (blur)</span>
+                    <span id="blurValue">{{ config.hero_blur }}px</span>
+                </div>
+                <input type="range" name="hero_blur" min="0" max="20" value="{{ config.hero_blur }}" oninput="document.getElementById('blurValue').innerText = this.value + 'px'; actualizarPreview()">
+                <div class="info-text">0 = nítido, 20 = muy difuso</div>
+            </div>
+
+            <!-- Overlay opcional -->
+            <div class="checkbox-overlay">
+                <input type="checkbox" id="usarOverlay" {% if config.usar_overlay != 'false' %}checked{% endif %} onchange="toggleOverlay()">
+                <label for="usarOverlay" style="font-weight: 700;">🎭 Aplicar color de superposición</label>
+            </div>
+            <input type="hidden" name="usar_overlay" id="usarOverlayInput" value="{% if config.usar_overlay != 'false' %}true{% else %}false{% endif %}">
+
+            <div id="overlayConfig" style="margin-top: 16px;">
+                <div class="slider-container">
+                    <div class="slider-label">
+                        <span>🎭 Opacidad del overlay</span>
+                        <span id="opacidadValue">{{ config.hero_opacidad_overlay }}%</span>
+                    </div>
+                    <input type="range" name="hero_opacidad_overlay" min="0" max="100" value="{{ config.hero_opacidad_overlay }}" oninput="document.getElementById('opacidadValue').innerText = this.value + '%'; actualizarPreview()">
+                </div>
+                
+                <div style="margin-top: 16px;">
+                    <label style="font-weight: 700; font-size: 0.85rem; display: block; margin-bottom: 8px;">🎨 Color del overlay</label>
+                    <input type="color" name="hero_color_overlay" value="{{ config.hero_color_overlay }}" onchange="actualizarPreview()">
+                </div>
+            </div>
+        </div>
+
+        <div id="camposGradiente" class="config-card" style="{% if config.hero_tipo == 'imagen' %}display:none;{% endif %}">
+            <div class="config-titulo">
+                <span>🌈</span> Gradiente
+            </div>
+            <div style="display: flex; gap: 8px; align-items: center;">
+                <input type="color" id="gradColor1" value="#1A1A2E" style="width: 60px; height: 45px; border-radius: 12px;" onchange="actualizarGradiente()">
+                <span>→</span>
+                <input type="color" id="gradColor2" value="#1E3A5F" style="width: 60px; height: 45px; border-radius: 12px;" onchange="actualizarGradiente()">
+                <input type="text" name="hero_gradiente" id="gradienteInput" class="form-control" value="{{ config.hero_gradiente }}" style="flex: 1;">
+            </div>
+            <div class="info-text">Elegí dos colores o escribí el gradiente manualmente</div>
+        </div>
+
+        <button type="submit" style="width: 100%; background: linear-gradient(135deg, #EA580C, #C2410C); color: white; border: none; border-radius: 99px; padding: 14px; font-weight: 800; font-size: 1rem; cursor: pointer; margin-top: 8px;">💾 Guardar configuración</button>
+    </form>
+
+    <div class="config-card">
+        <div class="config-titulo">
+            <span>🔍</span> Vista previa en vivo
+        </div>
+        <div class="preview-box" id="previewBox"></div>
+        <div class="info-text" style="margin-top: 12px;">Así se verá el fondo en la página principal</div>
+    </div>
+</div>
+
+<script>
+function actualizarGradiente() {
+    const color1 = document.getElementById('gradColor1').value;
+    const color2 = document.getElementById('gradColor2').value;
+    const gradiente = `135deg, ${color1}, ${color2}`;
+    document.getElementById('gradienteInput').value = gradiente;
+    actualizarPreview();
+}
+
+function toggleOverlay() {
+    const chk = document.getElementById('usarOverlay');
+    const overlayConfig = document.getElementById('overlayConfig');
+    const input = document.getElementById('usarOverlayInput');
+    if (chk.checked) {
+        overlayConfig.style.display = '';
+        input.value = 'true';
+    } else {
+        overlayConfig.style.display = 'none';
+        input.value = 'false';
+    }
+    actualizarPreview();
+}
+
+function actualizarPreview() {
+    const tipo = document.getElementById('tipoFondo').value;
+    const preview = document.getElementById('previewBox');
+    const blur = document.getElementById('campoImagen') ? document.querySelector('input[name="hero_blur"]')?.value || 6 : 6;
+    const opacidad = document.querySelector('input[name="hero_opacidad_overlay"]')?.value || 75;
+    const colorOverlay = document.querySelector('input[name="hero_color_overlay"]')?.value || '#1E3A5F';
+    const usarOverlay = document.getElementById('usarOverlay')?.checked || false;
+    
+    if (tipo === 'imagen') {
+        {% if config.hero_imagen_url %}
+        const imgUrl = '{{ config.hero_imagen_url }}';
+        preview.style.background = `url(${imgUrl}) center/cover no-repeat`;
+        preview.style.filter = `blur(${blur}px)`;
+        preview.style.transform = 'scale(1.05)';
+        preview.innerHTML = '';
+        const overlayDiv = document.createElement('div');
+        overlayDiv.style.position = 'absolute';
+        overlayDiv.style.inset = '0';
+        if (usarOverlay) {
+            overlayDiv.style.background = colorOverlay;
+            overlayDiv.style.opacity = opacidad / 100;
+        } else {
+            overlayDiv.style.background = 'transparent';
+            overlayDiv.style.opacity = '0';
+        }
+        overlayDiv.style.zIndex = '1';
+        const textDiv = document.createElement('div');
+        textDiv.style.position = 'relative';
+        textDiv.style.zIndex = '2';
+        textDiv.style.display = 'flex';
+        textDiv.style.alignItems = 'center';
+        textDiv.style.justifyContent = 'center';
+        textDiv.style.height = '100%';
+        textDiv.style.color = 'white';
+        textDiv.style.fontWeight = '800';
+        textDiv.innerText = 'Vista previa';
+        preview.innerHTML = '';
+        preview.appendChild(overlayDiv);
+        preview.appendChild(textDiv);
+        {% else %}
+        preview.style.background = '#1E3A5F';
+        preview.style.filter = 'none';
+        preview.innerHTML = '<div style="display:flex; align-items:center; justify-content:center; height:100%; color:white; font-weight:800;">Vista previa</div>';
+        {% endif %}
+    } else {
+        const gradiente = document.getElementById('gradienteInput')?.value || '135deg, #1A1A2E, #1E3A5F';
+        preview.style.background = `linear-gradient(${gradiente})`;
+        preview.style.filter = 'none';
+        preview.innerHTML = '<div style="display:flex; align-items:center; justify-content:center; height:100%; color:white; font-weight:800;">Vista previa</div>';
+    }
+}
+
+function toggleCampos() {
+    const tipo = document.getElementById('tipoFondo').value;
+    const imgCampos = document.getElementById('camposImagen');
+    const gradCampos = document.getElementById('camposGradiente');
+    
+    if (tipo === 'imagen') {
+        imgCampos.style.display = '';
+        gradCampos.style.display = 'none';
+    } else {
+        imgCampos.style.display = 'none';
+        gradCampos.style.display = '';
+        const gradActual = document.getElementById('gradienteInput')?.value || '135deg, #1A1A2E, #1E3A5F';
+        const match = gradActual.match(/(#[0-9A-Fa-f]{6})/g);
+        if (match && match.length >= 2) {
+            document.getElementById('gradColor1').value = match[0];
+            document.getElementById('gradColor2').value = match[1];
+        }
+    }
+    actualizarPreview();
+}
+
+// Inicializar
+setTimeout(() => {
+    toggleCampos();
+    actualizarPreview();
+}, 100);
+
+document.querySelectorAll('input, select').forEach(el => {
+    el.addEventListener('input', actualizarPreview);
+    el.addEventListener('change', actualizarPreview);
+});
+</script>
+{% endblock %}

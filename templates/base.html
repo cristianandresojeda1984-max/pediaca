@@ -3,17 +3,304 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
-<title>{% block title %}PediAcá — El sabor de tu barrio{% endblock %}</title>
-<meta name="description" content="{% block meta_desc %}PediAcá — Pedí a tus locales favoritos de Rosario directo por WhatsApp. Sin comisiones, sin apps, 100% gratis.{% endblock %}">
+<title>{% block title %}PediAcá — El sabor de tu barrio
+/* ── RESPONSIVE ───────────────────────────────────────────── */
+@media (max-width: 768px) {
+    .navbar {
+        padding: 0 12px;
+    }
+    .navbar-brand-text {
+        font-size: 1.1rem;
+    }
+    .navbar-btn {
+        padding: 6px 12px;
+        font-size: 0.75rem;
+    }
+    .container {
+        padding: 0 12px;
+    }
+    .seccion-titulo {
+        font-size: 1.1rem;
+    }
+    .local-card {
+        margin-bottom: 12px;
+    }
+    .footer {
+        padding: 20px 12px;
+        font-size: 0.7rem;
+    }
+}
+
+@media (max-width: 480px) {
+    .navbar-brand-text {
+        font-size: 1rem;
+    }
+    .navbar-btn {
+        padding: 4px 10px;
+        font-size: 0.7rem;
+    }
+    .seccion-titulo {
+        font-size: 1rem;
+    }
+}
+
+{% endblock %}</title>
+<meta name="description" content="{% block meta_desc %}PediAcá — Pedí a tus locales favoritos de Rosario directo por WhatsApp. Sin comisiones, sin apps, 100% gratis.
+/* ── RESPONSIVE ───────────────────────────────────────────── */
+@media (max-width: 768px) {
+    .navbar {
+        padding: 0 12px;
+    }
+    .navbar-brand-text {
+        font-size: 1.1rem;
+    }
+    .navbar-btn {
+        padding: 6px 12px;
+        font-size: 0.75rem;
+    }
+    .container {
+        padding: 0 12px;
+    }
+    .seccion-titulo {
+        font-size: 1.1rem;
+    }
+    .local-card {
+        margin-bottom: 12px;
+    }
+    .footer {
+        padding: 20px 12px;
+        font-size: 0.7rem;
+    }
+}
+
+@media (max-width: 480px) {
+    .navbar-brand-text {
+        font-size: 1rem;
+    }
+    .navbar-btn {
+        padding: 4px 10px;
+        font-size: 0.7rem;
+    }
+    .seccion-titulo {
+        font-size: 1rem;
+    }
+}
+
+{% endblock %}">
 <meta name="robots" content="index, follow">
-<meta property="og:title"       content="{% block og_title %}PediAcá Rosario{% endblock %}">
-<meta property="og:description" content="{% block og_desc %}Pedí comida a domicilio en Rosario sin pagar comisiones. Tu pedido va directo al local por WhatsApp.{% endblock %}">
-<meta property="og:image"       content="{% block og_image %}https://pediaca.ar/static/img/logo_pediaca.png{% endblock %}">
-<meta property="og:url"         content="{% block og_url %}https://pediaca.ar{% endblock %}">
+<meta property="og:title"       content="{% block og_title %}PediAcá Rosario
+/* ── RESPONSIVE ───────────────────────────────────────────── */
+@media (max-width: 768px) {
+    .navbar {
+        padding: 0 12px;
+    }
+    .navbar-brand-text {
+        font-size: 1.1rem;
+    }
+    .navbar-btn {
+        padding: 6px 12px;
+        font-size: 0.75rem;
+    }
+    .container {
+        padding: 0 12px;
+    }
+    .seccion-titulo {
+        font-size: 1.1rem;
+    }
+    .local-card {
+        margin-bottom: 12px;
+    }
+    .footer {
+        padding: 20px 12px;
+        font-size: 0.7rem;
+    }
+}
+
+@media (max-width: 480px) {
+    .navbar-brand-text {
+        font-size: 1rem;
+    }
+    .navbar-btn {
+        padding: 4px 10px;
+        font-size: 0.7rem;
+    }
+    .seccion-titulo {
+        font-size: 1rem;
+    }
+}
+
+{% endblock %}">
+<meta property="og:description" content="{% block og_desc %}Pedí comida a domicilio en Rosario sin pagar comisiones. Tu pedido va directo al local por WhatsApp.
+/* ── RESPONSIVE ───────────────────────────────────────────── */
+@media (max-width: 768px) {
+    .navbar {
+        padding: 0 12px;
+    }
+    .navbar-brand-text {
+        font-size: 1.1rem;
+    }
+    .navbar-btn {
+        padding: 6px 12px;
+        font-size: 0.75rem;
+    }
+    .container {
+        padding: 0 12px;
+    }
+    .seccion-titulo {
+        font-size: 1.1rem;
+    }
+    .local-card {
+        margin-bottom: 12px;
+    }
+    .footer {
+        padding: 20px 12px;
+        font-size: 0.7rem;
+    }
+}
+
+@media (max-width: 480px) {
+    .navbar-brand-text {
+        font-size: 1rem;
+    }
+    .navbar-btn {
+        padding: 4px 10px;
+        font-size: 0.7rem;
+    }
+    .seccion-titulo {
+        font-size: 1rem;
+    }
+}
+
+{% endblock %}">
+<meta property="og:image"       content="{% block og_image %}https://pediaca.ar/static/img/logo_pediaca.png
+/* ── RESPONSIVE ───────────────────────────────────────────── */
+@media (max-width: 768px) {
+    .navbar {
+        padding: 0 12px;
+    }
+    .navbar-brand-text {
+        font-size: 1.1rem;
+    }
+    .navbar-btn {
+        padding: 6px 12px;
+        font-size: 0.75rem;
+    }
+    .container {
+        padding: 0 12px;
+    }
+    .seccion-titulo {
+        font-size: 1.1rem;
+    }
+    .local-card {
+        margin-bottom: 12px;
+    }
+    .footer {
+        padding: 20px 12px;
+        font-size: 0.7rem;
+    }
+}
+
+@media (max-width: 480px) {
+    .navbar-brand-text {
+        font-size: 1rem;
+    }
+    .navbar-btn {
+        padding: 4px 10px;
+        font-size: 0.7rem;
+    }
+    .seccion-titulo {
+        font-size: 1rem;
+    }
+}
+
+{% endblock %}">
+<meta property="og:url"         content="{% block og_url %}https://pediaca.ar
+/* ── RESPONSIVE ───────────────────────────────────────────── */
+@media (max-width: 768px) {
+    .navbar {
+        padding: 0 12px;
+    }
+    .navbar-brand-text {
+        font-size: 1.1rem;
+    }
+    .navbar-btn {
+        padding: 6px 12px;
+        font-size: 0.75rem;
+    }
+    .container {
+        padding: 0 12px;
+    }
+    .seccion-titulo {
+        font-size: 1.1rem;
+    }
+    .local-card {
+        margin-bottom: 12px;
+    }
+    .footer {
+        padding: 20px 12px;
+        font-size: 0.7rem;
+    }
+}
+
+@media (max-width: 480px) {
+    .navbar-brand-text {
+        font-size: 1rem;
+    }
+    .navbar-btn {
+        padding: 4px 10px;
+        font-size: 0.7rem;
+    }
+    .seccion-titulo {
+        font-size: 1rem;
+    }
+}
+
+{% endblock %}">
 <meta property="og:type"        content="website">
 <meta property="og:locale"      content="es_AR">
 <meta name="twitter:card"       content="summary">
-<link rel="canonical"           href="{% block canonical %}https://pediaca.ar{% endblock %}">
+<link rel="canonical"           href="{% block canonical %}https://pediaca.ar
+/* ── RESPONSIVE ───────────────────────────────────────────── */
+@media (max-width: 768px) {
+    .navbar {
+        padding: 0 12px;
+    }
+    .navbar-brand-text {
+        font-size: 1.1rem;
+    }
+    .navbar-btn {
+        padding: 6px 12px;
+        font-size: 0.75rem;
+    }
+    .container {
+        padding: 0 12px;
+    }
+    .seccion-titulo {
+        font-size: 1.1rem;
+    }
+    .local-card {
+        margin-bottom: 12px;
+    }
+    .footer {
+        padding: 20px 12px;
+        font-size: 0.7rem;
+    }
+}
+
+@media (max-width: 480px) {
+    .navbar-brand-text {
+        font-size: 1rem;
+    }
+    .navbar-btn {
+        padding: 4px 10px;
+        font-size: 0.7rem;
+    }
+    .seccion-titulo {
+        font-size: 1rem;
+    }
+}
+
+{% endblock %}">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&family=Paytone+One&display=swap" rel="stylesheet">
 <style>
@@ -149,7 +436,48 @@ body {
 .mt-2 { margin-top: 16px; }
 .mt-3 { margin-top: 24px; }
 
-{% block extra_styles %}{% endblock %}
+{% block extra_styles %}
+/* ── RESPONSIVE ───────────────────────────────────────────── */
+@media (max-width: 768px) {
+    .navbar {
+        padding: 0 12px;
+    }
+    .navbar-brand-text {
+        font-size: 1.1rem;
+    }
+    .navbar-btn {
+        padding: 6px 12px;
+        font-size: 0.75rem;
+    }
+    .container {
+        padding: 0 12px;
+    }
+    .seccion-titulo {
+        font-size: 1.1rem;
+    }
+    .local-card {
+        margin-bottom: 12px;
+    }
+    .footer {
+        padding: 20px 12px;
+        font-size: 0.7rem;
+    }
+}
+
+@media (max-width: 480px) {
+    .navbar-brand-text {
+        font-size: 1rem;
+    }
+    .navbar-btn {
+        padding: 4px 10px;
+        font-size: 0.7rem;
+    }
+    .seccion-titulo {
+        font-size: 1rem;
+    }
+}
+
+{% endblock %}
 </style>
 </head>
 <body data-rol="{{ session.get('rol', '') }}">
@@ -184,7 +512,48 @@ body {
 {% endwith %}
 
 <!-- CONTENIDO -->
-{% block content %}{% endblock %}
+{% block content %}
+/* ── RESPONSIVE ───────────────────────────────────────────── */
+@media (max-width: 768px) {
+    .navbar {
+        padding: 0 12px;
+    }
+    .navbar-brand-text {
+        font-size: 1.1rem;
+    }
+    .navbar-btn {
+        padding: 6px 12px;
+        font-size: 0.75rem;
+    }
+    .container {
+        padding: 0 12px;
+    }
+    .seccion-titulo {
+        font-size: 1.1rem;
+    }
+    .local-card {
+        margin-bottom: 12px;
+    }
+    .footer {
+        padding: 20px 12px;
+        font-size: 0.7rem;
+    }
+}
+
+@media (max-width: 480px) {
+    .navbar-brand-text {
+        font-size: 1rem;
+    }
+    .navbar-btn {
+        padding: 4px 10px;
+        font-size: 0.7rem;
+    }
+    .seccion-titulo {
+        font-size: 1rem;
+    }
+}
+
+{% endblock %}
 
 <!-- FOOTER -->
 <footer class="footer">
@@ -205,7 +574,48 @@ setTimeout(() => {
   });
 }, 3500);
 </script>
-{% block extra_scripts %}{% endblock %}
+{% block extra_scripts %}
+/* ── RESPONSIVE ───────────────────────────────────────────── */
+@media (max-width: 768px) {
+    .navbar {
+        padding: 0 12px;
+    }
+    .navbar-brand-text {
+        font-size: 1.1rem;
+    }
+    .navbar-btn {
+        padding: 6px 12px;
+        font-size: 0.75rem;
+    }
+    .container {
+        padding: 0 12px;
+    }
+    .seccion-titulo {
+        font-size: 1.1rem;
+    }
+    .local-card {
+        margin-bottom: 12px;
+    }
+    .footer {
+        padding: 20px 12px;
+        font-size: 0.7rem;
+    }
+}
+
+@media (max-width: 480px) {
+    .navbar-brand-text {
+        font-size: 1rem;
+    }
+    .navbar-btn {
+        padding: 4px 10px;
+        font-size: 0.7rem;
+    }
+    .seccion-titulo {
+        font-size: 1rem;
+    }
+}
+
+{% endblock %}
 
 <!-- Service Worker + Push Notifications -->
 <script>
