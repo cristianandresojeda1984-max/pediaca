@@ -553,6 +553,18 @@ def ver_local(restaurante_id):
         promo = promo_por_producto.get(p["id"])
         p["precio_promo"] = _precio_con_promo(p["precio"], promo) if promo else None
 
+    # Productos sin categoría asignada (o con categoria_id huérfano, apuntando
+    # a una categoría borrada) quedaban invisibles en el menú público, porque
+    # el template solo recorre las categorías existentes y nunca mostraba un
+    # catch-all para estos casos. Los normalizamos a categoria_id=None acá y
+    # les creamos una categoría sintética "Otros" para que siempre se vean.
+    cat_ids = {c["id"] for c in categorias}
+    for p in productos:
+        if p["categoria_id"] not in cat_ids:
+            p["categoria_id"] = None
+    if any(p["categoria_id"] is None for p in productos):
+        categorias = categorias + [{"id": None, "nombre": "Otros", "orden": 999999}]
+
     es_favorito = False
     if session.get("rol") == "cliente":
         fav = query("SELECT id FROM favoritos WHERE usuario_id=? AND restaurante_id=?",
@@ -1591,19 +1603,19 @@ def whatsapp_link():
 
     total = subtotal - descuento
 
-    lineas = [f"🛵 *Nuevo pedido — {restaurante['nombre_local']}*\n"]
-    lineas.append(f"👤 *Cliente:* {nombre_cliente}")
+    lineas = [f"*Nuevo pedido — {restaurante['nombre_local']}*\n"]
+    lineas.append(f"*Cliente:* {nombre_cliente}")
     if tel_cliente:
-        lineas.append(f"📱 *Tel:* {tel_cliente}")
+        lineas.append(f"*Tel:* {tel_cliente}")
     lineas.append("")
     for item in items:
         sub = item["cantidad"] * item["precio"]
         lineas.append(f"• {item['cantidad']}x {item['nombre']} — ${sub:,.0f}".replace(",","."))
     if descuento > 0:
         lineas.append(f"\n*Subtotal: ${subtotal:,.0f}*".replace(",","."))
-        lineas.append(f"🎉 *{promo_orden['titulo']}: -${descuento:,.0f}*".replace(",","."))
+        lineas.append(f"*{promo_orden['titulo']}: -${descuento:,.0f}*".replace(",","."))
     lineas.append(f"\n*Total: ${total:,.0f}*".replace(",","."))
-    lineas.append(f"*Entrega:* {'🛵 Delivery' if tipo_entrega == 'delivery' else '🏪 Retiro en local'}")
+    lineas.append(f"*Entrega:* {'Delivery' if tipo_entrega == 'delivery' else 'Retiro en local'}")
     if tipo_entrega == "delivery":
         lineas.append(f"*Dirección:* {direccion}")
     if notas:
@@ -1844,11 +1856,11 @@ def notificar_cadetes(pedido_id):
     """)
 
     mensaje = (
-        f"🛵 *PediAcá — Pedido disponible!*\n\n"
-        f"🏪 Local: {restaurante['nombre_local']}\n"
-        f"📍 Retiro: {restaurante['direccion'] or 'A confirmar con el local'}\n"
-        f"🗺️ Entrega: {pedido['direccion_entrega'] or 'Retiro en local'}\n"
-        f"💰 Total del pedido: ${int(pedido['total'])}\n\n"
+        f"*PediAcá — Pedido disponible!*\n\n"
+        f"Local: {restaurante['nombre_local']}\n"
+        f"Retiro: {restaurante['direccion'] or 'A confirmar con el local'}\n"
+        f"Entrega: {pedido['direccion_entrega'] or 'Retiro en local'}\n"
+        f"Total del pedido: ${int(pedido['total'])}\n\n"
         f"Entrá a pediaca.ar para aceptarlo antes que otro cadete."
     )
 
