@@ -10,21 +10,41 @@ Registro de la infraestructura contratada y guía de lo que falta para dejar Ped
 - Acceso: usuario `root` con contraseña (generada y guardada — no se reenvía por email, así que si se pierde hay que resetearla desde el panel de DonWeb).
 - ID del servicio en DonWeb: `6198875`.
 
-## Lo que falta
+## Estado actual (25/07/2026)
 
-1. Esperar que el servidor termine de aprovisionarse y tenga IP pública asignada (columna "Información" del panel).
-2. Conectarse por SSH (o por la "Consola" web que trae el panel de DonWeb, sin necesidad de cliente SSH).
-3. Abrir los puertos 80/443 en el **Firewall** del panel de DonWeb (tiene una sección propia para esto, más simple que Oracle).
-4. Instalar dependencias: Python, nginx, PostgreSQL, certbot.
-5. Configurar PostgreSQL (base + usuario).
-6. Subir el código de PediAcá.
-7. Entorno virtual + `requirements.txt`.
-8. Variables de entorno (`SECRET_KEY`, `SETUP_KEY`, `ADMIN_PASSWORD`, `DATABASE_URL`).
-9. Servicio `systemd` con gunicorn (reinicio automático).
-10. Nginx como reverse proxy.
-11. Apuntar el dominio `pediaca.ar` (registro DNS tipo A a la IP del servidor) y pedir certificado HTTPS gratis con certbot.
-12. Crear el usuario admin vía `/setup/<clave>`.
-13. Backups automáticos diarios de la base.
+**La app ya está en producción y funcionando en `http://149.50.156.88`** (probado desde afuera, carga bien).
+
+Completado:
+- Servidor aprovisionado, IP pública `149.50.156.88`, puerto SSH 5859.
+- PostgreSQL instalado, base `pediaca` y usuario `pediacauser` creados con permisos.
+- Código clonado desde GitHub (`cristianandresojeda1984-max/pediaca`, rama `main`) en `/root/pediaca`.
+- Entorno virtual creado, `requirements.txt` instalado sin errores.
+- `/etc/pediaca.env` con `DATABASE_URL`, `SECRET_KEY` (generada al azar), `SETUP_KEY`, `ADMIN_PASSWORD`, `PORT=8000` — ya configurado (valores reales no se guardan acá).
+- Base de datos inicializada (`init_db.py`) y migrada (`migrate_db.py`).
+- Servicio `systemd` `pediaca.service` activo, habilitado para iniciar en cada reinicio del servidor.
+- Nginx configurado como reverse proxy en el puerto 80, sitio activo (`sites-enabled/pediaca`).
+- Usuario admin creado vía `/setup/<SETUP_KEY>` (`admin@pediaca.ar`, contraseña ya configurada — avisada por chat, no en este archivo).
+- Puerto 80 accesible públicamente sin tocar ningún firewall extra de DonWeb.
+
+## Dominio y HTTPS — completado
+
+`pediaca.ar` está delegado a Cloudflare (nameservers `demi.ns.cloudflare.com` / `sam.ns.cloudflare.com`, gestionado en la cuenta de Cloudflare de Cristian). Los registros DNS (antes apuntaban al viejo deploy en Render) se actualizaron:
+
+- `pediaca.ar` — A → `149.50.156.88` (proxied, nube naranja)
+- `www.pediaca.ar` — CNAME → `pediaca.ar` (proxied)
+
+SSL/TLS de Cloudflare configurado en modo **Flexible** (visitante ↔ Cloudflare va cifrado con el certificado de Cloudflare; Cloudflare ↔ servidor de origen va por HTTP plano, que es justo lo que nginx sirve en el puerto 80). No hizo falta correr certbot en el servidor — Cloudflare provee el candado gratis. Probado y funcionando: `https://pediaca.ar` y `https://www.pediaca.ar`.
+
+(Nota: si en el futuro se quiere subir a modo "Full", primero hay que instalar un certificado en nginx — por ejemplo con certbot — para que Cloudflare pueda validar HTTPS también contra el origen.)
+
+## Backups y actualizaciones
+
+- Backup automático diario de Postgres a las 3am vía `/etc/cron.d/pediacabackup` (dump comprimido en `/root/backups`, se borran los de más de 14 días).
+- Para subir cambios de código: `git push` desde la compu, y en el servidor `cd /root/pediaca && git pull` + reinstalar dependencias si cambiaron + `systemctl restart pediaca`.
+
+### Nota técnica sobre la consola web de DonWeb
+
+El teclado remoto de la consola VNC de DonWeb no transmite bien mayúsculas ni símbolos con Shift (`: { } $ | > < &`, etc.) — es una limitación conocida de esa consola, confirmada por el soporte de DonWeb. Para sortearlo: los archivos con símbolos especiales (config de nginx, servicio systemd) se subieron por GitHub y se bajaron con `git pull`; para escribir `/etc/pediaca.env` (con la `:` de la URL de Postgres) se usó un script chico (`deploy/write_hex.py`) que decodifica contenido pasado en hexadecimal, evitando escribir símbolos prohibidos directamente en la consola.
 
 ## Comandos de referencia (se van a ir ejecutando a medida que avancemos)
 
