@@ -1082,15 +1082,29 @@ def carga_masiva():
     cat_map = {c["nombre"].lower().strip(): c["id"] for c in cats}
 
     insertados = 0
+    categorias_creadas = 0
     for p in productos_data:
-        cat_id = cat_map.get(p["categoria"].lower()) if p["categoria"] else None
+        cat_id = None
+        cat_nombre = p["categoria"].strip()
+        if cat_nombre:
+            cat_id = cat_map.get(cat_nombre.lower())
+            if cat_id is None:
+                # La categoría no existe todavía para este local (caso típico:
+                # carga masiva de un menú nuevo) — la creamos en vez de dejar
+                # el producto sin categoría silenciosamente.
+                cat_id = execute("""
+                    INSERT INTO categorias_menu (restaurante_id, nombre)
+                    VALUES (?, ?)
+                """, (restaurante["id"], cat_nombre))
+                cat_map[cat_nombre.lower()] = cat_id
+                categorias_creadas += 1
         execute("""
             INSERT INTO productos (restaurante_id, categoria_id, nombre, descripcion, precio, disponible)
             VALUES (?, ?, ?, ?, ?, 1)
         """, (restaurante["id"], cat_id, p["nombre"], p["descripcion"], p["precio"]))
         insertados += 1
 
-    return jsonify({"ok": True, "insertados": insertados})
+    return jsonify({"ok": True, "insertados": insertados, "categorias_creadas": categorias_creadas})
 
 
 @app.route("/mi-local/plantilla-excel")
