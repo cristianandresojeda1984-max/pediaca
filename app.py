@@ -166,6 +166,35 @@ def notificar_cliente_push(pedido_id, estado, nombre_local):
         }, payload)
 
 
+# ── GEOCODING (para el mapa de seguimiento) ───────────────────────────────────
+import urllib.request, urllib.parse
+
+def geocodificar_direccion(direccion, ciudad):
+    """Convierte una dirección de texto en (lat, lng) usando Nominatim
+    (OpenStreetMap), que es gratuito y no requiere API key. Se usa una sola
+    vez por local/pedido y el resultado se cachea en la base — por eso el
+    volumen de llamadas es bajo y no hace falta contratar un servicio pago.
+    Si falla (dirección rara, sin internet, timeout) devuelve None y
+    simplemente no se muestra ese marcador en el mapa, sin romper nada."""
+    if not direccion:
+        return None
+    try:
+        q = f"{direccion}, {ciudad}, Argentina"
+        url = "https://nominatim.openstreetmap.org/search?" + urllib.parse.urlencode({
+            "q": q, "format": "json", "limit": 1
+        })
+        req = urllib.request.Request(url, headers={
+            "User-Agent": "PediacaApp/1.0 (contacto@pediaca.ar)"
+        })
+        with urllib.request.urlopen(req, timeout=5) as resp:
+            data = _json.loads(resp.read().decode())
+        if data:
+            return float(data[0]["lat"]), float(data[0]["lon"])
+    except Exception as e:
+        print(f"⚠️  Geocoding falló para '{direccion}': {e}")
+    return None
+
+
 def _sql(sql):
     return sql.replace("?", "%s") if USE_POSTGRES else sql
 
@@ -1292,11 +1321,24 @@ def cadete_panel():
             "SELECT COUNT(*) as n FROM pedidos WHERE cadete_id=? AND estado='entregado' AND date(fecha_pedido)=CURRENT_DATE",
             (cadete["id"],), one=True)["n"]
 
+    entrega_en_curso = None
+    if cadete and cadete["estado"] == "aprobado":
+        # Si el cadete tiene una entrega "en camino" asignada, el navegador
+        # empieza a mandar su ubicación GPS (ver JS) para que el comprador y
+        # el local la vean en el mapa de seguimiento.
+        entrega_en_curso = query("""
+            SELECT p.id, p.total, r.nombre_local
+            FROM pedidos p JOIN restaurantes r ON r.id = p.restaurante_id
+            WHERE p.cadete_id = ? AND p.estado = 'en_camino'
+            ORDER BY p.fecha_pedido DESC LIMIT 1
+        """, (cadete["id"],), one=True)
+
     return render_template("cadete_panel.html",
                            cadete=cadete,
                            pedidos=pedidos_disponibles,
                            entregas=entregas,
-                           entregas_stats=entregas_stats)
+                           entregas_stats=entregas_stats,
+                           entrega_en_curso=entrega_en_curso)
 
 
 @app.route("/mi-panel-cadete/disponibilidad", methods=["POST"])
@@ -1733,6 +1775,82 @@ def pedido_status(pedido_id):
         "estado":          pedido["estado"],
         "cadete_nombre":   pedido["cadete_nombre"],
         "cadete_vehiculo": pedido["vehiculo"],
+    })
+
+
+# ── API: UBICACIÓN GPS EN VIVO DEL CADETE ─────────────────────────────────────
+
+@app.route("/api/cadete/ubicacion", methods=["POST"])
+@login_required
+@rol_required("cadete")
+def cadete_actualizar_ubicacion():
+    """El celular del cadete manda su posición acá mientras tiene una entrega
+    en curso (ver JS en cadete_panel.html). Sólo puede actualizar su propia
+    fila — se identifica por la sesión, nunca por un id que venga del cliente."""
+    data = request.get_json(silent=True) or {}
+    try:
+        lat = float(data.get("lat"))
+        lng = float(data.get("lng"))
+    except (TypeError, ValueError):
+        return jsonify({"error": "Coordenadas inválidas"}), 400
+    execute("""
+        UPDATE cadetes SET lat=?, lng=?, ubicacion_ts=CURRENT_TIMESTAMP
+        WHERE usuario_id=?
+    """, (lat, lng, session["user_id"]))
+    return jsonify({"ok": True})
+
+
+@app.route("/api/pedido/<int:pedido_id>/tracking")
+def pedido_tracking(pedido_id):
+    """Devuelve las coordenadas para pintar el mapa de seguimiento: ubicación
+    del local, del destino de entrega (si es delivery) y del cadete en vivo
+    (si el pedido está en camino). Público como /status — hay pedidos de
+    clientes anónimos que necesitan ver esto sin login. Nunca se expone acá
+    ni teléfono ni nombre del cadete (eso ya lo maneja /status)."""
+    pedido = query("""
+        SELECT p.id, p.estado, p.tipo_entrega, p.direccion_entrega,
+               p.lat_entrega, p.lng_entrega, p.cadete_id, p.restaurante_id,
+               r.direccion AS restaurante_direccion, r.ciudad,
+               r.lat AS restaurante_lat, r.lng AS restaurante_lng,
+               c.lat AS cadete_lat, c.lng AS cadete_lng, c.ubicacion_ts
+        FROM pedidos p
+        JOIN restaurantes r ON r.id = p.restaurante_id
+        LEFT JOIN cadetes c ON c.id = p.cadete_id
+        WHERE p.id = ?
+    """, (pedido_id,), one=True)
+    if not pedido:
+        return jsonify({"error": "No encontrado"}), 404
+
+    r_lat, r_lng = pedido["restaurante_lat"], pedido["restaurante_lng"]
+    if r_lat is None and pedido["restaurante_direccion"]:
+        coords = geocodificar_direccion(pedido["restaurante_direccion"], pedido["ciudad"])
+        if coords:
+            r_lat, r_lng = coords
+            execute("UPDATE restaurantes SET lat=?, lng=? WHERE id=?",
+                    (r_lat, r_lng, pedido["restaurante_id"]))
+
+    e_lat, e_lng = pedido["lat_entrega"], pedido["lng_entrega"]
+    if pedido["tipo_entrega"] == "delivery" and e_lat is None and pedido["direccion_entrega"]:
+        coords = geocodificar_direccion(pedido["direccion_entrega"], pedido["ciudad"])
+        if coords:
+            e_lat, e_lng = coords
+            execute("UPDATE pedidos SET lat_entrega=?, lng_entrega=? WHERE id=?",
+                    (e_lat, e_lng, pedido_id))
+
+    cadete_pos = None
+    if pedido["estado"] == "en_camino" and pedido["cadete_lat"] is not None:
+        cadete_pos = {
+            "lat": pedido["cadete_lat"],
+            "lng": pedido["cadete_lng"],
+            "actualizado": pedido["ubicacion_ts"].isoformat() if hasattr(pedido["ubicacion_ts"], "isoformat") else pedido["ubicacion_ts"],
+        }
+
+    return jsonify({
+        "estado":       pedido["estado"],
+        "tipo_entrega": pedido["tipo_entrega"],
+        "restaurante":  {"lat": r_lat, "lng": r_lng} if r_lat is not None else None,
+        "entrega":      {"lat": e_lat, "lng": e_lng} if e_lat is not None else None,
+        "cadete":       cadete_pos,
     })
 
 

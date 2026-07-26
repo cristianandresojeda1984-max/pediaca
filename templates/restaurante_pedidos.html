@@ -348,6 +348,10 @@
                  onclick="postAction('{{ url_for('restaurante_cambiar_estado', pedido_id=p.id, nuevo_estado='entregado') }}'); return false;">
                 ✅ Marcar entregado
               </a>
+              <a class="btn-accion" style="background:#1E3A5F;color:#fff;"
+                 href="{{ url_for('seguimiento_pedido', pedido_id=p.id) }}" target="_blank">
+                📍 Ver ubicación en vivo
+              </a>
             {% endif %}
           </div>
 

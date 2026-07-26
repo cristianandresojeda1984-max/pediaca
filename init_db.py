@@ -52,7 +52,9 @@ def _tablas_sql(postgres):
             tiempo_estimado INTEGER,
             abierto         INTEGER NOT NULL DEFAULT 1,
             estado          TEXT NOT NULL DEFAULT 'pendiente' CHECK(estado IN ('pendiente','aprobado','suspendido')),
-            fecha_alta      TIMESTAMP NOT NULL DEFAULT {ts_now}
+            fecha_alta      TIMESTAMP NOT NULL DEFAULT {ts_now},
+            lat             REAL,
+            lng             REAL
         )""",
         f"""CREATE TABLE IF NOT EXISTS categorias_menu (
             id              {id_col},
@@ -86,7 +88,10 @@ def _tablas_sql(postgres):
             zona        TEXT,
             ciudad      TEXT NOT NULL DEFAULT 'Rosario',
             disponible  INTEGER NOT NULL DEFAULT 0,
-            estado      TEXT NOT NULL DEFAULT 'pendiente' CHECK(estado IN ('pendiente','aprobado','suspendido'))
+            estado      TEXT NOT NULL DEFAULT 'pendiente' CHECK(estado IN ('pendiente','aprobado','suspendido')),
+            lat         REAL,
+            lng         REAL,
+            ubicacion_ts TIMESTAMP
         )""",
         f"""CREATE TABLE IF NOT EXISTS pedidos (
             id                          {id_col},
@@ -102,7 +107,9 @@ def _tablas_sql(postgres):
             notas                       TEXT,
             enviado_whatsapp            INTEGER NOT NULL DEFAULT 0,
             fecha_pedido                TIMESTAMP NOT NULL DEFAULT {ts_now},
-            fecha_actualizado           TIMESTAMP NOT NULL DEFAULT {ts_now}
+            fecha_actualizado           TIMESTAMP NOT NULL DEFAULT {ts_now},
+            lat_entrega                 REAL,
+            lng_entrega                 REAL
         )""",
         f"""CREATE TABLE IF NOT EXISTS items_pedido (
             id              {id_col},

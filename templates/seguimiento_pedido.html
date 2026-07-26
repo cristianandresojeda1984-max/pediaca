@@ -107,6 +107,37 @@
   font-size: 0.85rem;
   text-decoration: none;
 }
+
+/* Mapa de seguimiento en vivo */
+.segui-mapa-card { display: none; }
+.segui-mapa-titulo {
+  display: flex; align-items: center; gap: 6px;
+  font-weight: 800; font-size: 0.88rem;
+  margin-bottom: 10px;
+}
+.segui-mapa-titulo .punto-vivo {
+  width: 8px; height: 8px; border-radius: 50%;
+  background: var(--verde);
+  box-shadow: 0 0 0 0 rgba(39,174,96,0.6);
+  animation: pulso-vivo 1.6s infinite;
+}
+@keyframes pulso-vivo {
+  0%   { box-shadow: 0 0 0 0 rgba(39,174,96,0.55); }
+  70%  { box-shadow: 0 0 0 8px rgba(39,174,96,0); }
+  100% { box-shadow: 0 0 0 0 rgba(39,174,96,0); }
+}
+#mapaPedido {
+  height: 260px;
+  border-radius: 14px;
+  overflow: hidden;
+  background: var(--gris-1);
+}
+.marker-emoji { font-size: 26px; line-height: 1; text-align: center; }
+.segui-mapa-leyenda {
+  display: flex; flex-wrap: wrap; gap: 12px;
+  margin-top: 10px; font-size: 0.76rem; color: var(--texto-s); font-weight: 700;
+}
+.segui-mapa-leyenda span { display: flex; align-items: center; gap: 4px; }
 {% endblock %}
 
 {% block content %}
@@ -167,6 +198,17 @@
     {% endif %}
   </div>
 
+  {% if pedido.estado != 'cancelado' %}
+  <div class="segui-card segui-mapa-card" id="mapaCard">
+    <div class="segui-mapa-titulo">
+      <span class="punto-vivo" id="puntoVivo" style="display:none;"></span>
+      <span id="mapaTitulo">📍 Ubicación</span>
+    </div>
+    <div id="mapaPedido"></div>
+    <div class="segui-mapa-leyenda" id="mapaLeyenda"></div>
+  </div>
+  {% endif %}
+
   <div class="segui-card">
     <div class="segui-items">
       {% for it in items %}
@@ -187,6 +229,10 @@
 {% endblock %}
 
 {% block extra_scripts %}
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+      integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+        integrity="sha256-20nQCchB9co0qIKoBnr4TMocqx4C+8HpBLtvB5Cz3+8=" crossorigin=""></script>
 <script>
 const PEDIDO_ID = {{ pedido.id }};
 const ESTADO_INICIAL = {{ pedido.estado|tojson }};
@@ -232,10 +278,96 @@ async function actualizarEstado() {
   } catch (e) { console.log('Error consultando estado:', e); }
 }
 
+// ── Mapa de seguimiento en vivo (local, destino de entrega y cadete) ────────
+let _mapa = null, _mLocal = null, _mDestino = null, _mCadete = null;
+
+function _iconoEmoji(emoji) {
+  return L.divIcon({
+    html: `<div class="marker-emoji">${emoji}</div>`,
+    className: '', iconSize: [30, 30], iconAnchor: [15, 15]
+  });
+}
+
+function pintarMapa(data) {
+  const card = document.getElementById('mapaCard');
+  if (!data.restaurante && !data.entrega) { card.style.display = 'none'; return; }
+  card.style.display = '';
+
+  const puntoVivo = document.getElementById('puntoVivo');
+  const titulo = document.getElementById('mapaTitulo');
+  if (data.cadete) {
+    puntoVivo.style.display = '';
+    titulo.textContent = '🛵 Tu cadete en vivo';
+  } else if (data.estado === 'en_camino') {
+    titulo.textContent = '🛵 Buscando la posición del cadete...';
+  } else {
+    titulo.textContent = '📍 Ubicación';
+  }
+
+  if (!_mapa) {
+    const centro = data.restaurante ? [data.restaurante.lat, data.restaurante.lng]
+                 : [data.entrega.lat, data.entrega.lng];
+    _mapa = L.map('mapaPedido', { zoomControl: false }).setView(centro, 14);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '© OpenStreetMap', maxZoom: 19
+    }).addTo(_mapa);
+    L.control.zoom({ position: 'bottomright' }).addTo(_mapa);
+  }
+
+  const leyenda = [];
+  if (data.restaurante && !_mLocal) {
+    _mLocal = L.marker([data.restaurante.lat, data.restaurante.lng], { icon: _iconoEmoji('🏪') })
+      .addTo(_mapa).bindPopup('{{ pedido.nombre_local|e }}');
+  }
+  if (_mLocal) leyenda.push('<span>🏪 Local</span>');
+
+  if (data.entrega && !_mDestino) {
+    _mDestino = L.marker([data.entrega.lat, data.entrega.lng], { icon: _iconoEmoji('📍') })
+      .addTo(_mapa).bindPopup('Tu dirección');
+  }
+  if (_mDestino) leyenda.push('<span>📍 Tu casa</span>');
+
+  const puntos = [];
+  if (_mLocal) puntos.push(_mLocal.getLatLng());
+  if (_mDestino) puntos.push(_mDestino.getLatLng());
+
+  if (data.cadete) {
+    const pos = [data.cadete.lat, data.cadete.lng];
+    if (!_mCadete) {
+      _mCadete = L.marker(pos, { icon: _iconoEmoji('🛵') }).addTo(_mapa).bindPopup('Tu cadete');
+    } else {
+      _mCadete.setLatLng(pos);
+    }
+    puntos.push(pos);
+    leyenda.push('<span>🛵 Cadete</span>');
+  }
+
+  if (puntos.length > 1) {
+    _mapa.fitBounds(puntos, { padding: [36, 36], maxZoom: 16 });
+  } else if (puntos.length === 1 && !_mapa._encuadrado) {
+    _mapa.setView(puntos[0], 15);
+    _mapa._encuadrado = true;
+  }
+  document.getElementById('mapaLeyenda').innerHTML = leyenda.join('');
+}
+
+async function actualizarTracking() {
+  try {
+    const res = await fetch(`/api/pedido/${PEDIDO_ID}/tracking`);
+    if (!res.ok) return;
+    const data = await res.json();
+    pintarMapa(data);
+  } catch (e) { console.log('Error consultando tracking:', e); }
+}
+
 pintarEstado({ estado: ESTADO_INICIAL });
 actualizarEstado();
+{% if pedido.estado != 'cancelado' %}
+actualizarTracking();
+{% endif %}
 {% if pedido.estado not in ('entregado', 'cancelado') %}
 setInterval(actualizarEstado, 8000);
+setInterval(actualizarTracking, 8000);
 {% endif %}
 
 async function activarNotificaciones(btn) {

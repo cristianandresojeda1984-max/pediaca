@@ -292,6 +292,29 @@ input:checked + .disp-track::after { transform: translateX(24px); }
   from { opacity:0; transform: translateX(-50%) translateY(20px); }
   to   { opacity:1; transform: translateX(-50%) translateY(0); }
 }
+.gps-card {
+  background: linear-gradient(135deg, #1E3A5F, #0F2A46);
+  border-radius: 14px;
+  padding: 16px 18px;
+  margin-bottom: 16px;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.gps-punto {
+  width: 10px; height: 10px; border-radius: 50%;
+  background: var(--verde); flex-shrink: 0;
+  animation: gps-pulso 1.6s infinite;
+}
+@keyframes gps-pulso {
+  0%   { box-shadow: 0 0 0 0 rgba(39,174,96,0.6); }
+  70%  { box-shadow: 0 0 0 9px rgba(39,174,96,0); }
+  100% { box-shadow: 0 0 0 0 rgba(39,174,96,0); }
+}
+.gps-info { flex: 1; }
+.gps-titulo { font-weight: 800; font-size: 0.9rem; }
+.gps-sub { font-size: 0.76rem; color: rgba(255,255,255,0.65); margin-top: 2px; }
 {% endblock %}
 
 {% block content %}
@@ -365,6 +388,15 @@ input:checked + .disp-track::after { transform: translateX(24px); }
         </a>
       </div>
     {% else %}
+      {% if entrega_en_curso %}
+        <div class="gps-card" id="gpsCard">
+          <div class="gps-punto"></div>
+          <div class="gps-info">
+            <div class="gps-titulo">📍 Compartiendo tu ubicación en vivo</div>
+            <div class="gps-sub" id="gpsSub">Pedido #{{ entrega_en_curso.id }} · {{ entrega_en_curso.nombre_local }}</div>
+          </div>
+        </div>
+      {% endif %}
       <form method="POST" action="{{ url_for('cadete_toggle_disponibilidad') }}" id="form-disp">
         <div class="disponibilidad-card">
           <div class="disp-info">
@@ -609,6 +641,39 @@ function mostrarToast(mensaje, bgColor) {
   pollingInterval = setInterval(actualizarPedidos, 8000);
   window.addEventListener('beforeunload', function() {
     if (pollingInterval) clearInterval(pollingInterval);
+  });
+{% endif %}
+
+// ── Compartir ubicación GPS en vivo mientras hay una entrega en camino ──────
+let _gpsInterval = null;
+
+function _mandarUbicacion() {
+  if (!navigator.geolocation) return;
+  navigator.geolocation.getCurrentPosition(async (pos) => {
+    try {
+      await fetch('/api/cadete/ubicacion', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ lat: pos.coords.latitude, lng: pos.coords.longitude })
+      });
+      const sub = document.getElementById('gpsSub');
+      if (sub) {
+        const hora = new Date().toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' });
+        sub.textContent = `{% if entrega_en_curso %}Pedido #{{ entrega_en_curso.id }} · {{ entrega_en_curso.nombre_local }}{% endif %} · actualizado ${hora}`;
+      }
+    } catch (e) { console.log('No se pudo enviar la ubicación:', e); }
+  }, (err) => {
+    console.log('Geolocalización no disponible:', err.message);
+    const sub = document.getElementById('gpsSub');
+    if (sub) sub.textContent = 'Activá la ubicación del celular para compartirla con el cliente';
+  }, { enableHighAccuracy: true, timeout: 8000, maximumAge: 5000 });
+}
+
+{% if entrega_en_curso %}
+  _mandarUbicacion();
+  _gpsInterval = setInterval(_mandarUbicacion, 12000);
+  window.addEventListener('beforeunload', function() {
+    if (_gpsInterval) clearInterval(_gpsInterval);
   });
 {% endif %}
 </script>

@@ -23,6 +23,13 @@ COLUMNAS = [
     ("valoraciones", "vista",                "INTEGER NOT NULL DEFAULT 0"),
     ("productos",    "sabores_por_kilo",     "INTEGER"),
     ("items_pedido", "peso_kg",              "REAL"),
+    ("cadetes",      "lat",                  "REAL"),
+    ("cadetes",      "lng",                  "REAL"),
+    ("cadetes",      "ubicacion_ts",         "TIMESTAMP"),
+    ("restaurantes", "lat",                  "REAL"),
+    ("restaurantes", "lng",                  "REAL"),
+    ("pedidos",      "lat_entrega",          "REAL"),
+    ("pedidos",      "lng_entrega",          "REAL"),
 ]
 
 
