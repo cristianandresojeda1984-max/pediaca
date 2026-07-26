@@ -358,7 +358,7 @@
       <a href="{{ url_for('admin_metricas') }}" target="_blank" style="margin-left:auto;font-size:0.7rem;opacity:0.6;">↗</a>
     </button>
     <a class="sidebar-link" href="/admin/configuracion">
-      <span class="sidebar-icon">🎨</span> Configurar Hero
+      <span class="sidebar-icon">⚙️</span> Configuración
     </a>
     <a class="sidebar-link" href="{{ url_for('home') }}" target="_blank">
       <span class="sidebar-icon">🌐</span> Ver sitio
@@ -463,9 +463,9 @@
                 📅 {{ r.fecha_alta|fecha_corta }}
               </div>
               <div class="solicitud-acciones">
-                <a href="{{ url_for('admin_restaurante_estado', restaurante_id=r.id, accion='aprobar') }}"
+                <a href="#" onclick="postAction('{{ url_for('admin_restaurante_estado', restaurante_id=r.id, accion='aprobar') }}'); return false;"
                    class="btn-aprobar">✅ Aprobar</a>
-                <a href="{{ url_for('admin_restaurante_estado', restaurante_id=r.id, accion='suspender') }}"
+                <a href="#" onclick="postAction('{{ url_for('admin_restaurante_estado', restaurante_id=r.id, accion='suspender') }}'); return false;"
                    class="btn-rechazar">🚫 Rechazar</a>
               </div>
             </div>
@@ -489,9 +489,9 @@
                 📍 Zona: {{ c.zona or 'No especificada' }}
               </div>
               <div class="solicitud-acciones">
-                <a href="{{ url_for('admin_cadete_estado', cadete_id=c.id, accion='aprobar') }}"
+                <a href="#" onclick="postAction('{{ url_for('admin_cadete_estado', cadete_id=c.id, accion='aprobar') }}'); return false;"
                    class="btn-aprobar">✅ Aprobar</a>
-                <a href="{{ url_for('admin_cadete_estado', cadete_id=c.id, accion='suspender') }}"
+                <a href="#" onclick="postAction('{{ url_for('admin_cadete_estado', cadete_id=c.id, accion='suspender') }}'); return false;"
                    class="btn-rechazar">🚫 Rechazar</a>
               </div>
             </div>
@@ -547,14 +547,14 @@
                   </td>
                   <td>
                     {% if r.estado != 'aprobado' %}
-                      <a class="accion-link al-verde"
-                         href="{{ url_for('admin_restaurante_estado', restaurante_id=r.id, accion='aprobar') }}">
+                      <a class="accion-link al-verde" href="#"
+                         onclick="postAction('{{ url_for('admin_restaurante_estado', restaurante_id=r.id, accion='aprobar') }}'); return false;">
                         Aprobar
                       </a>
                     {% endif %}
                     {% if r.estado == 'aprobado' %}
-                      <a class="accion-link al-rojo"
-                         href="{{ url_for('admin_restaurante_estado', restaurante_id=r.id, accion='suspender') }}">
+                      <a class="accion-link al-rojo" href="#"
+                         onclick="postAction('{{ url_for('admin_restaurante_estado', restaurante_id=r.id, accion='suspender') }}'); return false;">
                         Suspender
                       </a>
                       <a class="accion-link al-gris"
@@ -618,14 +618,14 @@
                   </td>
                   <td>
                     {% if c.estado != 'aprobado' %}
-                      <a class="accion-link al-verde"
-                         href="{{ url_for('admin_cadete_estado', cadete_id=c.id, accion='aprobar') }}">
+                      <a class="accion-link al-verde" href="#"
+                         onclick="postAction('{{ url_for('admin_cadete_estado', cadete_id=c.id, accion='aprobar') }}'); return false;">
                         Aprobar
                       </a>
                     {% endif %}
                     {% if c.estado == 'aprobado' %}
-                      <a class="accion-link al-rojo"
-                         href="{{ url_for('admin_cadete_estado', cadete_id=c.id, accion='suspender') }}">
+                      <a class="accion-link al-rojo" href="#"
+                         onclick="postAction('{{ url_for('admin_cadete_estado', cadete_id=c.id, accion='suspender') }}'); return false;">
                         Suspender
                       </a>
                     {% endif %}

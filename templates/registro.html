@@ -373,6 +373,16 @@ select.form-control {
 
           <div class="form-row">
             <div class="form-group">
+              <label class="form-label">Ciudad *</label>
+              <select class="form-control" name="ciudad">
+                {% for c in ciudades_disponibles %}
+                  <option value="{{ c.nombre }}" {% if c.nombre == ciudad_actual %}selected{% endif %}>
+                    {{ c.nombre }}{% if not c.activa %} (próximamente){% endif %}
+                  </option>
+                {% endfor %}
+              </select>
+            </div>
+            <div class="form-group">
               <label class="form-label">Tipo de local</label>
               <select class="form-control" name="categoria">
                 <option value="">Seleccioná...</option>
@@ -381,11 +391,12 @@ select.form-control {
                 {% endfor %}
               </select>
             </div>
-            <div class="form-group">
-              <label class="form-label">WhatsApp del local *</label>
-              <input class="form-control" name="whatsapp" id="inp-whatsapp"
-                     placeholder="3412345678">
-            </div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">WhatsApp del local *</label>
+            <input class="form-control" name="whatsapp" id="inp-whatsapp"
+                   placeholder="3412345678">
           </div>
 
           <div class="form-group">
@@ -443,6 +454,17 @@ select.form-control {
               <span class="vehiculo-emoji">🚗</span>
               <span class="vehiculo-label">Auto</span>
             </label>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Ciudad *</label>
+            <select class="form-control" name="ciudad">
+              {% for c in ciudades_disponibles %}
+                <option value="{{ c.nombre }}" {% if c.nombre == ciudad_actual %}selected{% endif %}>
+                  {{ c.nombre }}{% if not c.activa %} (próximamente){% endif %}
+                </option>
+              {% endfor %}
+            </select>
           </div>
 
           <div class="form-group">

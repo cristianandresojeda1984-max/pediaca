@@ -1,34 +1,12 @@
-# setup_db.py - CREAR ESTE ARCHIVO EN TU PROYECTO
-import os
-import psycopg2
+"""
+setup_db.py — OBSOLETO.
 
-try:
-    conn = psycopg2.connect(os.environ['DATABASE_URL'])
-    cur = conn.cursor()
-    
-    cur.execute("""
-        CREATE TABLE IF NOT EXISTS configuraciones (
-            id SERIAL PRIMARY KEY,
-            clave TEXT UNIQUE,
-            valor TEXT,
-            tipo TEXT DEFAULT 'text',
-            actualizado TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-        )
-    """)
-    
-    cur.execute("""
-        INSERT INTO configuraciones (clave, valor, tipo) VALUES
-        ('hero_tipo', 'gradiente', 'text'),
-        ('hero_imagen_url', '', 'text'),
-        ('hero_blur', '6', 'number'),
-        ('hero_opacidad_overlay', '75', 'number'),
-        ('hero_color_overlay', '#1E3A5F', 'text'),
-        ('hero_gradiente', '135deg, #1A1A2E, #1E3A5F', 'text'),
-        ('usar_overlay', 'true', 'text')
-        ON CONFLICT (clave) DO NOTHING
-    """)
-    
-    conn.commit()
-    print("✅ Tabla configuraciones creada")
-except Exception as e:
-    print(f"Error: {e}")
+Este script era un parche manual para crear la tabla `configuraciones`
+directo en la base de Render. Ya no hace falta: `app.py` la crea sola al
+arrancar (ver `_init_configuraciones()`) y `init_db.py` la incluye en el
+esquema completo. Se deja este archivo como no-op para no romper nada que
+todavía lo invoque, pero no debería usarse.
+"""
+print("⚠️  setup_db.py está obsoleto. La tabla 'configuraciones' ahora se crea "
+      "automáticamente al arrancar la app (ver app.py) y en init_db.py. "
+      "Este script no hace nada.")

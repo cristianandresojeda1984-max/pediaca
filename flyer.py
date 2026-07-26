@@ -184,9 +184,23 @@ def generar_flyer(
     logo_y    = sep1_y + 22
 
     logo_ok = False
-    if logo_path and os.path.exists(logo_path):
+    logo_img = None
+    if logo_path:
         try:
-            logo_local = Image.open(logo_path).convert("RGBA")
+            if logo_path.startswith("http"):
+                # logo_url puede ser una URL remota (Cloudinary) en vez de
+                # una ruta local en disco.
+                with urllib.request.urlopen(logo_path, timeout=8) as resp:
+                    logo_img = Image.open(io.BytesIO(resp.read()))
+            elif os.path.exists(logo_path):
+                logo_img = Image.open(logo_path)
+        except Exception as e:
+            print(f"No se pudo cargar el logo del local para el flyer: {e}")
+            logo_img = None
+
+    if logo_img:
+        try:
+            logo_local = logo_img.convert("RGBA")
             logo_circ  = _circulo(logo_local, logo_size)
             sh = Image.new("RGBA", (logo_size+16, logo_size+16), (0,0,0,0))
             ImageDraw.Draw(sh).ellipse([4,4,logo_size+12,logo_size+12], fill=(0,0,0,25))

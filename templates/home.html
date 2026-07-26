@@ -2,111 +2,97 @@
 {% block title %}PediAcá — El sabor de tu barrio · Rosario{% endblock %}
 
 {% block extra_styles %}
-/* ── HERO ──────────────────────────────────────────────── */
-.hero {
-  background: linear-gradient(135deg, #1A1A2E 0%, #16213E 60%, #1B4332 100%);
-  padding: 48px 20px 56px;
-  text-align: center;
-  position: relative;
-  overflow: hidden;
-}
-.hero::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background: radial-gradient(ellipse at 30% 50%, rgba(243,156,18,0.15) 0%, transparent 60%),
-              radial-gradient(ellipse at 70% 30%, rgba(39,174,96,0.10) 0%, transparent 60%);
-}
-.hero-content { position: relative; z-index: 1; }
-.hero-titulo {
-  font-family: 'Paytone One', sans-serif;
-  font-size: clamp(2rem, 6vw, 3.2rem);
-  color: var(--blanco);
-  line-height: 1.1;
-  margin-bottom: 12px;
-}
-.hero-titulo span { color: var(--naranja); }
-.hero-sub {
-  color: rgba(255,255,255,0.7);
-  font-size: 1.05rem;
-  margin-bottom: 28px;
-  font-weight: 600;
-}
-.hero-chips {
+/* ── FRANJA DE VALOR (compacta, reemplaza al hero grande) ─────────── */
+.valor-strip {
   display: flex;
+  align-items: center;
   justify-content: center;
   gap: 8px;
   flex-wrap: wrap;
-  margin-bottom: 32px;
+  padding: 12px 20px;
+  background: var(--gris-1);
+  border-bottom: 1px solid var(--gris-2);
+  text-align: center;
 }
-.hero-chip {
-  background: rgba(255,255,255,0.08);
-  border: 1px solid rgba(255,255,255,0.15);
-  color: rgba(255,255,255,0.85);
-  padding: 6px 16px;
-  border-radius: 99px;
-  font-size: 0.82rem;
+.valor-strip-item {
+  font-size: 0.8rem;
   font-weight: 700;
+  color: var(--texto-s);
+  display: flex;
+  align-items: center;
+  gap: 5px;
 }
-.hero-chip span { margin-right: 4px; }
+.valor-strip-sep {
+  color: var(--gris-2);
+  font-weight: 400;
+}
+@media (max-width: 480px) {
+  .valor-strip > *:nth-child(4),
+  .valor-strip > *:nth-child(5) { display: none; }
+}
 
-/* ── BUSCADOR ────────────────────────────────────────────── */
-.search-wrap {
-  max-width: 520px;
-  margin: 0 auto;
-  position: relative;
-}
-.search-input {
+/* ── BANNER FINO OPCIONAL (fechas puntuales, ej. Mundial) ──────────── */
+.hero-banner-fino {
   width: 100%;
-  padding: 16px 56px 16px 20px;
-  border: none;
-  border-radius: 99px;
-  font-size: 1rem;
-  font-family: 'Nunito', sans-serif;
-  font-weight: 600;
-  box-shadow: 0 8px 32px rgba(0,0,0,0.3);
-  outline: none;
-  color: var(--texto);
+  height: 130px;
+  border-radius: 16px;
+  overflow: hidden;
+  margin: 14px 0 4px;
+  box-shadow: var(--sombra-s);
 }
-.search-icon {
-  position: absolute;
-  right: 18px;
-  top: 50%;
-  transform: translateY(-50%);
-  font-size: 1.3rem;
-  pointer-events: none;
+.hero-banner-fino img { width: 100%; height: 100%; object-fit: cover; display: block; }
+@media (max-width: 600px) {
+  .hero-banner-fino { height: 90px; border-radius: 12px; }
 }
 
-/* ── CATEGORIAS ──────────────────────────────────────────── */
+/* ── CATEGORIAS (grilla de iconos, estilo apps de delivery) ────────── */
 .cats-scroll {
   display: flex;
-  gap: 10px;
+  gap: 16px;
   overflow-x: auto;
-  padding: 20px 0 8px;
+  padding: 20px 2px 10px;
   scrollbar-width: none;
 }
 .cats-scroll::-webkit-scrollbar { display: none; }
 .cat-btn {
   flex: none;
-  padding: 8px 18px;
-  border-radius: 99px;
-  border: 2px solid var(--gris-2);
-  background: var(--blanco);
-  font-family: 'Nunito', sans-serif;
-  font-weight: 700;
-  font-size: 0.85rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 7px;
+  width: 76px;
+  border: none;
+  background: none;
   cursor: pointer;
+  font-family: 'Nunito', sans-serif;
+}
+.cat-btn-circle {
+  width: 60px;
+  height: 60px;
+  border-radius: 18px;
+  background: var(--blanco);
+  border: 2px solid var(--gris-2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.7rem;
   transition: all 0.2s;
-  white-space: nowrap;
+  box-shadow: var(--sombra-s);
+}
+.cat-btn-label {
+  font-size: 0.72rem;
+  font-weight: 700;
   color: var(--texto-s);
+  white-space: nowrap;
+  transition: color 0.2s;
 }
-.cat-btn:hover, .cat-btn.activo {
-  background: var(--naranja);
+.cat-btn:hover .cat-btn-circle, .cat-btn.activo .cat-btn-circle {
   border-color: var(--naranja);
-  color: var(--blanco);
-  transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(243,156,18,0.3);
+  background: var(--naranja-l);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(243,156,18,0.25);
 }
+.cat-btn.activo .cat-btn-label { color: var(--naranja-d); }
 
 /* ── SECCIÓN LOCALES ─────────────────────────────────────── */
 .seccion-titulo {
@@ -328,149 +314,84 @@
 .promo-card-home:hover {
   transform: translateY(-4px);
 }
+
+/* ── POR QUÉ PEDIACÁ ──────────────────────────────────────── */
+.porque-section { margin: 40px 0; }
+.porque-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+}
+.porque-card {
+  background: var(--blanco);
+  border-radius: var(--radio);
+  padding: 22px 18px;
+  box-shadow: var(--sombra-s);
+  border-top: 3px solid var(--naranja);
+}
+.porque-icono { font-size: 1.8rem; margin-bottom: 10px; }
+.porque-titulo { font-weight: 800; font-size: 0.95rem; margin-bottom: 6px; }
+.porque-desc { font-size: 0.82rem; color: var(--texto-s); line-height: 1.5; }
+@media (max-width: 700px) {
+  .porque-grid { grid-template-columns: 1fr; }
+}
+
+/* ── CÓMO FUNCIONA ─────────────────────────────────────────── */
+.como-funciona {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 18px;
+  margin: 32px 0;
+}
+.paso-card {
+  background: var(--blanco);
+  border-radius: var(--radio);
+  padding: 22px 18px;
+  text-align: center;
+  box-shadow: var(--sombra-s);
+}
+.paso-num {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: var(--naranja-l);
+  color: var(--naranja-d);
+  font-family: 'Paytone One', sans-serif;
+  font-size: 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 12px;
+}
+.paso-icono { font-size: 1.8rem; margin-bottom: 8px; }
+.paso-titulo { font-weight: 800; font-size: 0.95rem; margin-bottom: 4px; }
+.paso-desc { font-size: 0.82rem; color: var(--texto-s); line-height: 1.4; }
+@media (max-width: 700px) {
+  .como-funciona { grid-template-columns: 1fr; gap: 12px; }
+}
 {% endblock %}
 
 {% block content %}
-<!-- HERO -->
-<style>
-.hero-dinamico {
-    position: relative;
-    padding: 60px 20px 70px;
-    text-align: center;
-    overflow: hidden;
-    min-height: 380px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-.hero-bg-dinamico {
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background-size: cover;
-    background-position: center;
-    filter: blur({{ get_config('hero_blur')|default(6) }}px);
-    transform: scale(1.05);
-}
-.hero-overlay-dinamico {
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background: {{ get_config('hero_color_overlay')|default('#1E3A5F') }};
-    opacity: {{ (get_config('hero_opacidad_overlay')|default(75)) / 100 }};
-}
-.hero-content {
-    position: relative;
-    z-index: 2;
-    max-width: 800px;
-    margin: 0 auto;
-}
-</style>
-
-<style>
-.hero-dinamico {
-    position: relative;
-    padding: 60px 20px 70px;
-    text-align: center;
-    overflow: hidden;
-    min-height: 380px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-.hero-bg-dinamico {
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background-size: cover;
-    background-position: center;
-    filter: blur({{ get_config('hero_blur')|default(6) }}px);
-    transform: scale(1.05);
-}
-.hero-overlay-dinamico {
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background: {{ get_config('hero_color_overlay')|default('#1E3A5F') }};
-    opacity: {{ (get_config('hero_opacidad_overlay')|default(75)) / 100 }};
-}
-.hero-content {
-    position: relative;
-    z-index: 2;
-    max-width: 800px;
-    margin: 0 auto;
-}
-/* Responsive */
-@media (max-width: 768px) {
-    .hero-dinamico {
-        padding: 40px 16px 50px;
-        min-height: 320px;
-    }
-    .hero-titulo {
-        font-size: 1.6rem;
-    }
-    .hero-sub {
-        font-size: 0.9rem;
-    }
-    .hero-chip {
-        font-size: 0.7rem;
-        padding: 4px 12px;
-    }
-    .search-input {
-        padding: 12px 50px 12px 16px;
-        font-size: 0.9rem;
-    }
-}
-@media (max-width: 480px) {
-    .hero-dinamico {
-        padding: 30px 12px 40px;
-        min-height: 280px;
-    }
-    .hero-titulo {
-        font-size: 1.3rem;
-    }
-    .hero-chips {
-        gap: 6px;
-    }
-}
-</style>
-
-<section class="hero-dinamico">
-    {% if get_config('hero_tipo') == 'imagen' and get_config('hero_imagen_url') %}
-        <div class="hero-bg-dinamico" style="background-image: url('{{ get_config('hero_imagen_url') }}');"></div>
-        <div class="hero-overlay-dinamico"></div>
-    {% else %}
-        <div style="position: absolute; inset: 0; background: linear-gradient({{ get_config('hero_gradiente')|default('135deg, #1A1A2E, #1E3A5F') }});"></div>
-    {% endif %}
-    
-    <div class="hero-content">
-        <h1 class="hero-titulo">Pedí a tu <span>local favorito</span><br>sin pagar de más</h1>
-        <p class="hero-sub">El menú llega directo a tu WhatsApp · Sin comisiones · Sin apps</p>
-        <div class="hero-chips">
-            <span class="hero-chip">✅ Sin comisiones</span>
-            <span class="hero-chip">📱 Directo al WhatsApp</span>
-            <span class="hero-chip">🌮 Locales de Rosario</span>
-        </div>
-        <div class="search-wrap">
-            <form action="/buscar" method="GET">
-                <input class="search-input" name="q" placeholder="🔍 Buscá un plato, local o tipo de comida..." autocomplete="off">
-            </form>
-        </div>
-    </div>
-</section>
+<!-- FRANJA DE VALOR -->
+<div class="valor-strip">
+  <span class="valor-strip-item">✅ Sin comisiones</span>
+  <span class="valor-strip-sep">·</span>
+  <span class="valor-strip-item">📱 Directo por WhatsApp</span>
+  <span class="valor-strip-sep">·</span>
+  <span class="valor-strip-item">📍 {{ ciudad_actual }}</span>
+</div>
 
 <div class="container">
 
+  <!-- BANNER FINO OPCIONAL -->
+  {% if get_config('hero_activo') == 'true' and get_config('hero_imagen_url') %}
+    <div class="hero-banner-fino">
+      <img src="{{ get_config('hero_imagen_url') }}" alt="">
+    </div>
+  {% endif %}
+
   <!-- CATEGORIAS -->
-  
+
     <!-- Botón para ver todas las promociones -->
     <a href="/promociones" style="display: flex; align-items: center; gap: 12px; background: linear-gradient(135deg, #EA580C, #C2410C); border-radius: 14px; padding: 16px 24px; margin-bottom: 24px; text-decoration: none; color: white; transition: transform 0.2s;" onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform=''">
         <span style="font-size: 2rem;">🎁</span>
@@ -482,10 +403,16 @@
     </a>
 
 <div class="cats-scroll" id="cats">
-    <button class="cat-btn activo" onclick="filtrarCat(this, '')">🍽️ Todos</button>
-    {% set cats = ['Pizzería','Rotisería','Hamburguesería','Sushi','Empanadas','Panadería','Bar','Heladería','Vegano'] %}
-    {% for c in cats %}
-      <button class="cat-btn" onclick="filtrarCat(this, '{{ c }}')">{{ c }}</button>
+    <button class="cat-btn activo" onclick="filtrarCat(this, '')">
+      <span class="cat-btn-circle">🍽️</span>
+      <span class="cat-btn-label">Todos</span>
+    </button>
+    {% set cats = [('Pizzería','🍕'),('Rotisería','🍗'),('Hamburguesería','🍔'),('Sushi','🍣'),('Empanadas','🥟'),('Panadería','🥐'),('Bar','🍺'),('Heladería','🍨'),('Vegano','🥗')] %}
+    {% for c, emoji in cats %}
+      <button class="cat-btn" onclick="filtrarCat(this, '{{ c }}')">
+        <span class="cat-btn-circle">{{ emoji }}</span>
+        <span class="cat-btn-label">{{ c }}</span>
+      </button>
     {% endfor %}
   </div>
 
@@ -516,6 +443,13 @@
            data-cat="{{ r.categoria or '' }}">
 
           <div class="local-banner" style="display:flex;align-items:center;justify-content:center;">
+            {% if session.get('rol') == 'cliente' %}
+              <button onclick="event.preventDefault();event.stopPropagation();toggleFavoritoCard(this,{{ r.id }});"
+                      data-fav="{{ '1' if r.id in favoritos_ids else '0' }}"
+                      style="position:absolute;top:8px;right:8px;z-index:5;width:32px;height:32px;border-radius:50%;border:none;background:rgba(255,255,255,0.85);font-size:0.95rem;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 8px rgba(0,0,0,0.15);">
+                {{ '❤️' if r.id in favoritos_ids else '🤍' }}
+              </button>
+            {% endif %}
             {% if r.logo_url %}
               <img src="{{ url_imagen(r.logo_url) }}" alt="{{ r.nombre_local }}"
                    style="width:90px;height:90px;border-radius:18px;object-fit:cover;box-shadow:0 4px 16px rgba(0,0,0,0.15);">
@@ -571,9 +505,16 @@
 
   {% else %}
     <div class="empty-state">
-      <div class="empty-icon">🍽️</div>
-      <div class="empty-titulo">Todavía no hay locales disponibles</div>
-      <p>¡Pronto vas a poder pedir desde acá!</p>
+      {% if ciudad_actual != 'Rosario' %}
+        <div class="empty-icon">🚀</div>
+        <div class="empty-titulo">Todavía no estamos en {{ ciudad_actual }}</div>
+        <p>Por ahora funcionamos en Rosario, pero pronto llegamos a más ciudades.</p>
+        <a href="{{ url_for('cambiar_ciudad', ciudad='Rosario') }}" class="cta-btn" style="display:inline-block;margin-top:16px;background:var(--naranja);color:#fff;">Ver locales en Rosario →</a>
+      {% else %}
+        <div class="empty-icon">🍽️</div>
+        <div class="empty-titulo">Todavía no hay locales disponibles</div>
+        <p>¡Pronto vas a poder pedir desde acá!</p>
+      {% endif %}
     </div>
   {% endif %}
 
@@ -609,6 +550,47 @@
   </div>
   {% endif %}
 
+  <!-- CÓMO FUNCIONA -->
+  <div class="como-funciona">
+    <div class="paso-card">
+      <div class="paso-icono">🔍</div>
+      <div class="paso-titulo">1. Elegí tu local</div>
+      <div class="paso-desc">Buscá por plato, categoría o nombre entre los locales de tu barrio.</div>
+    </div>
+    <div class="paso-card">
+      <div class="paso-icono">🛒</div>
+      <div class="paso-titulo">2. Armá tu pedido</div>
+      <div class="paso-desc">Elegí del menú y confirmá cómo lo querés recibir: delivery o retiro.</div>
+    </div>
+    <div class="paso-card">
+      <div class="paso-icono">📱</div>
+      <div class="paso-titulo">3. Enviá por WhatsApp</div>
+      <div class="paso-desc">Tu pedido llega directo al local, sin intermediarios ni comisiones.</div>
+    </div>
+  </div>
+
+  <!-- POR QUÉ PEDIACÁ -->
+  <div class="porque-section">
+    <h2 class="seccion-titulo">¿Por qué PediAcá?</h2>
+    <div class="porque-grid">
+      <div class="porque-card">
+        <div class="porque-icono">💸</div>
+        <div class="porque-titulo">Sin comisiones</div>
+        <div class="porque-desc">Otras apps le cobran hasta 30% a cada local por pedido. Acá el local no paga nada — vos pagás lo mismo que en el mostrador.</div>
+      </div>
+      <div class="porque-card">
+        <div class="porque-icono">📱</div>
+        <div class="porque-titulo">Directo por WhatsApp</div>
+        <div class="porque-desc">Tu pedido va directo al local, sin intermediarios ni pasos raros. Coordinás todo por el WhatsApp de siempre.</div>
+      </div>
+      <div class="porque-card">
+        <div class="porque-icono">🏘️</div>
+        <div class="porque-titulo">100% rosarino</div>
+        <div class="porque-desc">Hecho en Rosario, para locales de Rosario. Cada pedido ayuda a que un negocio del barrio siga creciendo.</div>
+      </div>
+    </div>
+  </div>
+
   <!-- CTA PARA LOCALES -->
   <div class="cta-band">
     <h3>¿Tenés un local?</h3>
@@ -623,17 +605,28 @@
 <script>
 const cards = document.querySelectorAll('.local-card');
 const badge = document.getElementById('count-badge');
-const buscador = document.getElementById('buscador');
+
+async function toggleFavoritoCard(btn, restauranteId) {
+  btn.disabled = true;
+  try {
+    const res = await fetch(`/favoritos/${restauranteId}/toggle`, { method: 'POST' });
+    const data = await res.json();
+    if (data.ok) {
+      btn.dataset.fav = data.favorito ? '1' : '0';
+      btn.textContent = data.favorito ? '❤️' : '🤍';
+    }
+  } catch (e) {
+    console.log('Error al guardar favorito:', e);
+  } finally {
+    btn.disabled = false;
+  }
+}
 
 function actualizar() {
-  if (!buscador) return;
-  const q = buscador.value.toLowerCase().trim();
   const cat = document.querySelector('.cat-btn.activo')?.dataset.cat || '';
   let visible = 0;
   cards.forEach(c => {
-    const matchNombre = c.dataset.nombre.includes(q);
-    const matchCat = !cat || c.dataset.cat === cat;
-    const show = matchNombre && matchCat;
+    const show = !cat || c.dataset.cat === cat;
     c.style.display = show ? '' : 'none';
     if (show) visible++;
   });
@@ -646,40 +639,5 @@ function filtrarCat(btn, cat) {
   btn.dataset.cat = cat;
   actualizar();
 }
-
-// Autocomplete
-let _acTimer = null;
-async function autocompleteBuscar(q) {
-  actualizar();
-  const drop = document.getElementById('autocomplete-drop');
-  if (!drop) return;
-  if (!q || q.length < 2) { drop.style.display = 'none'; return; }
-  clearTimeout(_acTimer);
-  _acTimer = setTimeout(async () => {
-    try {
-      const res = await fetch('/api/buscar-productos?q=' + encodeURIComponent(q));
-      const data = await res.json();
-      if (!data.resultados.length) { drop.style.display = 'none'; return; }
-      drop.innerHTML = data.resultados.map(r => `
-        <a href="/local/${r.restaurante_id}" style="display:flex;align-items:center;gap:10px;padding:10px 16px;text-decoration:none;color:#1A1A2E;border-bottom:1px solid #f0f2f5;" onmouseover="this.style.background='#FEF3DC'" onmouseout="this.style.background=''"  >
-          <div style="font-size:1.2rem;flex-shrink:0;">🍽️</div>
-          <div style="flex:1;min-width:0;">
-            <div style="font-weight:800;font-size:0.88rem;">${r.prod_nombre}</div>
-            <div style="font-size:0.75rem;color:#6C757D;">${r.nombre_local}${!r.abierto ? ' · <span style=color:#922B21>Cerrado</span>' : ''}</div>
-          </div>
-          <div style="font-weight:800;color:#D68910;font-size:0.88rem;">$${Math.round(r.precio).toLocaleString('es-AR')}</div>
-        </a>
-      `).join('') + `<a href="/buscar?q=${encodeURIComponent(q)}" style="display:block;padding:10px 16px;text-align:center;font-weight:800;font-size:0.82rem;color:#2980B9;text-decoration:none;background:#D6EAF8;">Ver todos los resultados →</a>`;
-      drop.style.display = '';
-    } catch(e) { console.log(e); }
-  }, 300);
-}
-
-document.addEventListener('click', e => {
-  const drop = document.getElementById('autocomplete-drop');
-  if (drop && !e.target.closest('.search-wrap')) {
-    drop.style.display = 'none';
-  }
-});
 </script>
 {% endblock %}

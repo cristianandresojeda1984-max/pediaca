@@ -331,7 +331,7 @@ textarea.form-control { resize: vertical; min-height: 80px; }
             {% endif %}
           </div>
           <div class="promo-actions">
-            <a href="{{ url_for('promocion_toggle', promo_id=promo.id) }}"
+            <a href="#" onclick="postAction('{{ url_for('promocion_toggle', promo_id=promo.id) }}'); return false;"
                class="btn btn-outline btn-sm">
               {{ '⏸ Desactivar' if promo.activa else '▶ Activar' }}
             </a>

@@ -3,6 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<meta name="csrf-token" content="{{ csrf_token() }}">
 <title>Mi Local — {{ restaurante.nombre_local }}</title>
 <style>
 /* ── RESET & BASE ─────────────────────────────────────────── */
@@ -461,7 +462,13 @@ select.form-control { appearance: none; cursor: pointer; }
   <div class="nav-tab" onclick="mostrarSeccion('menu', this)">🍕 Menú</div>
   <div class="nav-tab" onclick="mostrarSeccion('promociones', this)">🎉 Promociones</div>
   <a class="nav-tab" href="/mi-local/pedidos" style="text-decoration:none;">📋 Pedidos</a>
-  <button class="nav-tab" onclick="mostrarSeccion('valoraciones', this)">⭐ Valoraciones</button>
+  <a class="nav-tab" href="/mi-local/metricas" style="text-decoration:none;">📈 Métricas</a>
+  <button class="nav-tab" onclick="mostrarSeccion('valoraciones', this); marcarValoracionesVistas();">
+    ⭐ Valoraciones
+    {% if valoraciones_no_vistas %}
+      <span id="badge-valoraciones" style="display:inline-block;background:var(--rojo);color:#fff;border-radius:99px;padding:1px 7px;font-size:0.68rem;font-weight:800;margin-left:4px;">{{ valoraciones_no_vistas }}</span>
+    {% endif %}
+  </button>
 </div>
 
 <div class="container">
@@ -531,7 +538,7 @@ select.form-control { appearance: none; cursor: pointer; }
             {{ 'Los clientes pueden hacer pedidos' if restaurante.abierto else 'No aparecés como disponible' }}
           </div>
         </div>
-        <a href="{{ url_for('restaurante_toggle_abierto') }}"
+        <a href="#" onclick="postAction('{{ url_for('restaurante_toggle_abierto') }}'); return false;"
            style="background:{{ 'var(--verde)' if restaurante.abierto else 'var(--rojo)' }};color:#fff;padding:8px 18px;border-radius:99px;text-decoration:none;font-weight:800;font-size:0.82rem;flex-shrink:0;">
           {{ 'Cerrar local' if restaurante.abierto else 'Abrir local' }}
         </a>
@@ -608,9 +615,21 @@ select.form-control { appearance: none; cursor: pointer; }
             <input class="form-control" name="whatsapp" value="{{ restaurante.whatsapp }}" placeholder="3414000000" required>
           </div>
         </div>
-        <div class="form-group">
-          <label>Dirección</label>
-          <input class="form-control" name="direccion" value="{{ restaurante.direccion or '' }}">
+        <div class="form-row">
+          <div class="form-group">
+            <label>Ciudad</label>
+            <select class="form-control" name="ciudad">
+              {% for c in ciudades_disponibles %}
+                <option value="{{ c.nombre }}" {% if restaurante.ciudad == c.nombre %}selected{% endif %}>
+                  {{ c.nombre }}{% if not c.activa %} (próximamente){% endif %}
+                </option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Dirección</label>
+            <input class="form-control" name="direccion" value="{{ restaurante.direccion or '' }}">
+          </div>
         </div>
         <div class="form-group">
           <label>Horario</label>
@@ -902,7 +921,7 @@ select.form-control { appearance: none; cursor: pointer; }
               </button>
             </div>
             <div class="producto-acciones">
-              <a href="{{ url_for('producto_toggle', prod_id=p.id) }}" title="{{ 'Desactivar' if p.disponible else 'Activar' }}">
+              <a href="#" onclick="postAction('{{ url_for('producto_toggle', prod_id=p.id) }}'); return false;" title="{{ 'Desactivar' if p.disponible else 'Activar' }}">
                 <label class="toggle-switch">
                   <input type="checkbox" {% if p.disponible %}checked{% endif %} disabled>
                   <span class="toggle-slider"></span>
@@ -1190,12 +1209,66 @@ function toggleTipoDescuento() {
 </div>
 
 <script>
+// ── CSRF ──────────────────────────────────────────────────────────────────
+// Esta página no extiende base.html, así que necesita su propia copia de
+// este bloque (si no, todos los <form method="POST"> de acá quedan
+// rechazados con 400 por el CSRFProtect global de Flask-WTF).
+(function () {
+  const token = document.querySelector('meta[name="csrf-token"]')?.content || '';
+
+  const _fetch = window.fetch;
+  window.fetch = function (input, init) {
+    init = init || {};
+    const metodo = (init.method || 'GET').toUpperCase();
+    if (token && ['POST', 'PUT', 'PATCH', 'DELETE'].includes(metodo)) {
+      init.headers = new Headers(init.headers || {});
+      if (!init.headers.has('X-CSRFToken')) init.headers.set('X-CSRFToken', token);
+    }
+    return _fetch(input, init);
+  };
+
+  document.addEventListener('DOMContentLoaded', () => {
+    document.querySelectorAll('form').forEach(f => {
+      if (f.method.toUpperCase() === 'POST' && !f.querySelector('input[name="csrf_token"]')) {
+        const inp = document.createElement('input');
+        inp.type  = 'hidden';
+        inp.name  = 'csrf_token';
+        inp.value = token;
+        f.appendChild(inp);
+      }
+    });
+  });
+
+  window.postAction = function (url) {
+    const f = document.createElement('form');
+    f.method = 'POST';
+    f.action = url;
+    f.style.display = 'none';
+    const inp = document.createElement('input');
+    inp.type  = 'hidden';
+    inp.name  = 'csrf_token';
+    inp.value = token;
+    f.appendChild(inp);
+    document.body.appendChild(f);
+    f.submit();
+  };
+})();
+
 // ── TABS ───────────────────────────────────────────────────────
 function mostrarSeccion(nombre, btn) {
   document.querySelectorAll('.seccion').forEach(s => s.classList.remove('activo'));
   document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('activo'));
   document.getElementById('sec-' + nombre).classList.add('activo');
   if (btn) btn.classList.add('activo');
+}
+
+let _valoracionesVistasMarcadas = false;
+function marcarValoracionesVistas() {
+  if (_valoracionesVistasMarcadas) return;
+  _valoracionesVistasMarcadas = true;
+  const badge = document.getElementById('badge-valoraciones');
+  if (badge) badge.remove();
+  fetch('/mi-local/valoraciones/marcar-vistas', { method: 'POST' }).catch(e => console.log(e));
 }
 
 // Al cargar, activar la sección del hash si existe

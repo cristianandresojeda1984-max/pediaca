@@ -16,6 +16,7 @@ from flask import (Flask, render_template, request, redirect,
                    url_for, session, flash, jsonify, g)
 from werkzeug.security import generate_password_hash, check_password_hash
 from werkzeug.utils import secure_filename
+from flask_wtf.csrf import CSRFProtect, CSRFError
 
 
 # ── PUSH NOTIFICATIONS ────────────────────────────────────────────────────────
@@ -30,36 +31,6 @@ VAPID_EMAIL       = os.environ.get("VAPID_CLAIMS_EMAIL", "admin@pediaca.ar")
 # ── CONFIGURACIÓN ─────────────────────────────────────────────────────────────
 app = Flask(__name__)
 
-# Crear tabla configuraciones si no existe (para producción)
-try:
-    execute("""
-        CREATE TABLE IF NOT EXISTS configuraciones (
-            id SERIAL PRIMARY KEY,
-            clave TEXT UNIQUE,
-            valor TEXT,
-            tipo TEXT DEFAULT 'text',
-            actualizado TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-        )
-    """)
-    defaults = [
-        ('hero_tipo', 'gradiente', 'text'),
-        ('hero_imagen_url', '', 'text'),
-        ('hero_blur', '6', 'number'),
-        ('hero_opacidad_overlay', '75', 'number'),
-        ('hero_color_overlay', '#1E3A5F', 'text'),
-        ('hero_gradiente', '135deg, #1A1A2E, #1E3A5F', 'text'),
-        ('usar_overlay', 'true', 'text'),
-    ]
-    for clave, valor, tipo in defaults:
-        execute("""
-            INSERT INTO configuraciones (clave, valor, tipo)
-            VALUES (?, ?, ?)
-            ON CONFLICT (clave) DO NOTHING
-        """, (clave, valor, tipo))
-    print("✅ Tabla configuraciones verificada/creada")
-except Exception as e:
-    print(f"⚠️ Error al crear tabla configuraciones: {e}")
-
 app.secret_key = os.environ.get("SECRET_KEY", "dev-key-cambiar-en-produccion")
 
 DB_PATH       = os.environ.get("DB_PATH", "pediaca.db")
@@ -67,6 +38,33 @@ DATABASE_URL  = os.environ.get("DATABASE_URL", "")
 USE_POSTGRES  = bool(DATABASE_URL and psycopg2)
 UPLOAD_FOLDER = "static/uploads"
 ALLOWED_EXT   = {"png", "jpg", "jpeg", "webp"}
+
+if app.secret_key == "dev-key-cambiar-en-produccion" and USE_POSTGRES:
+    # Sólo advertir (no frenar el arranque): en local con SQLite es normal
+    # no tener SECRET_KEY seteada, pero en producción con Postgres sí
+    # debería venir de la variable de entorno.
+    print("⚠️  SECRET_KEY no configurada — usando la clave de desarrollo. "
+          "Configurá SECRET_KEY como variable de entorno en producción.")
+
+# ── CSRF ──────────────────────────────────────────────────────────────────────
+# Protege todos los POST/PUT/PATCH/DELETE de la app. base.html se encarga de
+# mandar el token en cada <form> (lo inyecta solo por JS) y en cada fetch()
+# (header X-CSRFToken), así que no hace falta tocar cada template a mano.
+csrf = CSRFProtect(app)
+
+
+@app.errorhandler(CSRFError)
+def _csrf_error(e):
+    # Los endpoints llamados por fetch()/JS esperan JSON, no un redirect.
+    quiere_json = (
+        request.path.startswith("/api/")
+        or request.accept_mimetypes.best == "application/json"
+        or request.headers.get("Content-Type", "").startswith("application/json")
+    )
+    if quiere_json:
+        return jsonify({"error": "Token de seguridad vencido, recargá la página."}), 400
+    flash("La página se venció, probá de nuevo.", "warning")
+    return redirect(request.referrer or url_for("home"))
 
 # ── CLOUDINARY (fotos persistentes gratis) ────────────────────────────────────
 import cloudinary
@@ -112,8 +110,11 @@ def _enviar_push(subscription_info, payload):
     except WebPushException as e:
         if "410" in str(e) or "404" in str(e):
             execute("DELETE FROM push_subscriptions WHERE endpoint=?", (subscription_info.get("endpoint",""),))
+        else:
+            print(f"⚠️ Error de push notification: {e}")
         return False
-    except Exception:
+    except Exception as e:
+        print(f"⚠️ Error inesperado al enviar push: {type(e).__name__}: {e}")
         return False
 
 
@@ -131,6 +132,33 @@ def notificar_cadetes_push(pedido_id, nombre_local, total, direccion_entrega):
         "cuerpo": f"{nombre_local} · ${int(total)} · {direccion_entrega or 'Retiro en local'}",
         "url":    "/mi-panel-cadete",
     }
+    for sub in subs:
+        _enviar_push({
+            "endpoint": sub["endpoint"],
+            "keys": {"p256dh": sub["p256dh"], "auth": sub["auth"]}
+        }, payload)
+
+
+def notificar_cliente_push(pedido_id, estado, nombre_local):
+    """Avisa al cliente (si está logueado y tiene push activado) que su
+    pedido cambió de estado. Los pedidos de clientes anónimos (sin cuenta)
+    no tienen a quién avisarle por acá, siguen dependiendo de WhatsApp."""
+    textos = {
+        "confirmado": ("✔️ Pedido confirmado", f"{nombre_local} confirmó tu pedido y lo está preparando."),
+        "en_camino":  ("🛵 Tu pedido está en camino", f"{nombre_local} · el cadete ya salió a entregarlo."),
+        "entregado":  ("✅ Pedido entregado", f"¡Buen provecho! Gracias por pedir en {nombre_local}."),
+        "cancelado":  ("✕ Pedido cancelado", f"Tu pedido en {nombre_local} fue cancelado."),
+    }
+    if estado not in textos:
+        return
+    pedido = query("SELECT cliente_id FROM pedidos WHERE id = ?", (pedido_id,), one=True)
+    if not pedido or not pedido["cliente_id"]:
+        return
+    subs = query("""
+        SELECT endpoint, p256dh, auth FROM push_subscriptions WHERE usuario_id = ?
+    """, (pedido["cliente_id"],))
+    titulo, cuerpo = textos[estado]
+    payload = {"titulo": titulo, "cuerpo": cuerpo, "url": f"/pedido/{pedido_id}"}
     for sub in subs:
         _enviar_push({
             "endpoint": sub["endpoint"],
@@ -194,6 +222,145 @@ def execute(sql, args=()):
         return cur.lastrowid
 
 
+def _init_configuraciones():
+    """Crea la tabla configuraciones (personalización del hero) si no existe
+    y carga sus valores por defecto. Se ejecuta una vez al arrancar la app,
+    dentro de un app_context real para que get_db()/execute() funcionen."""
+    id_col = "id SERIAL PRIMARY KEY" if USE_POSTGRES else "id INTEGER PRIMARY KEY AUTOINCREMENT"
+    try:
+        with app.app_context():
+            execute(f"""
+                CREATE TABLE IF NOT EXISTS configuraciones (
+                    {id_col},
+                    clave TEXT UNIQUE,
+                    valor TEXT,
+                    tipo TEXT DEFAULT 'text',
+                    actualizado TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            """)
+            defaults = [
+                ('hero_activo', 'false', 'text'),
+                ('hero_imagen_url', '', 'text'),
+            ]
+            for clave, valor, tipo in defaults:
+                execute("""
+                    INSERT INTO configuraciones (clave, valor, tipo)
+                    VALUES (?, ?, ?)
+                    ON CONFLICT (clave) DO NOTHING
+                """, (clave, valor, tipo))
+            print("✅ Tabla configuraciones verificada/creada")
+    except Exception as e:
+        print(f"⚠️ Error al crear tabla configuraciones: {e}")
+
+
+_init_configuraciones()
+
+
+def _init_ciudades():
+    """Crea la tabla ciudades (para poder activar/agregar ciudades desde el
+    panel de admin sin tocar código ni reiniciar el server) y la siembra con
+    Rosario activa más las principales ciudades del país como 'Próximamente'."""
+    id_col = "id SERIAL PRIMARY KEY" if USE_POSTGRES else "id INTEGER PRIMARY KEY AUTOINCREMENT"
+    try:
+        with app.app_context():
+            execute(f"""
+                CREATE TABLE IF NOT EXISTS ciudades (
+                    {id_col},
+                    nombre TEXT UNIQUE NOT NULL,
+                    activa INTEGER NOT NULL DEFAULT 0,
+                    orden  INTEGER NOT NULL DEFAULT 0
+                )
+            """)
+            defaults = [
+                ("Rosario",       1, 1),
+                ("Buenos Aires",  0, 2),
+                ("Córdoba",       0, 3),
+                ("Mendoza",       0, 4),
+                ("La Plata",      0, 5),
+                ("Mar del Plata", 0, 6),
+                ("Tucumán",       0, 7),
+                ("Salta",         0, 8),
+                ("Santa Fe",      0, 9),
+            ]
+            for nombre, activa, orden in defaults:
+                execute("""
+                    INSERT INTO ciudades (nombre, activa, orden)
+                    VALUES (?, ?, ?)
+                    ON CONFLICT (nombre) DO NOTHING
+                """, (nombre, activa, orden))
+            print("✅ Tabla ciudades verificada/creada")
+    except Exception as e:
+        print(f"⚠️ Error al crear tabla ciudades: {e}")
+
+
+_init_ciudades()
+
+
+def _init_favoritos():
+    """Crea la tabla favoritos si no existe (para instalaciones que ya
+    tenían la base creada antes de que se agregara esta función)."""
+    id_col = "id SERIAL PRIMARY KEY" if USE_POSTGRES else "id INTEGER PRIMARY KEY AUTOINCREMENT"
+    ts_now = "NOW()" if USE_POSTGRES else "CURRENT_TIMESTAMP"
+    try:
+        with app.app_context():
+            execute(f"""
+                CREATE TABLE IF NOT EXISTS favoritos (
+                    {id_col},
+                    usuario_id     INTEGER NOT NULL REFERENCES usuarios(id),
+                    restaurante_id INTEGER NOT NULL REFERENCES restaurantes(id),
+                    fecha          TIMESTAMP NOT NULL DEFAULT {ts_now},
+                    UNIQUE(usuario_id, restaurante_id)
+                )
+            """)
+            print("✅ Tabla favoritos verificada/creada")
+    except Exception as e:
+        print(f"⚠️ Error al crear tabla favoritos: {e}")
+
+
+_init_favoritos()
+
+
+def _init_migrar_columnas():
+    """Agrega columnas nuevas a tablas que ya existen, sin depender de que
+    alguien se acuerde de correr migrate_db.py a mano antes de levantar la
+    app (eso ya causó un KeyError en producción/local una vez)."""
+    columnas = [
+        ("restaurantes", "abierto",              "INTEGER NOT NULL DEFAULT 1"),
+        ("restaurantes", "ciudad",               "TEXT NOT NULL DEFAULT 'Rosario'"),
+        ("promociones",  "producto_id",          "INTEGER REFERENCES productos(id)"),
+        ("promociones",  "tipo_descuento",       "TEXT DEFAULT 'porcentaje'"),
+        ("promociones",  "descuento_monto",      "REAL DEFAULT 0"),
+        ("promociones",  "precio_con_descuento", "REAL"),
+        ("cadetes",      "ciudad",               "TEXT NOT NULL DEFAULT 'Rosario'"),
+        ("valoraciones", "vista",                "INTEGER NOT NULL DEFAULT 0"),
+    ]
+    try:
+        with app.app_context():
+            for tabla, columna, tipo in columnas:
+                try:
+                    if USE_POSTGRES:
+                        execute(f"ALTER TABLE {tabla} ADD COLUMN IF NOT EXISTS {columna} {tipo}")
+                    else:
+                        existentes = {row["name"] for row in query(f"PRAGMA table_info({tabla})")}
+                        if columna in existentes:
+                            continue
+                        execute(f"ALTER TABLE {tabla} ADD COLUMN {columna} {tipo}")
+                except Exception as e:
+                    print(f"⚠️ Migración columna {tabla}.{columna}: {e}")
+            print("✅ Columnas verificadas/migradas")
+    except Exception as e:
+        print(f"⚠️ Error en migración de columnas: {e}")
+
+
+_init_migrar_columnas()
+
+
+@app.context_processor
+def inject_now_year():
+    from datetime import datetime
+    return dict(now_year=datetime.now().year)
+
+
 # ── HELPERS ───────────────────────────────────────────────────────────────────
 def allowed_file(filename):
     return "." in filename and filename.rsplit(".", 1)[1].lower() in ALLOWED_EXT
@@ -233,10 +400,60 @@ app.jinja_env.filters["fecha"]  = formato_fecha
 app.jinja_env.filters["fecha_corta"] = lambda v: formato_fecha(v, "%Y-%m-%d")
 
 
+# ── CIUDADES ──────────────────────────────────────────────────────────────────
+# Se administran desde /admin/configuracion (tabla `ciudades`), así se pueden
+# activar ciudades nuevas o agregar otras sin tocar código ni reiniciar el server.
+CIUDAD_DEFAULT = "Rosario"
+
+
+def get_ciudades():
+    return query("SELECT id, nombre, activa FROM ciudades ORDER BY orden, nombre")
+
+
+def get_ciudades_validas():
+    return {c["nombre"] for c in get_ciudades()}
+
+
+def get_ciudad_actual():
+    ciudad = request.cookies.get("ciudad", CIUDAD_DEFAULT)
+    return ciudad if ciudad in get_ciudades_validas() else CIUDAD_DEFAULT
+
+
+@app.context_processor
+def inject_ciudad():
+    return dict(ciudades_disponibles=get_ciudades(), ciudad_actual=get_ciudad_actual())
+
+
+@app.route("/ciudad/<ciudad>")
+def cambiar_ciudad(ciudad):
+    resp = redirect(request.referrer or url_for("home"))
+    if ciudad in get_ciudades_validas():
+        resp.set_cookie("ciudad", ciudad, max_age=60 * 60 * 24 * 365)
+    return resp
+
+
+def _precio_con_promo(precio, promo):
+    """Calcula el precio final de un producto con una promo aplicada."""
+    if not promo:
+        return None
+    if promo.get("precio_con_descuento"):
+        final = promo["precio_con_descuento"]
+    elif promo.get("tipo_descuento") == "porcentaje" and promo.get("descuento_pct"):
+        final = precio * (1 - promo["descuento_pct"] / 100)
+    elif promo.get("tipo_descuento") == "monto" and promo.get("descuento_monto"):
+        final = precio - promo["descuento_monto"]
+    else:
+        return None
+    final = max(0, round(final))
+    return final if final < precio else None
+
+
 # ── RUTAS PÚBLICAS ────────────────────────────────────────────────────────────
 
 @app.route("/")
 def home():
+    ciudad = get_ciudad_actual()
+
     restaurantes = query("""
         SELECT r.*, u.telefono,
                COALESCE(AVG(v.estrellas), 0) AS rating,
@@ -245,28 +462,36 @@ def home():
         JOIN usuarios u ON u.id = r.usuario_id
         LEFT JOIN valoraciones v ON v.restaurante_id = r.id
         LEFT JOIN pedidos p ON p.restaurante_id = r.id AND p.estado = 'entregado'
-        WHERE r.estado = 'aprobado'
+        WHERE r.estado = 'aprobado' AND r.ciudad = ?
         GROUP BY r.id, u.telefono
         ORDER BY r.abierto DESC, r.nombre_local
-    """)
+    """, (ciudad,))
     auspiciantes = query("""
         SELECT * FROM auspiciantes
         WHERE activo = 1
           AND (fecha_inicio IS NULL OR fecha_inicio <= CURRENT_DATE)
           AND (fecha_fin   IS NULL OR fecha_fin   >= CURRENT_DATE)
     """)
-    
+
     promociones_destacadas = query("""
         SELECT p.*, r.nombre_local, r.id as restaurante_id
         FROM promociones p
         JOIN restaurantes r ON r.id = p.restaurante_id
         WHERE p.activa = 1
           AND r.estado = 'aprobado'
+          AND r.ciudad = ?
         ORDER BY p.fecha_creacion DESC
         LIMIT 10
-    """)
+    """, (ciudad,))
 
-    return render_template("home.html", restaurantes=restaurantes, auspiciantes=auspiciantes, promociones_destacadas=promociones_destacadas)
+    favoritos_ids = set()
+    if session.get("rol") == "cliente":
+        favs = query("SELECT restaurante_id FROM favoritos WHERE usuario_id=?", (session["user_id"],))
+        favoritos_ids = {f["restaurante_id"] for f in favs}
+
+    return render_template("home.html", restaurantes=restaurantes, auspiciantes=auspiciantes,
+                           promociones_destacadas=promociones_destacadas,
+                           favoritos_ids=favoritos_ids)
 
 
 @app.route("/local/<int:restaurante_id>")
@@ -283,12 +508,9 @@ def ver_local(restaurante_id):
         return redirect(url_for("home"))
 
     categorias = query("""
-        SELECT c.*, GROUP_CONCAT(p.id, ',') AS producto_ids
-        FROM categorias_menu c
-        LEFT JOIN productos p ON p.categoria_id = c.id AND p.disponible = 1
-        WHERE c.restaurante_id = ?
-        GROUP BY c.id
-        ORDER BY c.orden
+        SELECT * FROM categorias_menu
+        WHERE restaurante_id = ?
+        ORDER BY orden
     """, (restaurante_id,))
 
     productos = query("""
@@ -311,16 +533,41 @@ def ver_local(restaurante_id):
     promociones = query("""
         SELECT * FROM promociones
         WHERE restaurante_id = ? AND activa = 1
+          AND (fecha_inicio IS NULL OR fecha_inicio <= CURRENT_DATE)
+          AND (fecha_fin   IS NULL OR fecha_fin   >= CURRENT_DATE)
         ORDER BY fecha_creacion DESC
     """, (restaurante_id,))
 
+    # Promos ligadas a un producto puntual → se descuentan solas en el
+    # precio de ese producto. Promos sin producto (generales del local) →
+    # se aplican como descuento sobre el total del pedido en el carrito.
+    promo_por_producto = {}
+    promo_orden = None
+    for promo in promociones:
+        if promo.get("producto_id"):
+            promo_por_producto[promo["producto_id"]] = promo
+        elif promo_orden is None:
+            promo_orden = promo
+
+    for p in productos:
+        promo = promo_por_producto.get(p["id"])
+        p["precio_promo"] = _precio_con_promo(p["precio"], promo) if promo else None
+
+    es_favorito = False
+    if session.get("rol") == "cliente":
+        fav = query("SELECT id FROM favoritos WHERE usuario_id=? AND restaurante_id=?",
+                    (session["user_id"], restaurante_id), one=True)
+        es_favorito = bool(fav)
+
     return render_template("ver_local.html",
+                           promo_orden=promo_orden,
                            restaurante=restaurante,
                            categorias=categorias,
                            productos=productos,
                            valoraciones=valoraciones_pub,
                            rating_avg=rating_avg,
-                           promociones=promociones)
+                           promociones=promociones,
+                           es_favorito=es_favorito)
 
 # ── REGISTRO ──────────────────────────────────────────────────────────────────
 
@@ -397,6 +644,9 @@ def registro():
             whatsapp     = request.form.get("whatsapp", "").strip()
             categoria    = request.form.get("categoria", "").strip()
             direccion    = request.form.get("direccion", "").strip()
+            ciudad       = request.form.get("ciudad", "").strip()
+            if ciudad not in get_ciudades_validas():
+                ciudad = CIUDAD_DEFAULT
 
             if not nombre_local or not whatsapp:
                 flash("El nombre del local y el WhatsApp son obligatorios.", "danger")
@@ -404,18 +654,21 @@ def registro():
                 return redirect(url_for("registro"))
 
             execute("""
-                INSERT INTO restaurantes (usuario_id, nombre_local, whatsapp, categoria, direccion)
-                VALUES (?, ?, ?, ?, ?)
-            """, (user_id, nombre_local, whatsapp, categoria, direccion))
+                INSERT INTO restaurantes (usuario_id, nombre_local, whatsapp, categoria, direccion, ciudad)
+                VALUES (?, ?, ?, ?, ?, ?)
+            """, (user_id, nombre_local, whatsapp, categoria, direccion, ciudad))
             flash("Registro enviado. Te avisamos cuando tu local esté aprobado.", "info")
 
         elif rol == "cadete":
-            vehiculo = request.form.get("vehiculo", "moto")
-            zona     = request.form.get("zona", "").strip()
+            vehiculo    = request.form.get("vehiculo", "moto")
+            zona        = request.form.get("zona", "").strip()
+            ciudad_cad  = request.form.get("ciudad", "").strip()
+            if ciudad_cad not in get_ciudades_validas():
+                ciudad_cad = CIUDAD_DEFAULT
             execute("""
-                INSERT INTO cadetes (usuario_id, vehiculo, zona)
-                VALUES (?, ?, ?)
-            """, (user_id, vehiculo, zona))
+                INSERT INTO cadetes (usuario_id, vehiculo, zona, ciudad)
+                VALUES (?, ?, ?, ?)
+            """, (user_id, vehiculo, zona, ciudad_cad))
             flash("Registro enviado. Te avisamos cuando seas aprobado.", "info")
 
         return redirect(url_for("login"))
@@ -490,6 +743,15 @@ def get_restaurante_any():
     )
 
 
+@app.route("/sw.js")
+def service_worker():
+    """Sirve el service worker en la raíz (no en /static/) para que su
+    scope sea todo el sitio y la PWA sea instalable en cualquier página."""
+    resp = app.send_static_file("sw.js")
+    resp.headers["Cache-Control"] = "no-cache"
+    return resp
+
+
 @app.route("/api/vapid-public-key")
 def vapid_public_key():
     return jsonify({"publicKey": VAPID_PUBLIC_KEY})
@@ -518,15 +780,9 @@ def push_subscribe():
 @login_required
 def push_unsubscribe():
     data = request.get_json()
-    execute("DELETE FROM push_subscriptions WHERE endpoint=?", (data.get("endpoint",""),))
+    execute("DELETE FROM push_subscriptions WHERE endpoint=? AND usuario_id=?",
+            (data.get("endpoint", ""), session["user_id"]))
     return jsonify({"ok": True})
-
-
-@app.route("/static/sw.js")
-def service_worker():
-    from flask import send_from_directory
-    return send_from_directory("static", "sw.js",
-                               mimetype="application/javascript")
 
 
 def guardar_imagen(archivo, subcarpeta=""):
@@ -615,6 +871,7 @@ def restaurante_panel():
         WHERE v.restaurante_id = ?
         ORDER BY v.fecha DESC
     """, (restaurante["id"],))
+    valoraciones_no_vistas = sum(1 for v in valoraciones if not v.get("vista"))
 
     promociones = query("""
         SELECT * FROM promociones
@@ -628,7 +885,18 @@ def restaurante_panel():
                            productos=productos,
                            sabores_map=sabores_map,
                            valoraciones=valoraciones,
+                           valoraciones_no_vistas=valoraciones_no_vistas,
                            promociones=promociones)
+
+
+@app.route("/mi-local/valoraciones/marcar-vistas", methods=["POST"])
+@login_required
+@rol_required("restaurante")
+def marcar_valoraciones_vistas():
+    restaurante = get_restaurante_any()
+    if restaurante:
+        execute("UPDATE valoraciones SET vista=1 WHERE restaurante_id=?", (restaurante["id"],))
+    return jsonify({"ok": True})
 
 
 @app.route("/mi-local/editar", methods=["POST"])
@@ -651,15 +919,18 @@ def restaurante_editar():
     hace_envio      = 1 if request.form.get("hace_envio") else 0
     costo_envio     = float(request.form.get("costo_envio", 0) or 0)
     tiempo_estimado = request.form.get("tiempo_estimado", "").strip() or None
+    ciudad          = request.form.get("ciudad", "").strip()
+    if ciudad not in get_ciudades_validas():
+        ciudad = restaurante["ciudad"] or CIUDAD_DEFAULT
 
     execute("""
         UPDATE restaurantes SET
             nombre_local=?, descripcion=?, categoria=?, direccion=?,
-            whatsapp=?, horario=?, hace_envio=?, costo_envio=?, tiempo_estimado=?
+            whatsapp=?, horario=?, hace_envio=?, costo_envio=?, tiempo_estimado=?, ciudad=?
         WHERE id=?
     """, (nombre_local, descripcion, categoria, direccion,
           whatsapp, horario, hace_envio, costo_envio,
-          tiempo_estimado, restaurante["id"]))
+          tiempo_estimado, ciudad, restaurante["id"]))
 
     flash("Datos del local actualizados.", "success")
     return redirect(url_for("restaurante_panel"))
@@ -885,7 +1156,7 @@ def get_sabores(prod_id):
     return jsonify({"sabores": [dict(s) for s in sabores]})
 
 
-@app.route("/mi-local/producto/<int:prod_id>/toggle")
+@app.route("/mi-local/producto/<int:prod_id>/toggle", methods=["POST"])
 @login_required
 @rol_required("restaurante")
 def producto_toggle(prod_id):
@@ -893,6 +1164,8 @@ def producto_toggle(prod_id):
         "SELECT id FROM restaurantes WHERE usuario_id = ?",
         (session["user_id"],), one=True
     )
+    if not restaurante:
+        return redirect(url_for("restaurante_panel"))
     execute("""
         UPDATE productos SET disponible = 1 - disponible
         WHERE id = ? AND restaurante_id = ?
@@ -908,6 +1181,8 @@ def producto_eliminar(prod_id):
         "SELECT id FROM restaurantes WHERE usuario_id = ?",
         (session["user_id"],), one=True
     )
+    if not restaurante:
+        return redirect(url_for("restaurante_panel"))
     execute("DELETE FROM productos WHERE id = ? AND restaurante_id = ?",
             (prod_id, restaurante["id"]))
     flash("Producto eliminado.", "success")
@@ -951,6 +1226,8 @@ def cadete_panel():
         (session["user_id"],), one=True
     )
     pedidos_disponibles = []
+    entregas = []
+    entregas_stats = {"hoy": 0, "semana": 0, "total": 0}
     if cadete and cadete["estado"] == "aprobado":
         pedidos_disponibles = query("""
             SELECT p.*, r.nombre_local, r.whatsapp
@@ -959,11 +1236,35 @@ def cadete_panel():
             WHERE p.tipo_entrega = 'delivery'
               AND p.estado = 'confirmado'
               AND p.cadete_id IS NULL
+              AND r.ciudad = ?
             ORDER BY p.fecha_pedido DESC
-        """)
+        """, (cadete.get("ciudad") or CIUDAD_DEFAULT,))
+
+        entregas = query("""
+            SELECT p.id, p.total, p.fecha_pedido, p.direccion_entrega, r.nombre_local
+            FROM pedidos p
+            JOIN restaurantes r ON r.id = p.restaurante_id
+            WHERE p.cadete_id = ? AND p.estado = 'entregado'
+            ORDER BY p.fecha_pedido DESC LIMIT 50
+        """, (cadete["id"],))
+
+        from datetime import datetime, timedelta
+        hace_7_dias = (datetime.now() - timedelta(days=7)).strftime('%Y-%m-%d %H:%M:%S')
+        entregas_stats["total"] = query(
+            "SELECT COUNT(*) as n FROM pedidos WHERE cadete_id=? AND estado='entregado'",
+            (cadete["id"],), one=True)["n"]
+        entregas_stats["semana"] = query(
+            "SELECT COUNT(*) as n FROM pedidos WHERE cadete_id=? AND estado='entregado' AND fecha_pedido >= ?",
+            (cadete["id"], hace_7_dias), one=True)["n"]
+        entregas_stats["hoy"] = query(
+            "SELECT COUNT(*) as n FROM pedidos WHERE cadete_id=? AND estado='entregado' AND date(fecha_pedido)=CURRENT_DATE",
+            (cadete["id"],), one=True)["n"]
+
     return render_template("cadete_panel.html",
                            cadete=cadete,
-                           pedidos=pedidos_disponibles)
+                           pedidos=pedidos_disponibles,
+                           entregas=entregas,
+                           entregas_stats=entregas_stats)
 
 
 @app.route("/mi-panel-cadete/disponibilidad", methods=["POST"])
@@ -984,8 +1285,12 @@ def cadete_toggle_disponibilidad():
 def cadete_editar_perfil():
     vehiculo = request.form.get("vehiculo", "moto")
     zona     = request.form.get("zona", "").strip()
-    execute("UPDATE cadetes SET vehiculo=?, zona=? WHERE usuario_id=?",
-            (vehiculo, zona, session["user_id"]))
+    ciudad   = request.form.get("ciudad", "").strip()
+    if ciudad not in get_ciudades_validas():
+        cadete_actual = query("SELECT ciudad FROM cadetes WHERE usuario_id=?", (session["user_id"],), one=True)
+        ciudad = (cadete_actual["ciudad"] if cadete_actual else None) or CIUDAD_DEFAULT
+    execute("UPDATE cadetes SET vehiculo=?, zona=?, ciudad=? WHERE usuario_id=?",
+            (vehiculo, zona, ciudad, session["user_id"]))
     flash("Perfil actualizado.", "success")
     return redirect(url_for("cadete_panel"))
 
@@ -997,7 +1302,7 @@ def cadete_editar_perfil():
 @rol_required("cliente")
 def cliente_panel():
     pedidos = query("""
-        SELECT p.*, r.nombre_local, r.restaurante_id
+        SELECT p.*, r.nombre_local
         FROM pedidos p
         JOIN restaurantes r ON r.id = p.restaurante_id
         WHERE p.cliente_id = ?
@@ -1018,11 +1323,39 @@ def cliente_panel():
     cliente = query("SELECT * FROM clientes WHERE usuario_id = ?",
                     (session["user_id"],), one=True)
 
+    favoritos = query("""
+        SELECT r.* FROM favoritos f
+        JOIN restaurantes r ON r.id = f.restaurante_id
+        WHERE f.usuario_id = ? AND r.estado = 'aprobado'
+        ORDER BY f.fecha DESC
+    """, (session["user_id"],))
+
     return render_template("cliente_panel.html",
                            pedidos=pedidos,
                            locales_frecuentes=locales_frecuentes,
+                           favoritos=favoritos,
                            usuario=usuario,
                            cliente=cliente)
+
+
+@app.route("/favoritos/<int:restaurante_id>/toggle", methods=["POST"])
+@login_required
+@rol_required("cliente")
+def favorito_toggle(restaurante_id):
+    existe = query("SELECT id FROM favoritos WHERE usuario_id=? AND restaurante_id=?",
+                    (session["user_id"], restaurante_id), one=True)
+    if existe:
+        execute("DELETE FROM favoritos WHERE id=?", (existe["id"],))
+        return jsonify({"ok": True, "favorito": False})
+
+    r = query("SELECT id FROM restaurantes WHERE id=? AND estado='aprobado'",
+               (restaurante_id,), one=True)
+    if not r:
+        return jsonify({"error": "Local no encontrado"}), 404
+
+    execute("INSERT INTO favoritos (usuario_id, restaurante_id) VALUES (?, ?)",
+            (session["user_id"], restaurante_id))
+    return jsonify({"ok": True, "favorito": True})
 
 
 @app.route("/mi-cuenta/editar", methods=["POST"])
@@ -1137,6 +1470,10 @@ def admin_panel():
 @login_required
 @rol_required("admin")
 def admin_metricas():
+    from datetime import datetime, timedelta
+    hace_7_dias  = (datetime.now() - timedelta(days=7)).strftime('%Y-%m-%d %H:%M:%S')
+    hace_30_dias = (datetime.now() - timedelta(days=30)).strftime('%Y-%m-%d %H:%M:%S')
+
     stats = {
         "usuarios_total":      query("SELECT COUNT(*) as n FROM usuarios", one=True)["n"],
         "clientes":            query("SELECT COUNT(*) as n FROM usuarios WHERE rol='cliente'", one=True)["n"],
@@ -1144,14 +1481,14 @@ def admin_metricas():
         "cadetes_activos":     query("SELECT COUNT(*) as n FROM cadetes WHERE estado='aprobado'", one=True)["n"],
         "pedidos_total":       query("SELECT COUNT(*) as n FROM pedidos", one=True)["n"],
         "pedidos_hoy":         query("SELECT COUNT(*) as n FROM pedidos WHERE date(fecha_pedido)=CURRENT_DATE", one=True)["n"],
-        "pedidos_semana":      query("SELECT COUNT(*) as n FROM pedidos WHERE fecha_pedido >= datetime('now','-7 days','localtime')", one=True)["n"],
+        "pedidos_semana":      query("SELECT COUNT(*) as n FROM pedidos WHERE fecha_pedido >= ?", (hace_7_dias,), one=True)["n"],
         "facturado_total":     query("SELECT COALESCE(SUM(total),0) as n FROM pedidos WHERE estado != 'cancelado'", one=True)["n"],
     }
     pedidos_por_dia = query("""
         SELECT date(fecha_pedido) as dia, COUNT(*) as total
-        FROM pedidos WHERE fecha_pedido >= datetime('now','-30 days','localtime')
+        FROM pedidos WHERE fecha_pedido >= ?
         GROUP BY dia ORDER BY dia
-    """)
+    """, (hace_30_dias,))
     top_restaurantes = query("""
         SELECT r.nombre_local, COUNT(p.id) as pedidos,
                COALESCE(AVG(v.estrellas),0) as rating
@@ -1167,7 +1504,7 @@ def admin_metricas():
                            top_restaurantes=top_restaurantes)
 
 
-@app.route("/admin/restaurante/<int:restaurante_id>/estado/<accion>")
+@app.route("/admin/restaurante/<int:restaurante_id>/estado/<accion>", methods=["POST"])
 @login_required
 @rol_required("admin")
 def admin_restaurante_estado(restaurante_id, accion):
@@ -1181,7 +1518,7 @@ def admin_restaurante_estado(restaurante_id, accion):
     return redirect(url_for("admin_panel"))
 
 
-@app.route("/admin/cadete/<int:cadete_id>/estado/<accion>")
+@app.route("/admin/cadete/<int:cadete_id>/estado/<accion>", methods=["POST"])
 @login_required
 @rol_required("admin")
 def admin_cadete_estado(cadete_id, accion):
@@ -1232,7 +1569,28 @@ def whatsapp_link():
     if not restaurante or not items:
         return jsonify({"error": "Datos inválidos"}), 400
 
-    total = sum(i["cantidad"] * i["precio"] for i in items)
+    subtotal = sum(i["cantidad"] * i["precio"] for i in items)
+
+    # El descuento por promo general del local se recalcula acá (no se
+    # confía en lo que mande el navegador) para que no se pueda inflar
+    # el descuento manipulando la petición.
+    promo_orden = query("""
+        SELECT * FROM promociones
+        WHERE restaurante_id = ? AND activa = 1 AND producto_id IS NULL
+          AND (fecha_inicio IS NULL OR fecha_inicio <= CURRENT_DATE)
+          AND (fecha_fin   IS NULL OR fecha_fin   >= CURRENT_DATE)
+        ORDER BY fecha_creacion DESC LIMIT 1
+    """, (restaurante_id,), one=True)
+
+    descuento = 0
+    if promo_orden:
+        if promo_orden["tipo_descuento"] == "porcentaje" and promo_orden["descuento_pct"]:
+            descuento = round(subtotal * promo_orden["descuento_pct"] / 100)
+        elif promo_orden["tipo_descuento"] == "monto" and promo_orden["descuento_monto"]:
+            descuento = min(subtotal, promo_orden["descuento_monto"])
+
+    total = subtotal - descuento
+
     lineas = [f"🛵 *Nuevo pedido — {restaurante['nombre_local']}*\n"]
     lineas.append(f"👤 *Cliente:* {nombre_cliente}")
     if tel_cliente:
@@ -1241,6 +1599,9 @@ def whatsapp_link():
     for item in items:
         sub = item["cantidad"] * item["precio"]
         lineas.append(f"• {item['cantidad']}x {item['nombre']} — ${sub:,.0f}".replace(",","."))
+    if descuento > 0:
+        lineas.append(f"\n*Subtotal: ${subtotal:,.0f}*".replace(",","."))
+        lineas.append(f"🎉 *{promo_orden['titulo']}: -${descuento:,.0f}*".replace(",","."))
     lineas.append(f"\n*Total: ${total:,.0f}*".replace(",","."))
     lineas.append(f"*Entrega:* {'🛵 Delivery' if tipo_entrega == 'delivery' else '🏪 Retiro en local'}")
     if tipo_entrega == "delivery":
@@ -1276,13 +1637,46 @@ def whatsapp_link():
     return jsonify({"link": link, "pedido_id": pedido_id})
 
 
+# ── SEGUIMIENTO DE PEDIDO ─────────────────────────────────────────────────────
+
+@app.route("/pedido/<int:pedido_id>")
+def seguimiento_pedido(pedido_id):
+    # Página pública (hay pedidos de clientes anónimos) — por eso no expone
+    # dirección de entrega ni teléfonos, sólo lo necesario para trackear.
+    pedido = query("""
+        SELECT p.id, p.estado, p.tipo_entrega, p.total, p.fecha_pedido,
+               r.nombre_local, r.logo_url,
+               u.nombre AS cadete_nombre, c.vehiculo AS cadete_vehiculo
+        FROM pedidos p
+        JOIN restaurantes r ON r.id = p.restaurante_id
+        LEFT JOIN cadetes c ON c.id = p.cadete_id
+        LEFT JOIN usuarios u ON u.id = c.usuario_id
+        WHERE p.id = ?
+    """, (pedido_id,), one=True)
+    if not pedido:
+        flash("Pedido no encontrado.", "danger")
+        return redirect(url_for("home"))
+
+    items = query("""
+        SELECT nombre_producto, cantidad, subtotal
+        FROM items_pedido WHERE pedido_id = ?
+        ORDER BY id
+    """, (pedido_id,))
+
+    return render_template("seguimiento_pedido.html", pedido=pedido, items=items)
+
+
 # ── API: STATUS DEL PEDIDO ───────────────────────────────────────────────────
 
 @app.route("/api/pedido/<int:pedido_id>/status")
 def pedido_status(pedido_id):
+    # Endpoint público (hay pedidos de clientes anónimos, sin login) —
+    # por eso no exige @login_required. Para no filtrar datos personales
+    # del cadete a cualquiera que adivine un id, nunca se devuelve su
+    # teléfono acá, sólo nombre/vehículo.
     pedido = query("""
         SELECT p.estado, p.cadete_id,
-               u.nombre AS cadete_nombre, u.telefono AS cadete_tel,
+               u.nombre AS cadete_nombre,
                c.vehiculo
         FROM pedidos p
         LEFT JOIN cadetes c ON c.id = p.cadete_id
@@ -1292,11 +1686,62 @@ def pedido_status(pedido_id):
     if not pedido:
         return jsonify({"error": "No encontrado"}), 404
     return jsonify({
-        "estado":         pedido["estado"],
-        "cadete_nombre":  pedido["cadete_nombre"],
-        "cadete_tel":     pedido["cadete_tel"],
-        "cadete_vehiculo":pedido["vehiculo"],
+        "estado":          pedido["estado"],
+        "cadete_nombre":   pedido["cadete_nombre"],
+        "cadete_vehiculo": pedido["vehiculo"],
     })
+
+
+# ── RESTAURANTE: MÉTRICAS PROPIAS ─────────────────────────────────────────────
+
+@app.route("/mi-local/metricas")
+@login_required
+@rol_required("restaurante")
+def restaurante_metricas():
+    restaurante = get_restaurante_aprobado()
+    if not restaurante:
+        flash("Tu local debe estar aprobado para ver métricas.", "warning")
+        return redirect(url_for("restaurante_panel"))
+
+    from datetime import datetime, timedelta
+    hace_30_dias = (datetime.now() - timedelta(days=30)).strftime('%Y-%m-%d %H:%M:%S')
+    rid = restaurante["id"]
+
+    stats = {
+        "pedidos_total": query(
+            "SELECT COUNT(*) as n FROM pedidos WHERE restaurante_id=?", (rid,), one=True)["n"],
+        "pedidos_hoy": query(
+            "SELECT COUNT(*) as n FROM pedidos WHERE restaurante_id=? AND date(fecha_pedido)=CURRENT_DATE",
+            (rid,), one=True)["n"],
+        "facturado_mes": query("""
+            SELECT COALESCE(SUM(total),0) as n FROM pedidos
+            WHERE restaurante_id=? AND estado != 'cancelado' AND fecha_pedido >= ?
+        """, (rid, hace_30_dias), one=True)["n"],
+        "rating_promedio": query(
+            "SELECT COALESCE(AVG(estrellas),0) as n FROM valoraciones WHERE restaurante_id=?",
+            (rid,), one=True)["n"],
+    }
+
+    productos_top = query("""
+        SELECT ip.nombre_producto, SUM(ip.cantidad) as cantidad_total, SUM(ip.subtotal) as ingresos
+        FROM items_pedido ip
+        JOIN pedidos p ON p.id = ip.pedido_id
+        WHERE p.restaurante_id = ? AND p.estado != 'cancelado'
+        GROUP BY ip.nombre_producto
+        ORDER BY cantidad_total DESC LIMIT 8
+    """, (rid,))
+
+    pedidos_por_dia = query("""
+        SELECT date(fecha_pedido) as dia, COUNT(*) as total
+        FROM pedidos WHERE restaurante_id = ? AND fecha_pedido >= ?
+        GROUP BY dia ORDER BY dia
+    """, (rid, hace_30_dias))
+
+    return render_template("restaurante_metricas.html",
+                           restaurante=restaurante,
+                           stats=stats,
+                           productos_top=productos_top,
+                           pedidos_por_dia=pedidos_por_dia)
 
 
 # ── RESTAURANTE: HISTORIAL DE PEDIDOS ─────────────────────────────────────────
@@ -1341,7 +1786,7 @@ def restaurante_pedidos():
                            items_por_pedido=items_por_pedido)
 
 
-@app.route("/mi-local/pedido/<int:pedido_id>/estado/<nuevo_estado>")
+@app.route("/mi-local/pedido/<int:pedido_id>/estado/<nuevo_estado>", methods=["POST"])
 @login_required
 @rol_required("restaurante")
 def restaurante_cambiar_estado(pedido_id, nuevo_estado):
@@ -1355,12 +1800,13 @@ def restaurante_cambiar_estado(pedido_id, nuevo_estado):
         return redirect(url_for("restaurante_pedidos"))
 
     execute("""
-        UPDATE pedidos SET estado=?, fecha_actualizado=NOW()
+        UPDATE pedidos SET estado=?, fecha_actualizado=CURRENT_TIMESTAMP
         WHERE id=? AND restaurante_id=?
     """, (nuevo_estado, pedido_id, restaurante["id"]))
 
     if nuevo_estado == "confirmado":
-        pedido = query("SELECT * FROM pedidos WHERE id=?", (pedido_id,), one=True)
+        pedido = query("SELECT * FROM pedidos WHERE id=? AND restaurante_id=?",
+                        (pedido_id, restaurante["id"]), one=True)
         if pedido and pedido["tipo_entrega"] == "delivery":
             notificar_cadetes_push(
                 pedido_id,
@@ -1368,6 +1814,8 @@ def restaurante_cambiar_estado(pedido_id, nuevo_estado):
                 pedido["total"],
                 pedido["direccion_entrega"]
             )
+
+    notificar_cliente_push(pedido_id, nuevo_estado, restaurante["nombre_local"])
 
     flash(f"Pedido #{pedido_id} marcado como {nuevo_estado}.", "success")
     return redirect(url_for("restaurante_pedidos"))
@@ -1442,9 +1890,12 @@ def marcar_en_camino(pedido_id):
         return jsonify({"error": "Pedido no encontrado"}), 404
 
     execute("""
-        UPDATE pedidos SET estado='en_camino', fecha_actualizado=NOW()
+        UPDATE pedidos SET estado='en_camino', fecha_actualizado=CURRENT_TIMESTAMP
         WHERE id=?
     """, (pedido_id,))
+
+    local = query("SELECT nombre_local FROM restaurantes WHERE id=?", (pedido["restaurante_id"],), one=True)
+    notificar_cliente_push(pedido_id, "en_camino", local["nombre_local"] if local else "tu local")
 
     return jsonify({"ok": True})
 
@@ -1471,13 +1922,16 @@ def cadete_aceptar_pedido(pedido_id):
 
     execute("""
         UPDATE pedidos SET cadete_id=?, estado='en_camino',
-               fecha_actualizado=NOW()
+               fecha_actualizado=CURRENT_TIMESTAMP
         WHERE id=? AND cadete_id IS NULL
     """, (cadete["id"], pedido_id))
 
     check = query("SELECT cadete_id FROM pedidos WHERE id=?", (pedido_id,), one=True)
     if check["cadete_id"] != cadete["id"]:
         return jsonify({"ok": False, "msg": "El pedido ya fue tomado por otro cadete"}), 409
+
+    local = query("SELECT nombre_local FROM restaurantes WHERE id=?", (pedido["restaurante_id"],), one=True)
+    notificar_cliente_push(pedido_id, "en_camino", local["nombre_local"] if local else "tu local")
 
     return jsonify({"ok": True, "msg": "¡Pedido aceptado! Coordiná con el local."})
 
@@ -1486,6 +1940,8 @@ def cadete_aceptar_pedido(pedido_id):
 @login_required
 @rol_required("cadete")
 def pedidos_nuevos_cadete():
+    cadete = query("SELECT ciudad FROM cadetes WHERE usuario_id = ?", (session["user_id"],), one=True)
+    ciudad_cadete = (cadete["ciudad"] if cadete else None) or CIUDAD_DEFAULT
     pedidos = query("""
         SELECT p.id, p.total, p.direccion_entrega, p.fecha_pedido,
                r.nombre_local, r.direccion AS local_direccion, r.whatsapp
@@ -1494,8 +1950,9 @@ def pedidos_nuevos_cadete():
         WHERE p.tipo_entrega='delivery'
           AND p.estado='confirmado'
           AND p.cadete_id IS NULL
+          AND r.ciudad = ?
         ORDER BY p.fecha_pedido DESC
-    """)
+    """, (ciudad_cadete,))
     return jsonify({"pedidos": [dict(p) for p in pedidos]})
 
 
@@ -1514,7 +1971,13 @@ def descargar_flyer():
 
     logo_path = None
     if restaurante["logo_url"]:
-        logo_path = os.path.join("static", restaurante["logo_url"])
+        # logo_url puede ser una URL de Cloudinary (http...) o una ruta
+        # relativa dentro de static/ (almacenamiento local) — flyer.py
+        # sabe manejar ambos casos.
+        if restaurante["logo_url"].startswith("http"):
+            logo_path = restaurante["logo_url"]
+        else:
+            logo_path = os.path.join("static", restaurante["logo_url"])
 
     png_bytes = generar_flyer(
         nombre_local   = restaurante["nombre_local"],
@@ -1601,22 +2064,26 @@ def promocion_nueva():
     titulo = request.form.get("titulo", "").strip()
     descripcion = request.form.get("descripcion", "").strip()
     tipo_descuento = request.form.get("tipo_descuento", "porcentaje")
-    descuento_pct = int(request.form.get("descuento_pct", 0) or 0)
-    descuento_monto = int(request.form.get("descuento_monto", 0) or 0)
     fecha_inicio = request.form.get("fecha_inicio") or None
     fecha_fin = request.form.get("fecha_fin") or None
     producto_id = request.form.get("producto_id") or None
-    precio_con_descuento = request.form.get("precio_con_descuento") or None
     archivo = request.files.get("imagen")
     imagen_url = guardar_imagen(archivo, "promociones") if archivo and archivo.filename else None
-    
+
     if not titulo:
         flash("El título es obligatorio.", "danger")
         return redirect(url_for("restaurante_panel") + "#sec-promociones")
-    
-    if precio_con_descuento:
-        precio_con_descuento = int(precio_con_descuento)
-    
+
+    try:
+        descuento_pct = int(request.form.get("descuento_pct", 0) or 0)
+        descuento_monto = int(request.form.get("descuento_monto", 0) or 0)
+        precio_con_descuento = request.form.get("precio_con_descuento") or None
+        if precio_con_descuento:
+            precio_con_descuento = int(precio_con_descuento)
+    except ValueError:
+        flash("Los valores de descuento/precio tienen que ser números.", "danger")
+        return redirect(url_for("restaurante_panel") + "#sec-promociones")
+
     execute("""
         INSERT INTO promociones
             (restaurante_id, titulo, descripcion, imagen_url, tipo_descuento,
@@ -1626,22 +2093,11 @@ def promocion_nueva():
     """, (restaurante["id"], titulo, descripcion, imagen_url, tipo_descuento,
           descuento_pct, descuento_monto, fecha_inicio, fecha_fin,
           producto_id, precio_con_descuento))
-    
-    flash(f"Promoción '{titulo}' creada.", "success")
-    return redirect(url_for("restaurante_panel") + "#sec-promociones")
-    
-    execute("""
-        INSERT INTO promociones
-            (restaurante_id, titulo, descripcion, imagen_url, tipo_descuento,
-             descuento_pct, descuento_monto, fecha_inicio, fecha_fin, activa)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 1)
-    """, (restaurante["id"], titulo, descripcion, imagen_url, tipo_descuento,
-          descuento_pct, descuento_monto, fecha_inicio, fecha_fin))
-    
+
     flash(f"Promoción '{titulo}' creada.", "success")
     return redirect(url_for("restaurante_panel") + "#sec-promociones")
 
-@app.route("/mi-local/promocion/<int:promo_id>/toggle")
+@app.route("/mi-local/promocion/<int:promo_id>/toggle", methods=["POST"])
 @login_required
 @rol_required("restaurante")
 def promocion_toggle(promo_id):
@@ -1677,12 +2133,17 @@ def promocion_editar(promo_id):
     titulo = request.form.get("titulo", "").strip()
     descripcion = request.form.get("descripcion", "").strip()
     tipo_descuento = request.form.get("tipo_descuento", "porcentaje")
-    descuento_pct = int(request.form.get("descuento_pct", 0) or 0)
-    descuento_monto = int(request.form.get("descuento_monto", 0) or 0)
     fecha_inicio = request.form.get("fecha_inicio") or None
     fecha_fin = request.form.get("fecha_fin") or None
     archivo = request.files.get("imagen")
-    
+
+    try:
+        descuento_pct = int(request.form.get("descuento_pct", 0) or 0)
+        descuento_monto = int(request.form.get("descuento_monto", 0) or 0)
+    except ValueError:
+        flash("Los valores de descuento tienen que ser números.", "danger")
+        return redirect(url_for("restaurante_panel") + "#sec-promociones")
+
     promo = query("SELECT * FROM promociones WHERE id=? AND restaurante_id=?",
                   (promo_id, restaurante["id"]), one=True)
     if not promo:
@@ -1706,7 +2167,7 @@ def promocion_editar(promo_id):
 
 # ── TOGGLE ABIERTO/CERRADO ────────────────────────────────────────────────────
 
-@app.route("/mi-local/toggle-abierto")
+@app.route("/mi-local/toggle-abierto", methods=["POST"])
 @login_required
 @rol_required("restaurante")
 def restaurante_toggle_abierto():
@@ -1745,10 +2206,8 @@ def recuperar_password():
             base   = request.host_url.rstrip("/")
             link   = f"{base}/reset-password/{token}"
             msg    = f"PediAcá · Hola {usuario['nombre']}! Para resetear tu contraseña entrá a este link (válido 2hs): {link}"
-            numero = usuario["telefono"].replace("+","").replace("-","").replace(" ","")
-            if not numero.startswith("549"):
-                numero = "549" + numero
-            wa_link = f"https://wa.me/{numero}?text={urllib.parse.quote(msg)}"
+            numero = _limpiar_numero(usuario["telefono"])
+            wa_link = _wa_link(numero, msg)
             return render_template("recuperar_password.html",
                                    wa_link=wa_link, usuario=usuario, enviado=True)
         else:
@@ -1759,11 +2218,13 @@ def recuperar_password():
 
 @app.route("/reset-password/<token>", methods=["GET", "POST"])
 def reset_password(token):
+    from datetime import datetime
+    ahora = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     registro = query("""
         SELECT t.*, u.nombre FROM password_reset_tokens t
         JOIN usuarios u ON u.id = t.usuario_id
-        WHERE t.token=? AND t.usado=0 AND t.expira > NOW()
-    """, (token,), one=True)
+        WHERE t.token=? AND t.usado=0 AND t.expira > ?
+    """, (token, ahora), one=True)
 
     if not registro:
         flash("El link expiró o ya fue usado.", "danger")
@@ -1794,7 +2255,13 @@ def reset_password(token):
 @app.route("/valorar/<int:pedido_id>", methods=["POST"])
 @login_required
 def valorar_pedido(pedido_id):
-    estrellas  = int(request.form.get("estrellas", 5))
+    try:
+        estrellas = int(request.form.get("estrellas", 5))
+    except ValueError:
+        estrellas = 0
+    if not 1 <= estrellas <= 5:
+        flash("La valoración tiene que ser entre 1 y 5 estrellas.", "danger")
+        return redirect(url_for("cliente_panel"))
     comentario = request.form.get("comentario", "").strip()
 
     pedido = query("SELECT * FROM pedidos WHERE id=? AND cliente_id=? AND estado='entregado'",
@@ -1828,7 +2295,7 @@ def cadete_rechazar_pedido(pedido_id):
         return jsonify({"error": "No autorizado"}), 403
     execute("""
         UPDATE pedidos SET cadete_id=NULL, estado='confirmado',
-               fecha_actualizado=NOW()
+               fecha_actualizado=CURRENT_TIMESTAMP
         WHERE id=? AND cadete_id=?
     """, (pedido_id, cadete["id"]))
     return jsonify({"ok": True})
@@ -1964,7 +2431,13 @@ def restaurante_darse_de_baja():
 
 @app.route("/setup/<clave_secreta>")
 def setup_admin(clave_secreta):
-    CLAVE = os.environ.get("SETUP_KEY", "pediaca2026")
+    CLAVE    = os.environ.get("SETUP_KEY", "")
+    password = os.environ.get("ADMIN_PASSWORD", "")
+    if not CLAVE or not password:
+        # Sin SETUP_KEY / ADMIN_PASSWORD configuradas en el entorno, esta
+        # ruta queda deshabilitada — no hay fallback hardcodeado que un
+        # atacante pueda adivinar leyendo el código fuente.
+        return "Ruta no configurada. Definí SETUP_KEY y ADMIN_PASSWORD como variables de entorno.", 503
     if clave_secreta != CLAVE:
         return "No autorizado", 403
 
@@ -1973,7 +2446,6 @@ def setup_admin(clave_secreta):
         return "Ya existe un administrador. Ruta desactivada.", 200
 
     from werkzeug.security import generate_password_hash
-    password = os.environ.get("ADMIN_PASSWORD", "pediaca2026admin")
 
     execute("""
         INSERT INTO usuarios (nombre, apellido, email, telefono, password_hash, rol)
@@ -2007,15 +2479,16 @@ def get_config(clave):
         if config['tipo'] == 'number':
             return int(config['valor']) if config['valor'] else 0
         return config['valor']
-    except:
+    except Exception as e:
+        print(f"⚠️ Error en get_config('{clave}'): {type(e).__name__}: {e}")
         return None
 
 def set_config(clave, valor, tipo='text'):
     try:
         sql = "INSERT INTO configuraciones (clave, valor, tipo, actualizado) VALUES (?, ?, ?, CURRENT_TIMESTAMP) ON CONFLICT(clave) DO UPDATE SET valor = ?, actualizado = CURRENT_TIMESTAMP"
         execute(sql, (clave, valor, tipo, valor))
-    except:
-        pass
+    except Exception as e:
+        print(f"⚠️ Error en set_config('{clave}'): {type(e).__name__}: {e}")
 
 @app.context_processor
 def inject_config():
@@ -2033,55 +2506,129 @@ def admin_configuracion():
     
     if request.method == "POST":
         accion = request.form.get("accion", "")
-        
+
         if accion == "borrar_imagen":
-            set_config("hero_tipo", "gradiente")
             set_config("hero_imagen_url", "")
+            set_config("hero_activo", "false")
             mensaje = ("success", "✅ Imagen eliminada.")
+
+        elif accion == "agregar_ciudad":
+            nombre = request.form.get("nombre_ciudad", "").strip()
+            if not nombre:
+                mensaje = ("danger", "❌ Ingresá un nombre de ciudad.")
+            else:
+                existe = query("SELECT id FROM ciudades WHERE nombre = ?", (nombre,), one=True)
+                if existe:
+                    mensaje = ("danger", f"❌ '{nombre}' ya existe.")
+                else:
+                    fila = query("SELECT COALESCE(MAX(orden), 0) AS m FROM ciudades", one=True)
+                    execute("INSERT INTO ciudades (nombre, activa, orden) VALUES (?, 1, ?)",
+                            (nombre, (fila["m"] or 0) + 1))
+                    mensaje = ("success", f"✅ '{nombre}' agregada y activada.")
+
+        elif accion == "toggle_ciudad":
+            try:
+                ciudad_id = int(request.form.get("ciudad_id", 0))
+            except ValueError:
+                ciudad_id = 0
+            fila = query("SELECT nombre, activa FROM ciudades WHERE id = ?", (ciudad_id,), one=True)
+            if fila:
+                execute("UPDATE ciudades SET activa = ? WHERE id = ?",
+                        (0 if fila["activa"] else 1, ciudad_id))
+                mensaje = ("success", "✅ Ciudad actualizada.")
+
+        elif accion == "eliminar_ciudad":
+            try:
+                ciudad_id = int(request.form.get("ciudad_id", 0))
+            except ValueError:
+                ciudad_id = 0
+            fila = query("SELECT nombre FROM ciudades WHERE id = ?", (ciudad_id,), one=True)
+            if fila and fila["nombre"] == CIUDAD_DEFAULT:
+                mensaje = ("danger", "❌ No podés eliminar la ciudad por defecto.")
+            elif fila:
+                execute("DELETE FROM ciudades WHERE id = ?", (ciudad_id,))
+                mensaje = ("success", f"✅ '{fila['nombre']}' eliminada.")
+
+        elif accion == "agregar_auspiciante":
+            nombre_aus  = request.form.get("nombre_auspiciante", "").strip()
+            url_destino = request.form.get("url_destino", "").strip()
+            posicion    = request.form.get("posicion", "home")
+            if posicion not in ("header", "home", "listado"):
+                posicion = "home"
+            if not nombre_aus:
+                mensaje = ("danger", "❌ Ingresá un nombre.")
+            else:
+                logo_url = ""
+                archivo = request.files.get("logo_auspiciante")
+                if archivo and archivo.filename:
+                    if allowed_file(archivo.filename):
+                        ruta = guardar_imagen(archivo, "auspiciantes")
+                        if ruta:
+                            logo_url = url_imagen(ruta)
+                    else:
+                        mensaje = ("danger", "❌ Formato de imagen no soportado.")
+                if not mensaje:
+                    execute("""
+                        INSERT INTO auspiciantes (nombre, logo_url, url_destino, activo, posicion)
+                        VALUES (?, ?, ?, 1, ?)
+                    """, (nombre_aus, logo_url, url_destino, posicion))
+                    mensaje = ("success", f"✅ '{nombre_aus}' agregado.")
+
+        elif accion == "toggle_auspiciante":
+            try:
+                aus_id = int(request.form.get("auspiciante_id", 0))
+            except ValueError:
+                aus_id = 0
+            fila = query("SELECT activo FROM auspiciantes WHERE id = ?", (aus_id,), one=True)
+            if fila:
+                execute("UPDATE auspiciantes SET activo = ? WHERE id = ?",
+                        (0 if fila["activo"] else 1, aus_id))
+                mensaje = ("success", "✅ Auspiciante actualizado.")
+
+        elif accion == "eliminar_auspiciante":
+            try:
+                aus_id = int(request.form.get("auspiciante_id", 0))
+            except ValueError:
+                aus_id = 0
+            fila = query("SELECT nombre FROM auspiciantes WHERE id = ?", (aus_id,), one=True)
+            if fila:
+                execute("DELETE FROM auspiciantes WHERE id = ?", (aus_id,))
+                mensaje = ("success", f"✅ '{fila['nombre']}' eliminado.")
+
         else:
-            hero_tipo = request.form.get("hero_tipo", "gradiente")
-            hero_blur = int(request.form.get("hero_blur", 6))
-            hero_opacidad = int(request.form.get("hero_opacidad_overlay", 75))
-            hero_color = request.form.get("hero_color_overlay", "#1E3A5F")
-            hero_gradiente = request.form.get("hero_gradiente", "135deg, #1A1A2E, #1E3A5F")
-            
-            set_config("hero_tipo", hero_tipo)
-            set_config("hero_blur", str(hero_blur), "number")
-            set_config("hero_opacidad_overlay", str(hero_opacidad), "number")
-            set_config("hero_color_overlay", hero_color)
-            set_config("usar_overlay", "true" if request.form.get("usar_overlay") == "true" else "false")
-            set_config("hero_gradiente", hero_gradiente)
-            
+            hero_activo = "true" if request.form.get("hero_activo") == "true" else "false"
+
             archivo = request.files.get("hero_imagen")
             if archivo and archivo.filename:
-                from werkzeug.utils import secure_filename
-                import uuid, time
-                ext = archivo.filename.rsplit('.', 1)[1].lower()
-                if ext in ['png', 'jpg', 'jpeg', 'webp']:
-                    filename = f"hero_{int(time.time())}_{uuid.uuid4().hex[:8]}.{ext}"
-                    destino = os.path.join("static", "uploads", "hero")
-                    os.makedirs(destino, exist_ok=True)
-                    archivo.save(os.path.join(destino, filename))
-                    imagen_url = url_for("static", filename=f"uploads/hero/{filename}")
-                    set_config("hero_imagen_url", imagen_url)
-                    set_config("hero_tipo", "imagen")
-                    mensaje = ("success", "✅ Imagen subida.")
+                if allowed_file(archivo.filename):
+                    ruta = guardar_imagen(archivo, "hero")
+                    if ruta:
+                        set_config("hero_imagen_url", url_imagen(ruta))
+                        mensaje = ("success", "✅ Imagen subida.")
+                    else:
+                        mensaje = ("danger", "❌ No se pudo subir la imagen.")
                 else:
                     mensaje = ("danger", "❌ Formato no soportado.")
-            
+
+            if hero_activo == "true" and not (get_config("hero_imagen_url") or (archivo and archivo.filename)):
+                hero_activo = "false"
+                mensaje = ("danger", "❌ Subí una imagen para poder activar el banner.")
+
+            set_config("hero_activo", hero_activo)
+
             if not mensaje:
-                mensaje = ("success", "✅ Configuracion guardada.")
-    
+                mensaje = ("success", "✅ Configuración guardada.")
+
     config = {
-        "hero_tipo": get_config("hero_tipo") or "gradiente",
+        "hero_activo": get_config("hero_activo") or "false",
         "hero_imagen_url": get_config("hero_imagen_url") or "",
-        "hero_blur": get_config("hero_blur") or 6,
-        "hero_opacidad_overlay": get_config("hero_opacidad_overlay") or 75,
-        "hero_color_overlay": get_config("hero_color_overlay") or "#1E3A5F",
-        "hero_gradiente": get_config("hero_gradiente") or "135deg, #1A1A2E, #1E3A5F",
     }
-    
-    return render_template("admin_configuracion.html", config=config, mensaje=mensaje)
+
+    auspiciantes = query("SELECT * FROM auspiciantes ORDER BY activo DESC, nombre")
+
+    return render_template("admin_configuracion.html", config=config, mensaje=mensaje,
+                           ciudades=get_ciudades(), ciudad_default=CIUDAD_DEFAULT,
+                           auspiciantes=auspiciantes)
 
 
 # ── MAIN ──────────────────────────────────────────────────────────────────────

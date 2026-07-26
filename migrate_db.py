@@ -1,74 +1,70 @@
 """
-migrate_db.py — Aplica migraciones a la DB existente sin borrar datos.
-Se ejecuta en cada deploy desde start.sh.
+migrate_db.py — Agrega columnas nuevas a tablas que ya existen, sin borrar
+datos. Complementa a init_db.py (que sólo crea tablas si no existen, y por
+lo tanto nunca agrega columnas a una tabla que un deploy anterior ya creó).
+
+Soporta SQLite (local) y PostgreSQL (producción) y se ejecuta en cada
+deploy desde start.sh, después de init_db.py.
 """
-import sqlite3, os
+import os
 
-DB_PATH = os.environ.get("DB_PATH", "pediaca.db")
+DATABASE_URL = os.environ.get("DATABASE_URL", "")
+USE_POSTGRES = bool(DATABASE_URL)
 
-MIGRACIONES = [
-    ("abierto_restaurantes", """
-        ALTER TABLE restaurantes ADD COLUMN abierto INTEGER NOT NULL DEFAULT 1
-    """),
-    ("password_reset_tokens", """
-        CREATE TABLE IF NOT EXISTS password_reset_tokens (
-            id         INTEGER PRIMARY KEY AUTOINCREMENT,
-            usuario_id INTEGER NOT NULL REFERENCES usuarios(id),
-            token      TEXT NOT NULL UNIQUE,
-            expira     TEXT NOT NULL,
-            usado      INTEGER NOT NULL DEFAULT 0
-        )
-    """),
-    ("valoraciones", """
-        CREATE TABLE IF NOT EXISTS valoraciones (
-            id             INTEGER PRIMARY KEY AUTOINCREMENT,
-            pedido_id      INTEGER NOT NULL UNIQUE REFERENCES pedidos(id),
-            restaurante_id INTEGER NOT NULL REFERENCES restaurantes(id),
-            cliente_id     INTEGER REFERENCES usuarios(id),
-            estrellas      INTEGER NOT NULL CHECK(estrellas BETWEEN 1 AND 5),
-            comentario     TEXT,
-            fecha          TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
-        )
-    """),
-    # (nombre, sql)
-    ("sabores_producto", """
-        CREATE TABLE IF NOT EXISTS sabores_producto (
-            id          INTEGER PRIMARY KEY AUTOINCREMENT,
-            producto_id INTEGER NOT NULL REFERENCES productos(id) ON DELETE CASCADE,
-            nombre      TEXT NOT NULL,
-            disponible  INTEGER NOT NULL DEFAULT 1,
-            orden       INTEGER NOT NULL DEFAULT 0
-        )
-    """),
-    ("promociones", """
-        CREATE TABLE IF NOT EXISTS promociones (
-            id              INTEGER PRIMARY KEY AUTOINCREMENT,
-            restaurante_id  INTEGER NOT NULL REFERENCES restaurantes(id),
-            titulo          TEXT NOT NULL,
-            descripcion     TEXT,
-            imagen_url      TEXT,
-            descuento_pct   INTEGER DEFAULT 0,
-            activa          INTEGER NOT NULL DEFAULT 1,
-            fecha_inicio    TEXT,
-            fecha_fin       TEXT,
-            fecha_creacion  TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
-        )
-    """),
+# (tabla, columna, definición de tipo/default — sin "ADD COLUMN")
+COLUMNAS = [
+    ("restaurantes", "abierto",              "INTEGER NOT NULL DEFAULT 1"),
+    ("restaurantes", "ciudad",               "TEXT NOT NULL DEFAULT 'Rosario'"),
+    ("promociones",  "producto_id",          "INTEGER REFERENCES productos(id)"),
+    ("promociones",  "tipo_descuento",       "TEXT DEFAULT 'porcentaje'"),
+    ("promociones",  "descuento_monto",      "REAL DEFAULT 0"),
+    ("promociones",  "precio_con_descuento", "REAL"),
+    ("cadetes",      "ciudad",               "TEXT NOT NULL DEFAULT 'Rosario'"),
+    ("valoraciones", "vista",                "INTEGER NOT NULL DEFAULT 0"),
 ]
 
-def migrar():
+
+def migrar_postgres():
+    import psycopg2
+    conn = psycopg2.connect(DATABASE_URL)
+    cur  = conn.cursor()
+    for tabla, columna, tipo in COLUMNAS:
+        try:
+            cur.execute(f"ALTER TABLE {tabla} ADD COLUMN IF NOT EXISTS {columna} {tipo}")
+            conn.commit()
+            print(f"✅ {tabla}.{columna} verificada/agregada")
+        except Exception as e:
+            conn.rollback()
+            print(f"⚠️  {tabla}.{columna}: {e}")
+    conn.close()
+
+
+def migrar_sqlite():
+    import sqlite3
+    DB_PATH = os.environ.get("DB_PATH", "pediaca.db")
     if not os.path.exists(DB_PATH):
-        print("DB no existe, se creará con init_db.py")
+        print("DB no existe todavía, se creará con init_db.py")
         return
     conn = sqlite3.connect(DB_PATH)
-    for nombre, sql in MIGRACIONES:
+    for tabla, columna, tipo in COLUMNAS:
         try:
-            conn.execute(sql)
-            print(f"✅ Migración '{nombre}' aplicada")
+            existentes = {row[1] for row in conn.execute(f"PRAGMA table_info({tabla})")}
+            if columna in existentes:
+                continue
+            conn.execute(f"ALTER TABLE {tabla} ADD COLUMN {columna} {tipo}")
+            conn.commit()
+            print(f"✅ {tabla}.{columna} agregada")
         except Exception as e:
-            print(f"⚠️  '{nombre}': {e}")
-    conn.commit()
+            print(f"⚠️  {tabla}.{columna}: {e}")
     conn.close()
+
+
+def migrar():
+    if USE_POSTGRES:
+        migrar_postgres()
+    else:
+        migrar_sqlite()
+
 
 if __name__ == "__main__":
     migrar()

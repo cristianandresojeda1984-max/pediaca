@@ -331,12 +331,19 @@
             </span>
           </div>
 
-          <!-- Repetir + valorar -->
+          <!-- Seguimiento + repetir + valorar -->
           <div style="display:flex;gap:8px;margin:0 16px 14px;">
-            <a class="btn-repetir" style="flex:1;"
-               href="{{ url_for('ver_local', restaurante_id=p.restaurante_id) }}">
-              🔄 Volver a pedir
-            </a>
+            {% if p.estado not in ('entregado', 'cancelado') %}
+              <a class="btn-repetir" style="flex:1;background:var(--azul-l);color:var(--azul-d);"
+                 href="{{ url_for('seguimiento_pedido', pedido_id=p.id) }}">
+                📍 Seguir pedido
+              </a>
+            {% else %}
+              <a class="btn-repetir" style="flex:1;"
+                 href="{{ url_for('ver_local', restaurante_id=p.restaurante_id) }}">
+                🔄 Volver a pedir
+              </a>
+            {% endif %}
             {% if p.estado == 'entregado' %}
               <button class="btn-repetir" style="flex:none;padding:10px 14px;"
                       onclick="document.getElementById('form-val-{{ p.id }}').style.display = document.getElementById('form-val-{{ p.id }}').style.display === 'none' ? 'block' : 'none'">
@@ -379,8 +386,45 @@
 
   <!-- ── FAVORITOS ──────────────────────────────────────── -->
   <div class="seccion" id="sec-favoritos">
+    {% if favoritos %}
+      <div class="sec-titulo">❤️ Tus favoritos</div>
+      <div class="fav-grid">
+        {% for local in favoritos %}
+          <div class="fav-card" style="position:relative;" id="fav-card-{{ local.id }}">
+            <button onclick="quitarFavorito({{ local.id }})"
+                    style="position:absolute;top:6px;right:6px;z-index:5;width:26px;height:26px;border-radius:50%;border:none;background:rgba(255,255,255,0.9);font-size:0.8rem;cursor:pointer;">🗑️</button>
+            <a href="{{ url_for('ver_local', restaurante_id=local.id) }}" style="color:inherit;text-decoration:none;display:block;">
+              <div class="fav-banner">
+                {% if local.banner_url %}
+                  <img src="{{ url_imagen(local.banner_url) }}"
+                       style="width:100%;height:100%;object-fit:cover;" alt="">
+                {% else %}
+                  {% if local.categoria == 'Pizzería' %}🍕
+                  {% elif local.categoria == 'Hamburguesería' %}🍔
+                  {% elif local.categoria == 'Sushi' %}🍣
+                  {% elif local.categoria == 'Heladería' %}🍦
+                  {% else %}🍽️{% endif %}
+                {% endif %}
+              </div>
+              <div class="fav-body">
+                <div class="fav-nombre">{{ local.nombre_local }}</div>
+                <div class="fav-cat">{{ local.categoria or 'Restaurante' }}</div>
+              </div>
+            </a>
+          </div>
+        {% endfor %}
+      </div>
+    {% else %}
+      <div class="empty-state">
+        <div class="empty-icon">❤️</div>
+        <h4>Todavía no tenés favoritos</h4>
+        <p>Tocá el corazón en cualquier local para guardarlo acá.</p>
+        <a href="{{ url_for('home') }}" class="btn-explorar">Explorar locales →</a>
+      </div>
+    {% endif %}
+
     {% if locales_frecuentes %}
-      <div class="sec-titulo">🔥 Tus locales frecuentes</div>
+      <div class="sec-titulo" style="margin-top:26px;">🔥 Pedís seguido en estos locales</div>
       <div class="fav-grid">
         {% for local in locales_frecuentes %}
           <a href="{{ url_for('ver_local', restaurante_id=local.id) }}" class="fav-card">
@@ -402,13 +446,6 @@
             </div>
           </a>
         {% endfor %}
-      </div>
-    {% else %}
-      <div class="empty-state">
-        <div class="empty-icon">❤️</div>
-        <h4>Todavía no tenés favoritos</h4>
-        <p>Cuando hagas pedidos en los mismos locales van a aparecer acá.</p>
-        <a href="{{ url_for('home') }}" class="btn-explorar">Explorar locales →</a>
       </div>
     {% endif %}
   </div>
@@ -483,6 +520,19 @@
 
 {% block extra_scripts %}
 <script>
+async function quitarFavorito(restauranteId) {
+  try {
+    const res = await fetch(`/favoritos/${restauranteId}/toggle`, { method: 'POST' });
+    const data = await res.json();
+    if (data.ok && !data.favorito) {
+      const card = document.getElementById('fav-card-' + restauranteId);
+      if (card) card.remove();
+    }
+  } catch (e) {
+    console.log('Error al quitar favorito:', e);
+  }
+}
+
 function setStar(pedidoId, val) {
   document.getElementById('inp-star-' + pedidoId).value = val;
   for (let i = 1; i <= 5; i++) {

@@ -322,13 +322,12 @@
           <!-- ACCIONES -->
           <div class="pedido-acciones">
             {% if p.estado == 'nuevo' %}
-              <a class="btn-accion btn-confirmar"
-                 href="{{ url_for('restaurante_cambiar_estado', pedido_id=p.id, nuevo_estado='confirmado') }}">
+              <a class="btn-accion btn-confirmar" href="#"
+                 onclick="postAction('{{ url_for('restaurante_cambiar_estado', pedido_id=p.id, nuevo_estado='confirmado') }}'); return false;">
                 ✔ Confirmar pedido
               </a>
-              <a class="btn-accion btn-cancelar"
-                 href="{{ url_for('restaurante_cambiar_estado', pedido_id=p.id, nuevo_estado='cancelado') }}"
-                 onclick="return confirm('¿Cancelar este pedido?')">
+              <a class="btn-accion btn-cancelar" href="#"
+                 onclick="if(confirm('¿Cancelar este pedido?')) postAction('{{ url_for('restaurante_cambiar_estado', pedido_id=p.id, nuevo_estado='cancelado') }}'); return false;">
                 ✕ Cancelar
               </a>
             {% endif %}
@@ -345,8 +344,8 @@
               </button>
             {% endif %}
             {% if p.estado == 'en_camino' %}
-              <a class="btn-accion" style="background:#D5F5E3;color:#1E8449;"
-                 href="{{ url_for('restaurante_cambiar_estado', pedido_id=p.id, nuevo_estado='entregado') }}">
+              <a class="btn-accion" style="background:#D5F5E3;color:#1E8449;" href="#"
+                 onclick="postAction('{{ url_for('restaurante_cambiar_estado', pedido_id=p.id, nuevo_estado='entregado') }}'); return false;">
                 ✅ Marcar entregado
               </a>
             {% endif %}

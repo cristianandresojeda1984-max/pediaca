@@ -53,26 +53,22 @@ git push -u origin main
 
 | Variable | Valor |
 |---|---|
-| `SECRET_KEY` | Una clave larga y aleatoria |
+| `SECRET_KEY` | Se genera sola (`render.yaml`) |
 | `DB_PATH` | `pediaca.db` |
+| `SETUP_KEY` | Elegí una clave secreta propia — la vas a necesitar para crear el admin |
+| `ADMIN_PASSWORD` | La contraseña que va a tener la cuenta admin |
+
+`SETUP_KEY` y `ADMIN_PASSWORD` son **obligatorias**: sin ellas la ruta de creación del admin queda deshabilitada (para que nadie pueda crear una cuenta admin adivinando una clave por defecto).
 
 ### 4. Crear el admin
 
-Después del primer deploy, en la consola de Render:
-```bash
-python -c "
-from werkzeug.security import generate_password_hash
-import sqlite3
-conn = sqlite3.connect('pediaca.db')
-conn.execute('''INSERT INTO usuarios (nombre, apellido, email, telefono, password_hash, rol)
-VALUES (?, ?, ?, ?, ?, ?)''',
-('Cristian', 'Ojeda', 'admin@pediaca.ar', '3417523674',
-generate_password_hash('TU_PASSWORD'), 'admin'))
-conn.commit()
-conn.close()
-print('Admin creado')
-"
+Después del primer deploy, entrá una sola vez a:
+
 ```
+https://tu-app.onrender.com/setup/TU_SETUP_KEY
+```
+
+Te va a mostrar el email y la contraseña del admin (la que pusiste en `ADMIN_PASSWORD`). La ruta se autodesactiva apenas existe un admin, así que solo funciona la primera vez.
 
 ### 5. Subir el logo
 

@@ -4,8 +4,8 @@
   "description": "Pedí en tus locales favoritos de Rosario sin pagar comisiones",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#1A1A2E",
-  "theme_color": "#F39C12",
+  "background_color": "#FFFFFF",
+  "theme_color": "#EA580C",
   "orientation": "portrait",
   "icons": [
     {

@@ -3,304 +3,26 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
-<title>{% block title %}PediAcá — El sabor de tu barrio
-/* ── RESPONSIVE ───────────────────────────────────────────── */
-@media (max-width: 768px) {
-    .navbar {
-        padding: 0 12px;
-    }
-    .navbar-brand-text {
-        font-size: 1.1rem;
-    }
-    .navbar-btn {
-        padding: 6px 12px;
-        font-size: 0.75rem;
-    }
-    .container {
-        padding: 0 12px;
-    }
-    .seccion-titulo {
-        font-size: 1.1rem;
-    }
-    .local-card {
-        margin-bottom: 12px;
-    }
-    .footer {
-        padding: 20px 12px;
-        font-size: 0.7rem;
-    }
-}
-
-@media (max-width: 480px) {
-    .navbar-brand-text {
-        font-size: 1rem;
-    }
-    .navbar-btn {
-        padding: 4px 10px;
-        font-size: 0.7rem;
-    }
-    .seccion-titulo {
-        font-size: 1rem;
-    }
-}
-
-{% endblock %}</title>
-<meta name="description" content="{% block meta_desc %}PediAcá — Pedí a tus locales favoritos de Rosario directo por WhatsApp. Sin comisiones, sin apps, 100% gratis.
-/* ── RESPONSIVE ───────────────────────────────────────────── */
-@media (max-width: 768px) {
-    .navbar {
-        padding: 0 12px;
-    }
-    .navbar-brand-text {
-        font-size: 1.1rem;
-    }
-    .navbar-btn {
-        padding: 6px 12px;
-        font-size: 0.75rem;
-    }
-    .container {
-        padding: 0 12px;
-    }
-    .seccion-titulo {
-        font-size: 1.1rem;
-    }
-    .local-card {
-        margin-bottom: 12px;
-    }
-    .footer {
-        padding: 20px 12px;
-        font-size: 0.7rem;
-    }
-}
-
-@media (max-width: 480px) {
-    .navbar-brand-text {
-        font-size: 1rem;
-    }
-    .navbar-btn {
-        padding: 4px 10px;
-        font-size: 0.7rem;
-    }
-    .seccion-titulo {
-        font-size: 1rem;
-    }
-}
-
-{% endblock %}">
-<meta name="robots" content="index, follow">
-<meta property="og:title"       content="{% block og_title %}PediAcá Rosario
-/* ── RESPONSIVE ───────────────────────────────────────────── */
-@media (max-width: 768px) {
-    .navbar {
-        padding: 0 12px;
-    }
-    .navbar-brand-text {
-        font-size: 1.1rem;
-    }
-    .navbar-btn {
-        padding: 6px 12px;
-        font-size: 0.75rem;
-    }
-    .container {
-        padding: 0 12px;
-    }
-    .seccion-titulo {
-        font-size: 1.1rem;
-    }
-    .local-card {
-        margin-bottom: 12px;
-    }
-    .footer {
-        padding: 20px 12px;
-        font-size: 0.7rem;
-    }
-}
-
-@media (max-width: 480px) {
-    .navbar-brand-text {
-        font-size: 1rem;
-    }
-    .navbar-btn {
-        padding: 4px 10px;
-        font-size: 0.7rem;
-    }
-    .seccion-titulo {
-        font-size: 1rem;
-    }
-}
-
-{% endblock %}">
-<meta property="og:description" content="{% block og_desc %}Pedí comida a domicilio en Rosario sin pagar comisiones. Tu pedido va directo al local por WhatsApp.
-/* ── RESPONSIVE ───────────────────────────────────────────── */
-@media (max-width: 768px) {
-    .navbar {
-        padding: 0 12px;
-    }
-    .navbar-brand-text {
-        font-size: 1.1rem;
-    }
-    .navbar-btn {
-        padding: 6px 12px;
-        font-size: 0.75rem;
-    }
-    .container {
-        padding: 0 12px;
-    }
-    .seccion-titulo {
-        font-size: 1.1rem;
-    }
-    .local-card {
-        margin-bottom: 12px;
-    }
-    .footer {
-        padding: 20px 12px;
-        font-size: 0.7rem;
-    }
-}
-
-@media (max-width: 480px) {
-    .navbar-brand-text {
-        font-size: 1rem;
-    }
-    .navbar-btn {
-        padding: 4px 10px;
-        font-size: 0.7rem;
-    }
-    .seccion-titulo {
-        font-size: 1rem;
-    }
-}
-
-{% endblock %}">
-<meta property="og:image"       content="{% block og_image %}https://pediaca.ar/static/img/logo_pediaca.png
-/* ── RESPONSIVE ───────────────────────────────────────────── */
-@media (max-width: 768px) {
-    .navbar {
-        padding: 0 12px;
-    }
-    .navbar-brand-text {
-        font-size: 1.1rem;
-    }
-    .navbar-btn {
-        padding: 6px 12px;
-        font-size: 0.75rem;
-    }
-    .container {
-        padding: 0 12px;
-    }
-    .seccion-titulo {
-        font-size: 1.1rem;
-    }
-    .local-card {
-        margin-bottom: 12px;
-    }
-    .footer {
-        padding: 20px 12px;
-        font-size: 0.7rem;
-    }
-}
-
-@media (max-width: 480px) {
-    .navbar-brand-text {
-        font-size: 1rem;
-    }
-    .navbar-btn {
-        padding: 4px 10px;
-        font-size: 0.7rem;
-    }
-    .seccion-titulo {
-        font-size: 1rem;
-    }
-}
-
-{% endblock %}">
-<meta property="og:url"         content="{% block og_url %}https://pediaca.ar
-/* ── RESPONSIVE ───────────────────────────────────────────── */
-@media (max-width: 768px) {
-    .navbar {
-        padding: 0 12px;
-    }
-    .navbar-brand-text {
-        font-size: 1.1rem;
-    }
-    .navbar-btn {
-        padding: 6px 12px;
-        font-size: 0.75rem;
-    }
-    .container {
-        padding: 0 12px;
-    }
-    .seccion-titulo {
-        font-size: 1.1rem;
-    }
-    .local-card {
-        margin-bottom: 12px;
-    }
-    .footer {
-        padding: 20px 12px;
-        font-size: 0.7rem;
-    }
-}
-
-@media (max-width: 480px) {
-    .navbar-brand-text {
-        font-size: 1rem;
-    }
-    .navbar-btn {
-        padding: 4px 10px;
-        font-size: 0.7rem;
-    }
-    .seccion-titulo {
-        font-size: 1rem;
-    }
-}
-
-{% endblock %}">
+<meta name="csrf-token" content="{{ csrf_token() }}">
+<title>{% block title %}PediAcá — El sabor de tu barrio{% endblock %}</title>
+<meta name="description" content="{% block meta_desc %}PediAcá — Pedí a tus locales favoritos de Rosario directo por WhatsApp. Sin comisiones, sin apps, 100% gratis.{% endblock %}">
+{% block robots %}<meta name="robots" content="index, follow">{% endblock %}
+<meta property="og:title"       content="{% block og_title %}PediAcá Rosario{% endblock %}">
+<meta property="og:description" content="{% block og_desc %}Pedí comida a domicilio en Rosario sin pagar comisiones. Tu pedido va directo al local por WhatsApp.{% endblock %}">
+<meta property="og:image"       content="{% block og_image %}https://pediaca.ar/static/img/logo_pediaca.png{% endblock %}">
+<meta property="og:url"         content="{% block og_url %}https://pediaca.ar{% endblock %}">
 <meta property="og:type"        content="website">
 <meta property="og:locale"      content="es_AR">
 <meta name="twitter:card"       content="summary">
-<link rel="canonical"           href="{% block canonical %}https://pediaca.ar
-/* ── RESPONSIVE ───────────────────────────────────────────── */
-@media (max-width: 768px) {
-    .navbar {
-        padding: 0 12px;
-    }
-    .navbar-brand-text {
-        font-size: 1.1rem;
-    }
-    .navbar-btn {
-        padding: 6px 12px;
-        font-size: 0.75rem;
-    }
-    .container {
-        padding: 0 12px;
-    }
-    .seccion-titulo {
-        font-size: 1.1rem;
-    }
-    .local-card {
-        margin-bottom: 12px;
-    }
-    .footer {
-        padding: 20px 12px;
-        font-size: 0.7rem;
-    }
-}
-
-@media (max-width: 480px) {
-    .navbar-brand-text {
-        font-size: 1rem;
-    }
-    .navbar-btn {
-        padding: 4px 10px;
-        font-size: 0.7rem;
-    }
-    .seccion-titulo {
-        font-size: 1rem;
-    }
-}
-
-{% endblock %}">
+<link rel="canonical" href="{% block canonical %}https://pediaca.ar{% endblock %}">
+<link rel="icon" type="image/png" href="{{ url_for('static', filename='img/logo_pediaca.png') }}">
+<link rel="apple-touch-icon" href="{{ url_for('static', filename='img/logo_pediaca.png') }}">
+<link rel="manifest" href="{{ url_for('static', filename='manifest.json') }}">
+<meta name="theme-color" content="#EA580C">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="PediAcá">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&family=Paytone+One&display=swap" rel="stylesheet">
 <style>
@@ -338,6 +60,8 @@ body {
   min-height: 100vh;
 }
 
+a { color: inherit; }
+
 /* ── NAVBAR ─────────────────────────────────────────────── */
 .navbar {
   background: var(--blanco);
@@ -345,10 +69,11 @@ body {
   position: sticky;
   top: 0;
   z-index: 200;
-  height: 60px;
+  min-height: 60px;
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  padding: 0 20px;
+  padding: 10px 20px;
   gap: 12px;
 }
 .navbar-brand {
@@ -370,6 +95,51 @@ body {
   line-height: 1;
 }
 .navbar-brand-text span { color: var(--azul); }
+.navbar-ciudad-wrap {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  background: var(--gris-1);
+  border-radius: 99px;
+  padding: 6px 12px 6px 10px;
+  margin-left: 4px;
+}
+.navbar-ciudad-icon { font-size: 0.85rem; }
+.navbar-ciudad-select {
+  border: none;
+  background: transparent;
+  font-family: 'Nunito', sans-serif;
+  font-weight: 700;
+  font-size: 0.8rem;
+  color: var(--texto);
+  cursor: pointer;
+  outline: none;
+  max-width: 130px;
+}
+.navbar-search-wrap { flex: 1 1 200px; max-width: 420px; margin: 0 8px; }
+.navbar-search-form { position: relative; }
+.navbar-search-input {
+  width: 100%;
+  padding: 8px 36px 8px 14px;
+  border-radius: 99px;
+  border: 1px solid var(--gris-2);
+  background: var(--gris-1);
+  font-family: 'Nunito', sans-serif;
+  font-size: 0.85rem;
+  color: var(--texto);
+  outline: none;
+  transition: border-color 0.2s, background 0.2s;
+}
+.navbar-search-input:focus { border-color: var(--naranja); background: var(--blanco); }
+.navbar-search-icon {
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 0.9rem;
+  opacity: 0.55;
+  pointer-events: none;
+}
 .navbar-spacer { flex: 1; }
 .navbar-btn {
   padding: 8px 18px;
@@ -417,17 +187,51 @@ body {
 .footer {
   background: var(--texto);
   color: #aaa;
-  text-align: center;
-  padding: 28px 20px;
-  font-size: 0.82rem;
+  padding: 44px 20px 24px;
   margin-top: 60px;
+  font-size: 0.85rem;
 }
-.footer a { color: var(--naranja); text-decoration: none; }
+.footer-inner {
+  max-width: 1000px;
+  margin: 0 auto;
+  display: grid;
+  grid-template-columns: 1.3fr 1fr 1fr;
+  gap: 28px;
+}
 .footer-logo {
   font-family: 'Paytone One', sans-serif;
-  font-size: 1.3rem;
+  font-size: 1.4rem;
   color: var(--naranja);
-  margin-bottom: 6px;
+  margin-bottom: 10px;
+}
+.footer-desc { max-width: 320px; line-height: 1.5; opacity: 0.85; }
+.footer-col-titulo {
+  color: var(--blanco);
+  font-weight: 800;
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 12px;
+}
+.footer-col a {
+  display: block;
+  color: #bbb;
+  text-decoration: none;
+  margin-bottom: 8px;
+  transition: color 0.2s;
+}
+.footer-col a:hover { color: var(--naranja); }
+.footer-bottom {
+  max-width: 1000px;
+  margin: 32px auto 0;
+  padding-top: 20px;
+  border-top: 1px solid rgba(255,255,255,0.1);
+  text-align: center;
+  font-size: 0.75rem;
+  opacity: 0.6;
+}
+@media (max-width: 700px) {
+  .footer-inner { grid-template-columns: 1fr; gap: 24px; text-align: left; }
 }
 
 /* ── UTILITIES ───────────────────────────────────────────── */
@@ -436,48 +240,26 @@ body {
 .mt-2 { margin-top: 16px; }
 .mt-3 { margin-top: 24px; }
 
-{% block extra_styles %}
-/* ── RESPONSIVE ───────────────────────────────────────────── */
+/* ── RESPONSIVE (base) ────────────────────────────────────── */
 @media (max-width: 768px) {
-    .navbar {
-        padding: 0 12px;
-    }
-    .navbar-brand-text {
-        font-size: 1.1rem;
-    }
-    .navbar-btn {
-        padding: 6px 12px;
-        font-size: 0.75rem;
-    }
-    .container {
-        padding: 0 12px;
-    }
-    .seccion-titulo {
-        font-size: 1.1rem;
-    }
-    .local-card {
-        margin-bottom: 12px;
-    }
-    .footer {
-        padding: 20px 12px;
-        font-size: 0.7rem;
-    }
+    .navbar { padding: 8px 12px; }
+    .navbar-brand-text { font-size: 1.1rem; }
+    .navbar-btn { padding: 6px 12px; font-size: 0.75rem; }
+    .navbar-ciudad-wrap { padding: 5px 8px; margin-left: 0; }
+    .navbar-ciudad-select { font-size: 0.7rem; max-width: 78px; }
+    .navbar-search-wrap { order: 5; flex: 1 1 100%; max-width: none; margin: 0; }
+    .container { padding: 0 12px; }
+    .seccion-titulo { font-size: 1.1rem; }
+    .local-card { margin-bottom: 12px; }
+    .footer { padding: 32px 16px 20px; font-size: 0.8rem; }
 }
-
 @media (max-width: 480px) {
-    .navbar-brand-text {
-        font-size: 1rem;
-    }
-    .navbar-btn {
-        padding: 4px 10px;
-        font-size: 0.7rem;
-    }
-    .seccion-titulo {
-        font-size: 1rem;
-    }
+    .navbar-brand-text { font-size: 1rem; }
+    .navbar-btn { padding: 4px 10px; font-size: 0.7rem; }
+    .seccion-titulo { font-size: 1rem; }
 }
 
-{% endblock %}
+{% block extra_styles %}{% endblock %}
 </style>
 </head>
 <body data-rol="{{ session.get('rol', '') }}">
@@ -490,6 +272,23 @@ body {
          onerror="this.style.display='none'">
     <span class="navbar-brand-text">Pedi<span>Acá</span></span>
   </a>
+  <div class="navbar-ciudad-wrap">
+    <span class="navbar-ciudad-icon">📍</span>
+    <select class="navbar-ciudad-select"
+            onchange="if(this.value) window.location.href='{{ url_for('cambiar_ciudad', ciudad='__C__') }}'.replace('__C__', encodeURIComponent(this.value));">
+      {% for c in ciudades_disponibles %}
+        <option value="{{ c.nombre }}" {% if c.nombre == ciudad_actual %}selected{% endif %}>
+          {{ c.nombre }}{% if not c.activa %} (Próximamente){% endif %}
+        </option>
+      {% endfor %}
+    </select>
+  </div>
+  <div class="navbar-search-wrap">
+    <form action="{{ url_for('buscar_productos') }}" method="GET" class="navbar-search-form">
+      <input type="text" name="q" class="navbar-search-input" placeholder="Buscá un plato, local o comida..." autocomplete="off">
+      <span class="navbar-search-icon">🔍</span>
+    </form>
+  </div>
   <div class="navbar-spacer"></div>
   {% if session.get('user_id') %}
     <a href="{{ url_for('dashboard') }}" class="navbar-btn navbar-btn-outline">Mi cuenta</a>
@@ -512,58 +311,81 @@ body {
 {% endwith %}
 
 <!-- CONTENIDO -->
-{% block content %}
-/* ── RESPONSIVE ───────────────────────────────────────────── */
-@media (max-width: 768px) {
-    .navbar {
-        padding: 0 12px;
-    }
-    .navbar-brand-text {
-        font-size: 1.1rem;
-    }
-    .navbar-btn {
-        padding: 6px 12px;
-        font-size: 0.75rem;
-    }
-    .container {
-        padding: 0 12px;
-    }
-    .seccion-titulo {
-        font-size: 1.1rem;
-    }
-    .local-card {
-        margin-bottom: 12px;
-    }
-    .footer {
-        padding: 20px 12px;
-        font-size: 0.7rem;
-    }
-}
-
-@media (max-width: 480px) {
-    .navbar-brand-text {
-        font-size: 1rem;
-    }
-    .navbar-btn {
-        padding: 4px 10px;
-        font-size: 0.7rem;
-    }
-    .seccion-titulo {
-        font-size: 1rem;
-    }
-}
-
-{% endblock %}
+{% block content %}{% endblock %}
 
 <!-- FOOTER -->
 <footer class="footer">
-  <div class="footer-logo">PediAcá</div>
-  <p>El sabor de tu barrio · Rosario, Santa Fe</p>
-  <p style="margin-top:6px;">Sin comisiones · Sin letra chica · 100% Rosarino</p>
-  <p style="margin-top:10px;"><a href="/terminos" style="color:var(--naranja);">Términos y Condiciones</a> · <a href="/privacidad" style="color:var(--naranja);">Privacidad</a></p><p style="margin-top:6px; font-size:0.75rem; opacity:0.5;">© 2026 pediaca.ar</p>
+  <div class="footer-inner">
+    <div>
+      <div class="footer-logo">PediAcá</div>
+      <p class="footer-desc">El sabor de tu barrio. Pedile directo por WhatsApp a tus locales de Rosario favoritos — sin comisiones, sin letra chica, 100% rosarino.</p>
+    </div>
+    <div class="footer-col">
+      <div class="footer-col-titulo">Explorar</div>
+      <a href="{{ url_for('home') }}">Locales</a>
+      <a href="{{ url_for('buscar_productos') }}">Buscar</a>
+      <a href="{{ url_for('ver_promociones') }}">Promociones</a>
+    </div>
+    <div class="footer-col">
+      <div class="footer-col-titulo">PediAcá</div>
+      <a href="{{ url_for('registro') }}?rol=restaurante">Sumar mi local</a>
+      <a href="{{ url_for('registro') }}?rol=cadete">Ser cadete</a>
+      <a href="{{ url_for('terminos') }}">Términos y Condiciones</a>
+      <a href="{{ url_for('privacidad') }}">Privacidad</a>
+    </div>
+  </div>
+  <div class="footer-bottom">© {{ now_year|default(2026) }} pediaca.ar · Rosario, Santa Fe</div>
 </footer>
 
 <script>
+// ── CSRF ──────────────────────────────────────────────────────────────────
+// Adjunta el token CSRF a todas las peticiones que modifican datos, para no
+// tener que tocar cada <form> o fetch() de la app a mano.
+(function () {
+  const token = document.querySelector('meta[name="csrf-token"]')?.content || '';
+
+  // 1) fetch(): agrega el header X-CSRFToken en POST/PUT/PATCH/DELETE.
+  const _fetch = window.fetch;
+  window.fetch = function (input, init) {
+    init = init || {};
+    const metodo = (init.method || 'GET').toUpperCase();
+    if (token && ['POST', 'PUT', 'PATCH', 'DELETE'].includes(metodo)) {
+      init.headers = new Headers(init.headers || {});
+      if (!init.headers.has('X-CSRFToken')) init.headers.set('X-CSRFToken', token);
+    }
+    return _fetch(input, init);
+  };
+
+  // 2) Forms tradicionales: inyecta un input oculto con el token.
+  document.addEventListener('DOMContentLoaded', () => {
+    document.querySelectorAll('form').forEach(f => {
+      if (f.method.toUpperCase() === 'POST' && !f.querySelector('input[name="csrf_token"]')) {
+        const inp = document.createElement('input');
+        inp.type  = 'hidden';
+        inp.name  = 'csrf_token';
+        inp.value = token;
+        f.appendChild(inp);
+      }
+    });
+  });
+
+  // 3) Helper para acciones que antes eran un <a href="..."> a una ruta que
+  // modifica datos: arma un form POST al vuelo y lo manda.
+  window.postAction = function (url) {
+    const f = document.createElement('form');
+    f.method = 'POST';
+    f.action = url;
+    f.style.display = 'none';
+    const inp = document.createElement('input');
+    inp.type  = 'hidden';
+    inp.name  = 'csrf_token';
+    inp.value = token;
+    f.appendChild(inp);
+    document.body.appendChild(f);
+    f.submit();
+  };
+})();
+
 // Auto-ocultar alertas
 setTimeout(() => {
   document.querySelectorAll('.alert').forEach(a => {
@@ -574,53 +396,12 @@ setTimeout(() => {
   });
 }, 3500);
 </script>
-{% block extra_scripts %}
-/* ── RESPONSIVE ───────────────────────────────────────────── */
-@media (max-width: 768px) {
-    .navbar {
-        padding: 0 12px;
-    }
-    .navbar-brand-text {
-        font-size: 1.1rem;
-    }
-    .navbar-btn {
-        padding: 6px 12px;
-        font-size: 0.75rem;
-    }
-    .container {
-        padding: 0 12px;
-    }
-    .seccion-titulo {
-        font-size: 1.1rem;
-    }
-    .local-card {
-        margin-bottom: 12px;
-    }
-    .footer {
-        padding: 20px 12px;
-        font-size: 0.7rem;
-    }
-}
-
-@media (max-width: 480px) {
-    .navbar-brand-text {
-        font-size: 1rem;
-    }
-    .navbar-btn {
-        padding: 4px 10px;
-        font-size: 0.7rem;
-    }
-    .seccion-titulo {
-        font-size: 1rem;
-    }
-}
-
-{% endblock %}
+{% block extra_scripts %}{% endblock %}
 
 <!-- Service Worker + Push Notifications -->
 <script>
 if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.register('/static/sw.js')
+  navigator.serviceWorker.register('/sw.js')
     .then(reg => {
       window._swReg = reg;
       // Auto-suscribir si es cadete y tiene sesión
@@ -660,10 +441,6 @@ function urlBase64ToUint8Array(base64String) {
   return new Uint8Array([...raw].map(c => c.charCodeAt(0)));
 }
 </script>
-
-
-<!-- MODAL DE PROMOCIONES -->
-
 
 </body>
 </html>

@@ -9,5 +9,8 @@ mkdir -p static/uploads/logos static/uploads/banners \
 echo "📦 Inicializando base de datos..."
 python init_db.py
 
+echo "📦 Aplicando migraciones..."
+python migrate_db.py
+
 echo "▶️  Iniciando servidor..."
 gunicorn app:app --bind 0.0.0.0:$PORT --workers 2 --timeout 120
