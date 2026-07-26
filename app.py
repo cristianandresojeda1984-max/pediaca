@@ -1786,7 +1786,7 @@ def restaurante_pedidos():
 
     pedidos = query("""
         SELECT p.*,
-               u.nombre  AS cliente_nombre,
+               u.nombre  AS nombre_cliente,
                u.telefono AS cliente_tel,
                uc.nombre  AS cadete_nombre,
                uc.telefono AS cadete_tel,
