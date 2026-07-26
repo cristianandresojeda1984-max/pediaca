@@ -982,6 +982,9 @@ def producto_nuevo():
     precio       = float(request.form.get("precio", 0) or 0)
     categoria_id = request.form.get("categoria_id") or None
     disponible   = 1 if request.form.get("disponible") else 0
+    sabores_por_kilo = None
+    if request.form.get("vendido_por_peso"):
+        sabores_por_kilo = int(request.form.get("sabores_por_kilo", 0) or 0) or None
 
     foto_url = None
     archivo  = request.files.get("foto")
@@ -989,9 +992,9 @@ def producto_nuevo():
         foto_url = guardar_imagen(archivo, "productos")
 
     prod_id = execute("""
-        INSERT INTO productos (restaurante_id, categoria_id, nombre, descripcion, precio, disponible, foto_url)
-        VALUES (?, ?, ?, ?, ?, ?, ?)
-    """, (restaurante["id"], categoria_id, nombre, descripcion, precio, disponible, foto_url))
+        INSERT INTO productos (restaurante_id, categoria_id, nombre, descripcion, precio, disponible, foto_url, sabores_por_kilo)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    """, (restaurante["id"], categoria_id, nombre, descripcion, precio, disponible, foto_url, sabores_por_kilo))
 
     flash(f"Producto '{nombre}' agregado.", "success")
     return redirect(url_for("restaurante_panel"))
@@ -1216,12 +1219,15 @@ def producto_editar(prod_id):
     precio       = float(request.form.get("precio", 0) or 0)
     categoria_id = request.form.get("categoria_id") or None
     disponible   = 1 if request.form.get("disponible") else 0
+    sabores_por_kilo = None
+    if request.form.get("vendido_por_peso"):
+        sabores_por_kilo = int(request.form.get("sabores_por_kilo", 0) or 0) or None
 
     execute("""
         UPDATE productos SET
-            nombre=?, descripcion=?, precio=?, categoria_id=?, disponible=?
+            nombre=?, descripcion=?, precio=?, categoria_id=?, disponible=?, sabores_por_kilo=?
         WHERE id=? AND restaurante_id=?
-    """, (nombre, descripcion, precio, categoria_id, disponible,
+    """, (nombre, descripcion, precio, categoria_id, disponible, sabores_por_kilo,
           prod_id, restaurante["id"]))
     flash("Producto actualizado.", "success")
     return redirect(url_for("restaurante_panel"))
@@ -1581,7 +1587,10 @@ def whatsapp_link():
     if not restaurante or not items:
         return jsonify({"error": "Datos inválidos"}), 400
 
-    subtotal = sum(i["cantidad"] * i["precio"] for i in items)
+    def _sub_item(i):
+        return i["cantidad"] * i["precio"] * (i.get("peso_kg") or 1)
+
+    subtotal = sum(_sub_item(i) for i in items)
 
     # El descuento por promo general del local se recalcula acá (no se
     # confía en lo que mande el navegador) para que no se pueda inflar
@@ -1603,18 +1612,27 @@ def whatsapp_link():
 
     total = subtotal - descuento
 
+    def _pesos(n):
+        # Formatea como "$1.234" (separador de miles con punto), sin tocar
+        # ningún otro texto de la línea (antes se usaba .replace(",",".")
+        # sobre la línea entera, lo que también rompía comas dentro de
+        # nombres de producto, p.ej. listas de gustos "Choco, Vainilla").
+        return f"${n:,.0f}".replace(",", ".")
+
     lineas = [f"*Nuevo pedido — {restaurante['nombre_local']}*\n"]
     lineas.append(f"*Cliente:* {nombre_cliente}")
     if tel_cliente:
         lineas.append(f"*Tel:* {tel_cliente}")
     lineas.append("")
     for item in items:
-        sub = item["cantidad"] * item["precio"]
-        lineas.append(f"• {item['cantidad']}x {item['nombre']} — ${sub:,.0f}".replace(",","."))
+        sub = _sub_item(item)
+        # El nombre del item ya incluye el peso y los gustos elegidos (armado
+        # en el frontend), así que no hace falta un formato especial acá.
+        lineas.append(f"• {item['cantidad']}x {item['nombre']} — {_pesos(sub)}")
     if descuento > 0:
-        lineas.append(f"\n*Subtotal: ${subtotal:,.0f}*".replace(",","."))
-        lineas.append(f"*{promo_orden['titulo']}: -${descuento:,.0f}*".replace(",","."))
-    lineas.append(f"\n*Total: ${total:,.0f}*".replace(",","."))
+        lineas.append(f"\n*Subtotal: {_pesos(subtotal)}*")
+        lineas.append(f"*{promo_orden['titulo']}: -{_pesos(descuento)}*")
+    lineas.append(f"\n*Total: {_pesos(total)}*")
     lineas.append(f"*Entrega:* {'Delivery' if tipo_entrega == 'delivery' else 'Retiro en local'}")
     if tipo_entrega == "delivery":
         lineas.append(f"*Dirección:* {direccion}")
@@ -1641,10 +1659,10 @@ def whatsapp_link():
     for item in items:
         execute("""
             INSERT INTO items_pedido
-                (pedido_id, producto_id, nombre_producto, cantidad, precio_unitario, subtotal)
-            VALUES (?,?,?,?,?,?)
+                (pedido_id, producto_id, nombre_producto, cantidad, precio_unitario, subtotal, peso_kg)
+            VALUES (?,?,?,?,?,?,?)
         """, (pedido_id, item.get("producto_id"), item["nombre"],
-              item["cantidad"], item["precio"], item["cantidad"] * item["precio"]))
+              item["cantidad"], item["precio"], _sub_item(item), item.get("peso_kg")))
 
     return jsonify({"link": link, "pedido_id": pedido_id})
 

@@ -21,6 +21,8 @@ COLUMNAS = [
     ("promociones",  "precio_con_descuento", "REAL"),
     ("cadetes",      "ciudad",               "TEXT NOT NULL DEFAULT 'Rosario'"),
     ("valoraciones", "vista",                "INTEGER NOT NULL DEFAULT 0"),
+    ("productos",    "sabores_por_kilo",     "INTEGER"),
+    ("items_pedido", "peso_kg",              "REAL"),
 ]
 
 

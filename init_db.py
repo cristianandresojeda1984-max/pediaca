@@ -69,7 +69,8 @@ def _tablas_sql(postgres):
             precio          REAL NOT NULL,
             foto_url        TEXT,
             disponible      INTEGER NOT NULL DEFAULT 1,
-            orden           INTEGER NOT NULL DEFAULT 0
+            orden           INTEGER NOT NULL DEFAULT 0,
+            sabores_por_kilo INTEGER
         )""",
         f"""CREATE TABLE IF NOT EXISTS sabores_producto (
             id          {id_col},
@@ -111,7 +112,8 @@ def _tablas_sql(postgres):
             cantidad        INTEGER NOT NULL DEFAULT 1,
             precio_unitario REAL NOT NULL,
             subtotal        REAL NOT NULL,
-            notas           TEXT
+            notas           TEXT,
+            peso_kg         REAL
         )""",
         f"""CREATE TABLE IF NOT EXISTS auspiciantes (
             id          {id_col},

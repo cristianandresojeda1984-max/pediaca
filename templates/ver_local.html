@@ -812,7 +812,7 @@
                 {% for p in prods %}
                   <div class="prod-card {{ 'has-foto' if p.foto_url else 'no-foto' }}"
                        id="pcard-{{ p.id }}"
-                       onclick="verProducto({{ p.id }}, '{{ p.nombre|e }}', {{ p.precio_promo or p.precio }}, '{{ url_imagen(p.foto_url) if p.foto_url else '' }}')">
+                       onclick="verProducto({{ p.id }}, '{{ p.nombre|e }}', {{ p.precio_promo or p.precio }}, '{{ url_imagen(p.foto_url) if p.foto_url else '' }}', {{ p.sabores_por_kilo or 0 }})">
 
                     {% if p.foto_url %}
                       <div class="prod-foto-container">
@@ -827,7 +827,7 @@
                           <div class="prod-desc">{{ p.descripcion }}</div>
                         {% endif %}
                         <div class="prod-footer-row">
-                          <span>{% if p.precio_promo %}<span class="prod-precio-anterior">{{ p.precio | pesos }}</span>{% endif %}<span class="prod-precio">{{ (p.precio_promo or p.precio) | pesos }}</span></span>
+                          <span>{% if p.precio_promo %}<span class="prod-precio-anterior">{{ p.precio | pesos }}</span>{% endif %}<span class="prod-precio">{{ (p.precio_promo or p.precio) | pesos }}{% if p.sabores_por_kilo %} /kg{% endif %}</span></span>
                           <div class="prod-agregar" id="btn-{{ p.id }}">+</div>
                         </div>
                       </div>
@@ -851,7 +851,7 @@
                           <div class="prod-desc">{{ p.descripcion }}</div>
                         {% endif %}
                         <div class="prod-footer-row">
-                          <span>{% if p.precio_promo %}<span class="prod-precio-anterior">{{ p.precio | pesos }}</span>{% endif %}<span class="prod-precio">{{ (p.precio_promo or p.precio) | pesos }}</span></span>
+                          <span>{% if p.precio_promo %}<span class="prod-precio-anterior">{{ p.precio | pesos }}</span>{% endif %}<span class="prod-precio">{{ (p.precio_promo or p.precio) | pesos }}{% if p.sabores_por_kilo %} /kg{% endif %}</span></span>
                           <div class="prod-agregar" id="btn-{{ p.id }}">+</div>
                         </div>
                       </div>
@@ -872,7 +872,7 @@
             {% for p in productos %}
               <div class="prod-card {{ 'has-foto' if p.foto_url else 'no-foto' }}"
                    id="pcard-{{ p.id }}"
-                   onclick="verProducto({{ p.id }}, '{{ p.nombre|e }}', {{ p.precio_promo or p.precio }}, '{{ url_imagen(p.foto_url) if p.foto_url else '' }}')">
+                   onclick="verProducto({{ p.id }}, '{{ p.nombre|e }}', {{ p.precio_promo or p.precio }}, '{{ url_imagen(p.foto_url) if p.foto_url else '' }}', {{ p.sabores_por_kilo or 0 }})">
                 {% if p.foto_url %}
                   <div class="prod-foto-container">
                     <img src="{{ url_imagen(p.foto_url) }}" alt="{{ p.nombre }}" loading="lazy">
@@ -892,7 +892,7 @@
                     <div class="prod-desc">{{ p.descripcion }}</div>
                   {% endif %}
                   <div class="prod-footer-row">
-                    <span>{% if p.precio_promo %}<span class="prod-precio-anterior">{{ p.precio | pesos }}</span>{% endif %}<span class="prod-precio">{{ (p.precio_promo or p.precio) | pesos }}</span></span>
+                    <span>{% if p.precio_promo %}<span class="prod-precio-anterior">{{ p.precio | pesos }}</span>{% endif %}<span class="prod-precio">{{ (p.precio_promo or p.precio) | pesos }}{% if p.sabores_por_kilo %} /kg{% endif %}</span></span>
                     <div class="prod-agregar" id="btn-{{ p.id }}">+</div>
                   </div>
                 </div>
@@ -1037,10 +1037,10 @@
     </div>
 
     <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;">
-      <div style="font-size:0.82rem;font-weight:700;">Cantidad:</div>
+      <div style="font-size:0.82rem;font-weight:700;" id="modal-cant-label">Cantidad:</div>
       <div style="display:flex;align-items:center;gap:8px;">
         <button onclick="cambiarCantModal(-1)" style="width:30px;height:30px;border-radius:50%;border:2px solid var(--gris-2);background:none;cursor:pointer;font-size:1rem;font-weight:700;">−</button>
-        <span id="modal-cant" style="font-weight:800;font-size:1.1rem;min-width:24px;text-align:center;">1</span>
+        <span id="modal-cant" style="font-weight:800;font-size:1.1rem;min-width:56px;text-align:center;">1</span>
         <button onclick="cambiarCantModal(+1)" style="width:30px;height:30px;border-radius:50%;border:2px solid var(--gris-2);background:none;cursor:pointer;font-size:1rem;font-weight:700;">+</button>
       </div>
     </div>
@@ -1117,7 +1117,7 @@
 const RID        = {{ restaurante.id }};
 const HACE_ENVIO = {{ 'true' if restaurante.hace_envio else 'false' }};
 const PROMO_ORDEN = {{ promo_orden | tojson if promo_orden else 'null' }};
-let carrito     = {};   // id → { nombre, precio, cantidad, fotoUrl }
+let carrito     = {};   // "id::nombre" → { productoId, nombre, precio, cantidad, fotoUrl, pesoKg }
 let tipoEntrega = 'retiro';
 
 /* ── DESCUENTO GENERAL DEL LOCAL (promo sin producto asociado) ────────── */
@@ -1135,19 +1135,29 @@ function calcularDescuentoOrden(subtotal) {
 
 /* ── SELECTOR DE SABORES ──────────────────────────────── */
 let _modalProd = null;
-let _modalCant = 1;
+let _modalCant = 1;       // cantidad de unidades (productos normales)
+let _modalPesoKg = 0.25;  // kg elegidos (productos por peso)
 let _saborSeleccionados = [];
 
-async function verProducto(id, nombre, precio, fotoUrl) {
-  _modalProd = { id, nombre, precio, fotoUrl };
+function _maxSaboresModal() {
+  if (!_modalProd || !_modalProd.saboresPorKilo) return Infinity;
+  return Math.max(1, Math.floor(_modalPesoKg * _modalProd.saboresPorKilo));
+}
+
+async function verProducto(id, nombre, precio, fotoUrl, saboresPorKilo) {
+  _modalProd = { id, nombre, precio, fotoUrl, saboresPorKilo: saboresPorKilo || 0 };
   _modalCant = 1;
+  _modalPesoKg = 0.25;
   _saborSeleccionados = [];
+
+  const esPorPeso = !!_modalProd.saboresPorKilo;
 
   // Resetear UI
   document.getElementById('modal-sabores-nombre').textContent = nombre;
-  document.getElementById('modal-sabores-precio').textContent = fmt(precio);
-  document.getElementById('modal-cant').textContent = '1';
-  document.getElementById('modal-sabores-loading').style.display = '';
+  document.getElementById('modal-sabores-precio').textContent = esPorPeso ? fmt(precio) + ' /kg' : fmt(precio);
+  document.getElementById('modal-cant-label').textContent = esPorPeso ? 'Peso:' : 'Cantidad:';
+  document.getElementById('modal-cant').textContent = esPorPeso ? _modalPesoKg.toFixed(2) + ' kg' : '1';
+  document.getElementById('modal-sabores-loading').style.display = esPorPeso ? 'none' : '';
   document.getElementById('modal-sabores-content').style.display = 'none';
   document.getElementById('modal-sabores-libre').style.display = 'none';
   const fotoEl = document.getElementById('modal-sabores-foto');
@@ -1164,6 +1174,7 @@ async function verProducto(id, nombre, precio, fotoUrl) {
     const res  = await fetch('/api/producto/' + id + '/sabores');
     const data = await res.json();
     document.getElementById('modal-sabores-loading').style.display = 'none';
+    _modalProd.saboresDisponibles = data.sabores || [];
 
     if (data.sabores && data.sabores.length > 0) {
       // Tiene sabores → mostrar selector
@@ -1176,16 +1187,32 @@ async function verProducto(id, nombre, precio, fotoUrl) {
           ${s.nombre}
         </button>
       `).join('');
-      document.getElementById('sabores-hint').textContent = 'Podés elegir varios gustos';
+      actualizarHintSabores();
+    } else if (esPorPeso) {
+      // Por peso pero sin gustos cargados: igual dejamos elegir el peso.
+      document.getElementById('sabores-hint').textContent = '';
     } else {
-      // Sin sabores → agregar directo
+      // Sin sabores y no es por peso → agregar directo
       agregarAlCarrito(id, nombre, precio, fotoUrl);
       cerrarModalSabores();
     }
   } catch(e) {
     document.getElementById('modal-sabores-loading').style.display = 'none';
-    agregarAlCarrito(id, nombre, precio, fotoUrl);
-    cerrarModalSabores();
+    if (!esPorPeso) {
+      agregarAlCarrito(id, nombre, precio, fotoUrl);
+      cerrarModalSabores();
+    }
+  }
+}
+
+function actualizarHintSabores() {
+  const hint = document.getElementById('sabores-hint');
+  if (!hint) return;
+  if (_modalProd && _modalProd.saboresPorKilo) {
+    const max = _maxSaboresModal();
+    hint.textContent = `Podés elegir hasta ${max} gusto${max !== 1 ? 's' : ''} para ${_modalPesoKg.toFixed(2)} kg.`;
+  } else {
+    hint.textContent = 'Podés elegir varios gustos';
   }
 }
 
@@ -1198,6 +1225,10 @@ function toggleSabor(id, nombre) {
     btn.style.borderColor   = 'var(--gris-2)';
     btn.style.color         = '';
   } else {
+    if (_saborSeleccionados.length >= _maxSaboresModal()) {
+      alert(`Para este peso podés elegir hasta ${_maxSaboresModal()} gusto${_maxSaboresModal() !== 1 ? 's' : ''}. Sacá alguno para agregar otro, o aumentá la cantidad.`);
+      return;
+    }
     _saborSeleccionados.push({ id, nombre });
     btn.style.background    = 'var(--azul)';
     btn.style.borderColor   = 'var(--azul)';
@@ -1205,20 +1236,47 @@ function toggleSabor(id, nombre) {
   }
 }
 
+function _recortarSaboresAlMaximo() {
+  const max = _maxSaboresModal();
+  if (_saborSeleccionados.length <= max) return;
+  const sobrantes = _saborSeleccionados.splice(max);
+  sobrantes.forEach(s => {
+    const btn = document.getElementById('sc-' + s.id);
+    if (btn) { btn.style.background = 'var(--gris-1)'; btn.style.borderColor = 'var(--gris-2)'; btn.style.color = ''; }
+  });
+}
+
 function cambiarCantModal(delta) {
-  _modalCant = Math.max(1, _modalCant + delta);
-  document.getElementById('modal-cant').textContent = _modalCant;
+  if (_modalProd && _modalProd.saboresPorKilo) {
+    _modalPesoKg = Math.max(0.25, Math.round((_modalPesoKg + delta * 0.25) * 100) / 100);
+    document.getElementById('modal-cant').textContent = _modalPesoKg.toFixed(2) + ' kg';
+    _recortarSaboresAlMaximo();
+    actualizarHintSabores();
+  } else {
+    _modalCant = Math.max(1, _modalCant + delta);
+    document.getElementById('modal-cant').textContent = _modalCant;
+  }
 }
 
 function confirmarProductoModal() {
   if (!_modalProd) return;
   let nombre = _modalProd.nombre;
+  const esPorPeso = !!_modalProd.saboresPorKilo;
+
+  if (esPorPeso) {
+    nombre += ` — ${_modalPesoKg.toFixed(2)} kg`;
+  }
   if (_saborSeleccionados.length > 0) {
     nombre += ' (' + _saborSeleccionados.map(s => s.nombre).join(', ') + ')';
   }
-  // Agregar la cantidad indicada
-  for (let i = 0; i < _modalCant; i++) {
-    agregarAlCarrito(_modalProd.id, nombre, _modalProd.precio, _modalProd.fotoUrl);
+
+  if (esPorPeso) {
+    // Una sola línea por combinación peso+gustos; el precio ya es por kilo.
+    agregarAlCarrito(_modalProd.id, nombre, _modalProd.precio, _modalProd.fotoUrl, _modalPesoKg);
+  } else {
+    for (let i = 0; i < _modalCant; i++) {
+      agregarAlCarrito(_modalProd.id, nombre, _modalProd.precio, _modalProd.fotoUrl);
+    }
   }
   cerrarModalSabores();
 }
@@ -1234,51 +1292,62 @@ document.getElementById('modal-sabores').addEventListener('click', function(e) {
 });
 
 /* ── AGREGAR ──────────────────────────────────────────── */
-function agregarAlCarrito(id, nombre, precio, fotoUrl) {
-  if (carrito[id]) carrito[id].cantidad++;
-  else carrito[id] = { nombre, precio, fotoUrl, cantidad: 1 };
+function agregarAlCarrito(id, nombre, precio, fotoUrl, pesoKg) {
+  // Clave compuesta por producto + nombre (que ya incluye peso/gustos), para
+  // que dos combinaciones distintas del mismo producto no se pisen entre sí.
+  const key = id + '::' + nombre;
+  if (carrito[key]) carrito[key].cantidad++;
+  else carrito[key] = { productoId: id, nombre, precio, fotoUrl, cantidad: 1, pesoKg: pesoKg || null };
   renderCarrito();
   animarProducto(id);
 }
 
-function cambiarCantidad(id, delta) {
-  if (!carrito[id]) return;
-  carrito[id].cantidad += delta;
-  if (carrito[id].cantidad <= 0) {
-    delete carrito[id];
-    resetProducto(id);
+function _escKey(k) {
+  return String(k).replace(/\\/g,'\\\\').replace(/'/g,"\\'");
+}
+
+function cambiarCantidad(key, delta) {
+  if (!carrito[key]) return;
+  const productoId = carrito[key].productoId;
+  carrito[key].cantidad += delta;
+  if (carrito[key].cantidad <= 0) {
+    delete carrito[key];
   }
   renderCarrito();
+  animarProducto(productoId);
 }
 
 function animarProducto(id) {
   const btn   = document.getElementById('btn-' + id);
   const badge = document.getElementById('badge-' + id);
-  const cant  = carrito[id]?.cantidad || 0;
+  const cant  = Object.values(carrito)
+    .filter(it => it.productoId === id)
+    .reduce((s, it) => s + it.cantidad, 0);
   if (btn) {
-    btn.textContent = cant;
-    btn.classList.add('en-carrito');
-    btn.style.transform = 'scale(1.35)';
-    setTimeout(() => btn.style.transform = '', 200);
+    btn.textContent = cant > 0 ? cant : '+';
+    if (cant > 0) {
+      btn.classList.add('en-carrito');
+      btn.style.transform = 'scale(1.35)';
+      setTimeout(() => btn.style.transform = '', 200);
+    } else {
+      btn.classList.remove('en-carrito');
+    }
   }
   if (badge) {
-    badge.textContent = cant;
-    badge.classList.add('visible');
+    if (cant > 0) { badge.textContent = cant; badge.classList.add('visible'); }
+    else          { badge.classList.remove('visible'); }
   }
-}
-
-function resetProducto(id) {
-  const btn   = document.getElementById('btn-' + id);
-  const badge = document.getElementById('badge-' + id);
-  if (btn)   { btn.textContent = '+'; btn.classList.remove('en-carrito'); }
-  if (badge) { badge.classList.remove('visible'); }
 }
 
 /* ── RENDER CARRITO ───────────────────────────────────── */
+function _totalLinea(it) {
+  return it.precio * it.cantidad * (it.pesoKg || 1);
+}
+
 function renderCarrito() {
-  const ids      = Object.keys(carrito);
-  const subtotal = ids.reduce((s,id) => s + carrito[id].precio * carrito[id].cantidad, 0);
-  const nItems   = ids.reduce((s,id) => s + carrito[id].cantidad, 0);
+  const keys     = Object.keys(carrito);
+  const subtotal = keys.reduce((s,k) => s + _totalLinea(carrito[k]), 0);
+  const nItems   = keys.reduce((s,k) => s + carrito[k].cantidad, 0);
   const descuento = calcularDescuentoOrden(subtotal);
   const total     = subtotal - descuento;
 
@@ -1288,7 +1357,7 @@ function renderCarrito() {
   const fab    = document.getElementById('fabCarrito');
   const badge  = document.getElementById('fabBadge');
 
-  if (ids.length === 0) {
+  if (keys.length === 0) {
     vacio.style.display  = '';
     items.style.display  = 'none';
     footer.style.display = 'none';
@@ -1314,22 +1383,23 @@ function renderCarrito() {
   }
   document.getElementById('totalValor').textContent = fmt(total);
 
-  items.innerHTML = ids.map(id => {
-    const it = carrito[id];
+  items.innerHTML = keys.map(key => {
+    const it = carrito[key];
     const imgHtml = it.fotoUrl
       ? `<img class="ci-img" src="${it.fotoUrl}" alt="">`
       : `<div class="ci-img-ph">🍽️</div>`;
+    const subLabel = it.pesoKg ? `${fmt(it.precio)} /kg` : `${fmt(it.precio)} c/u`;
     return `
       <div class="ci">
         ${imgHtml}
         <div class="ci-info">
           <div class="ci-nombre">${it.nombre}</div>
-          <div class="ci-sub">${fmt(it.precio)} c/u</div>
+          <div class="ci-sub">${subLabel}</div>
         </div>
         <div class="ci-ctrl">
-          <button class="ci-btn" onclick="cambiarCantidad(${id},-1)">−</button>
+          <button class="ci-btn" onclick="cambiarCantidad('${_escKey(key)}',-1)">−</button>
           <span class="ci-cant">${it.cantidad}</span>
-          <button class="ci-btn" onclick="cambiarCantidad(${id},+1)">+</button>
+          <button class="ci-btn" onclick="cambiarCantidad('${_escKey(key)}',+1)">+</button>
         </div>
       </div>`;
   }).join('');
@@ -1377,14 +1447,15 @@ async function enviarPedido() {
   btn.disabled   = true;
   btn.textContent = '⏳ Generando...';
 
-  const items = ids.map(id => ({
-    producto_id: +id,
-    nombre:      carrito[id].nombre,
-    precio:      carrito[id].precio,
-    cantidad:    carrito[id].cantidad
+  const items = ids.map(key => ({
+    producto_id: carrito[key].productoId,
+    nombre:      carrito[key].nombre,
+    precio:      carrito[key].precio,
+    cantidad:    carrito[key].cantidad,
+    peso_kg:     carrito[key].pesoKg || undefined
   }));
 
-  const subtotal      = items.reduce((s,it) => s + it.precio * it.cantidad, 0);
+  const subtotal      = ids.reduce((s,key) => s + _totalLinea(carrito[key]), 0);
   const descuentoOrden = calcularDescuentoOrden(subtotal);
 
   try {
@@ -1404,8 +1475,9 @@ async function enviarPedido() {
       // Mostrar tracker de estado
       mostrarTrackerPedido(data.pedido_id);
       // Limpiar carrito
-      Object.keys(carrito).forEach(id => resetProducto(id));
+      const idsAfectados = [...new Set(Object.values(carrito).map(it => it.productoId))];
       carrito = {};
+      idsAfectados.forEach(id => animarProducto(id));
       renderCarrito();
       cerrarCarrito();
     }

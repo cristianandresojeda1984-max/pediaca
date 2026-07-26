@@ -805,6 +805,19 @@ select.form-control { appearance: none; cursor: pointer; }
               </div>
             </div>
           </div>
+          <div class="form-group">
+            <div class="check-row">
+              <input type="checkbox" name="vendido_por_peso" id="chk_peso_nuevo" onchange="togglePesoNuevo()">
+              <label for="chk_peso_nuevo" style="font-size:0.9rem;font-weight:600;">Se vende por peso (kg) — ej: heladería, fiambrería</label>
+            </div>
+          </div>
+          <div class="form-group" id="campo-sabores-kilo-nuevo" style="display:none;">
+            <label>Gustos permitidos por kilo</label>
+            <input class="form-control" type="number" name="sabores_por_kilo" min="1" placeholder="Ej: 4">
+            <div style="font-size:0.78rem;color:var(--gris-3);margin-top:4px;">
+              El precio de arriba se toma como precio por kilo. Si el cliente pide medio kilo, se le permite la mitad de gustos (redondeando hacia abajo, mínimo 1).
+            </div>
+          </div>
           <!-- FOTO INLINE -->
           <div class="form-group">
             <label>Foto del producto</label>
@@ -928,7 +941,7 @@ select.form-control { appearance: none; cursor: pointer; }
                 </label>
               </a>
               <button class="btn btn-outline btn-sm"
-                onclick="abrirEditarProducto({{ p.id }}, '{{ p.nombre|e }}', {{ p.precio }}, '{{ p.descripcion|e }}', {{ p.categoria_id or 'null' }}, {{ p.disponible }})">
+                onclick="abrirEditarProducto({{ p.id }}, '{{ p.nombre|e }}', {{ p.precio }}, '{{ p.descripcion|e }}', {{ p.categoria_id or 'null' }}, {{ p.disponible }}, {{ p.sabores_por_kilo or 'null' }})">
                 ✏️
               </button>
               <form method="POST" action="{{ url_for('producto_eliminar', prod_id=p.id) }}"
@@ -1162,6 +1175,19 @@ function toggleTipoDescuento() {
           <label for="ep-disponible" style="font-size:0.9rem;font-weight:600;">Disponible</label>
         </div>
       </div>
+      <div class="form-group">
+        <div class="check-row">
+          <input type="checkbox" name="vendido_por_peso" id="ep-vendido-por-peso" onchange="togglePesoEditar()">
+          <label for="ep-vendido-por-peso" style="font-size:0.9rem;font-weight:600;">Se vende por peso (kg) — ej: heladería, fiambrería</label>
+        </div>
+      </div>
+      <div class="form-group" id="ep-campo-sabores-kilo" style="display:none;">
+        <label>Gustos permitidos por kilo</label>
+        <input class="form-control" type="number" name="sabores_por_kilo" id="ep-sabores-por-kilo" min="1" placeholder="Ej: 4">
+        <div style="font-size:0.78rem;color:var(--gris-3);margin-top:4px;">
+          El precio se toma como precio por kilo. Si el cliente pide medio kilo, se le permite la mitad de gustos (redondeando hacia abajo, mínimo 1).
+        </div>
+      </div>
       <button class="btn btn-primary btn-block" type="submit">💾 Guardar</button>
     </form>
   </div>
@@ -1322,7 +1348,7 @@ document.querySelectorAll('.modal-overlay').forEach(m => {
   m.addEventListener('click', e => { if (e.target === m) m.classList.remove('open'); });
 });
 
-function abrirEditarProducto(id, nombre, precio, desc, catId, disponible) {
+function abrirEditarProducto(id, nombre, precio, desc, catId, disponible, saboresPorKilo) {
   document.getElementById('form-editar-producto').action = '/mi-local/producto/' + id + '/editar';
   document.getElementById('ep-nombre').value     = nombre;
   document.getElementById('ep-precio').value     = precio;
@@ -1330,7 +1356,20 @@ function abrirEditarProducto(id, nombre, precio, desc, catId, disponible) {
   document.getElementById('ep-disponible').checked = !!disponible;
   const sel = document.getElementById('ep-categoria');
   sel.value = catId || '';
+  document.getElementById('ep-vendido-por-peso').checked = !!saboresPorKilo;
+  document.getElementById('ep-sabores-por-kilo').value = saboresPorKilo || '';
+  togglePesoEditar();
   document.getElementById('modal-producto').classList.add('open');
+}
+
+function togglePesoNuevo() {
+  document.getElementById('campo-sabores-kilo-nuevo').style.display =
+    document.getElementById('chk_peso_nuevo').checked ? '' : 'none';
+}
+
+function togglePesoEditar() {
+  document.getElementById('ep-campo-sabores-kilo').style.display =
+    document.getElementById('ep-vendido-por-peso').checked ? '' : 'none';
 }
 
 function abrirEditarPromo(id, titulo, desc, descPct, inicio, fin) {
