@@ -204,10 +204,40 @@
         </form>
     </div>
 
-    <h2 style="font-family:'Paytone One',sans-serif;font-size:1rem;margin:32px 0 14px;">📢 Auspiciantes</h2>
+    <h2 style="font-family:'Paytone One',sans-serif;font-size:1rem;margin:32px 0 14px;">📢 Publicidad a marcas</h2>
     <p class="info-text" style="margin-bottom:14px;">
-        Marcas o negocios patrocinadores que se muestran en el home. Se pueden activar/desactivar sin borrarlos.
+        Marcas anunciantes (auspiciantes) que pagan por aparecer en la plataforma — modelo de ingresos separado,
+        no le cobra nada a los locales. Dos espacios, cada uno con su propio interruptor y arrancan
+        <strong>desactivados</strong>: activalos solo cuando quieras mostrarlos (por ejemplo, en una demo).
     </p>
+
+    <div class="config-card" style="margin-bottom:14px;">
+        <form method="POST" style="margin:0;display:flex;align-items:center;justify-content:space-between;gap:12px;">
+            <input type="hidden" name="accion" value="toggle_anuncios">
+            <div>
+                <div style="font-weight:800;font-size:0.9rem;">🎠 Carrusel en el home</div>
+                <div class="info-text" style="margin:2px 0 0;">Franja rotativa arriba del listado de locales.</div>
+            </div>
+            <button type="submit" class="ciudad-toggle-btn"
+                    style="{% if config.anuncios_activo == 'true' %}background:#D5F5E3;color:#1E8449;{% else %}background:#f0f2f5;color:#6c757d;{% endif %}">
+                {{ '🟢 Activado' if config.anuncios_activo == 'true' else '⚪ Desactivado' }}
+            </button>
+        </form>
+    </div>
+
+    <div class="config-card" style="margin-bottom:14px;">
+        <form method="POST" style="margin:0;display:flex;align-items:center;justify-content:space-between;gap:12px;">
+            <input type="hidden" name="accion" value="toggle_anuncios_lateral">
+            <div>
+                <div style="font-weight:800;font-size:0.9rem;">📌 Banners a los costados</div>
+                <div class="info-text" style="margin:2px 0 0;">Fijos a izquierda y derecha, solo en pantallas anchas (desktop).</div>
+            </div>
+            <button type="submit" class="ciudad-toggle-btn"
+                    style="{% if config.anuncios_lateral_activo == 'true' %}background:#D5F5E3;color:#1E8449;{% else %}background:#f0f2f5;color:#6c757d;{% endif %}">
+                {{ '🟢 Activado' if config.anuncios_lateral_activo == 'true' else '⚪ Desactivado' }}
+            </button>
+        </form>
+    </div>
 
     <div class="config-card">
         {% for a in auspiciantes %}
@@ -219,7 +249,9 @@
             {% endif %}
             <span class="ciudad-nombre">
                 {{ a.nombre }}
-                <span style="font-size:0.7rem;color:#6c757d;font-weight:600;">· {{ a.posicion }}</span>
+                <span style="font-size:0.7rem;color:#6c757d;font-weight:600;">·
+                    {% if a.posicion == 'home' %}carrusel home{% elif a.posicion == 'header' %}banner lateral{% else %}{{ a.posicion }}{% endif %}
+                </span>
             </span>
             <form method="POST" style="margin:0;">
                 <input type="hidden" name="accion" value="toggle_auspiciante">
@@ -244,9 +276,9 @@
             <input type="text" name="nombre_auspiciante" class="form-control" placeholder="Nombre del auspiciante" required>
             <input type="url" name="url_destino" class="form-control" placeholder="Link a donde va (opcional)">
             <select name="posicion" class="form-control">
-                <option value="home">Home</option>
-                <option value="header">Header</option>
-                <option value="listado">Listado</option>
+                <option value="home">Carrusel del home</option>
+                <option value="header">Banner lateral (costados)</option>
+                <option value="listado">Listado (sin usar todavía)</option>
             </select>
             <input type="file" name="logo_auspiciante" class="form-control" accept="image/*" style="padding:10px;">
             <button type="submit" style="background:#EA580C;color:#fff;border:none;border-radius:10px;padding:12px;font-weight:800;cursor:pointer;">+ Agregar auspiciante</button>

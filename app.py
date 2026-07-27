@@ -270,6 +270,14 @@ def _init_configuraciones():
             defaults = [
                 ('hero_activo', 'false', 'text'),
                 ('hero_imagen_url', '', 'text'),
+                # Carrusel de publicidad a marcas (auspiciantes). Arranca
+                # DESACTIVADO por defecto — Cristian lo prende desde el panel
+                # de admin cuando quiera mostrarlo/usarlo en una demo.
+                ('anuncios_activo', 'false', 'text'),
+                # Banners laterales (a los costados de la página, solo
+                # pantallas anchas). Toggle independiente del carrusel de
+                # arriba, también arranca DESACTIVADO.
+                ('anuncios_lateral_activo', 'false', 'text'),
             ]
             for clave, valor, tipo in defaults:
                 execute("""
@@ -362,6 +370,7 @@ def _init_migrar_columnas():
         ("promociones",  "precio_con_descuento", "REAL"),
         ("cadetes",      "ciudad",               "TEXT NOT NULL DEFAULT 'Rosario'"),
         ("valoraciones", "vista",                "INTEGER NOT NULL DEFAULT 0"),
+        ("pedidos",      "costo_envio",          "REAL NOT NULL DEFAULT 0"),
     ]
     try:
         with app.app_context():
@@ -495,12 +504,13 @@ def home():
         GROUP BY r.id, u.telefono
         ORDER BY r.abierto DESC, r.nombre_local
     """, (ciudad,))
+    anuncios_activo = get_config("anuncios_activo") == "true"
     auspiciantes = query("""
         SELECT * FROM auspiciantes
         WHERE activo = 1
           AND (fecha_inicio IS NULL OR fecha_inicio <= CURRENT_DATE)
           AND (fecha_fin   IS NULL OR fecha_fin   >= CURRENT_DATE)
-    """)
+    """) if anuncios_activo else []
 
     promociones_destacadas = query("""
         SELECT p.*, r.nombre_local, r.id as restaurante_id
@@ -519,6 +529,7 @@ def home():
         favoritos_ids = {f["restaurante_id"] for f in favs}
 
     return render_template("home.html", restaurantes=restaurantes, auspiciantes=auspiciantes,
+                           anuncios_activo=anuncios_activo,
                            promociones_destacadas=promociones_destacadas,
                            favoritos_ids=favoritos_ids)
 
@@ -1302,7 +1313,7 @@ def cadete_panel():
         """, (cadete.get("ciudad") or CIUDAD_DEFAULT,))
 
         entregas = query("""
-            SELECT p.id, p.total, p.fecha_pedido, p.direccion_entrega, r.nombre_local
+            SELECT p.id, p.total, p.costo_envio, p.fecha_pedido, p.direccion_entrega, r.nombre_local
             FROM pedidos p
             JOIN restaurantes r ON r.id = p.restaurante_id
             WHERE p.cadete_id = ? AND p.estado = 'entregado'
@@ -1327,7 +1338,7 @@ def cadete_panel():
         # empieza a mandar su ubicación GPS (ver JS) para que el comprador y
         # el local la vean en el mapa de seguimiento.
         entrega_en_curso = query("""
-            SELECT p.id, p.total, r.nombre_local
+            SELECT p.id, p.total, p.costo_envio, r.nombre_local
             FROM pedidos p JOIN restaurantes r ON r.id = p.restaurante_id
             WHERE p.cadete_id = ? AND p.estado = 'en_camino'
             ORDER BY p.fecha_pedido DESC LIMIT 1
@@ -1666,7 +1677,16 @@ def whatsapp_link():
         elif promo_orden["tipo_descuento"] == "monto" and promo_orden["descuento_monto"]:
             descuento = min(subtotal, promo_orden["descuento_monto"])
 
-    total = subtotal - descuento
+    # El costo de envío se toma del local (restaurantes.costo_envio) y se
+    # suma al total, y también se guarda "congelado" en el pedido (columna
+    # pedidos.costo_envio) para que quede constante aunque el local cambie
+    # después su tarifa — así el cadete siempre puede verificar cuánto le
+    # corresponde reclamar por ESE pedido puntual.
+    envio = 0
+    if tipo_entrega == "delivery" and restaurante["hace_envio"]:
+        envio = restaurante["costo_envio"] or 0
+
+    total = subtotal - descuento + envio
 
     def _pesos(n):
         # Formatea como "$1.234" (separador de miles con punto), sin tocar
@@ -1688,6 +1708,8 @@ def whatsapp_link():
     if descuento > 0:
         lineas.append(f"\n*Subtotal: {_pesos(subtotal)}*")
         lineas.append(f"*{promo_orden['titulo']}: -{_pesos(descuento)}*")
+    if envio > 0:
+        lineas.append(f"*Envío: {_pesos(envio)}*")
     lineas.append(f"\n*Total: {_pesos(total)}*")
     lineas.append(f"*Entrega:* {'Delivery' if tipo_entrega == 'delivery' else 'Retiro en local'}")
     if tipo_entrega == "delivery":
@@ -1707,10 +1729,10 @@ def whatsapp_link():
     pedido_id = execute("""
         INSERT INTO pedidos
             (restaurante_id, cliente_id, nombre_cliente_anonimo, telefono_cliente_anonimo,
-             tipo_entrega, direccion_entrega, total, notas, enviado_whatsapp)
-        VALUES (?,?,?,?,?,?,?,?,1)
+             tipo_entrega, direccion_entrega, total, costo_envio, notas, enviado_whatsapp)
+        VALUES (?,?,?,?,?,?,?,?,?,1)
     """, (restaurante_id, cliente_id, nom_anon, tel_anon,
-          tipo_entrega, direccion, total, notas))
+          tipo_entrega, direccion, total, envio, notas))
 
     for item in items:
         execute("""
@@ -2105,7 +2127,7 @@ def pedidos_nuevos_cadete():
     cadete = query("SELECT ciudad FROM cadetes WHERE usuario_id = ?", (session["user_id"],), one=True)
     ciudad_cadete = (cadete["ciudad"] if cadete else None) or CIUDAD_DEFAULT
     pedidos = query("""
-        SELECT p.id, p.total, p.direccion_entrega, p.fecha_pedido,
+        SELECT p.id, p.total, p.costo_envio, p.direccion_entrega, p.fecha_pedido,
                r.nombre_local, r.direccion AS local_direccion, r.whatsapp
         FROM pedidos p
         JOIN restaurantes r ON r.id = p.restaurante_id
@@ -2660,6 +2682,27 @@ def inject_config():
         return get_config(clave)
     return dict(get_config=get_cached_config)
 
+
+@app.context_processor
+def inject_anuncios_lateral():
+    """Banners de publicidad a los costados de la página (fixed, solo en
+    pantallas anchas). Toggle independiente del carrusel del home — se
+    inyecta acá (context_processor, no por ruta) para que aparezca en
+    cualquier página sin tener que tocar cada vista. Reutiliza la tabla
+    auspiciantes con posicion='header' (reutilizado como "lateral" para no
+    tener que migrar el CHECK de la columna en la base ya en producción)."""
+    activo = get_config("anuncios_lateral_activo") == "true"
+    anuncios = []
+    if activo:
+        anuncios = query("""
+            SELECT * FROM auspiciantes
+            WHERE activo = 1 AND posicion = 'header'
+              AND (fecha_inicio IS NULL OR fecha_inicio <= CURRENT_DATE)
+              AND (fecha_fin   IS NULL OR fecha_fin   >= CURRENT_DATE)
+        """)
+    return dict(anuncios_lateral_activo=activo, anuncios_lateral=anuncios)
+
+
 @app.route("/admin/configuracion", methods=["GET", "POST"])
 @login_required
 @rol_required("admin")
@@ -2757,6 +2800,16 @@ def admin_configuracion():
                 execute("DELETE FROM auspiciantes WHERE id = ?", (aus_id,))
                 mensaje = ("success", f"✅ '{fila['nombre']}' eliminado.")
 
+        elif accion == "toggle_anuncios":
+            actual = get_config("anuncios_activo") or "false"
+            set_config("anuncios_activo", "false" if actual == "true" else "true")
+            mensaje = ("success", "✅ Carrusel de publicidad (home) actualizado.")
+
+        elif accion == "toggle_anuncios_lateral":
+            actual = get_config("anuncios_lateral_activo") or "false"
+            set_config("anuncios_lateral_activo", "false" if actual == "true" else "true")
+            mensaje = ("success", "✅ Banners laterales actualizados.")
+
         else:
             hero_activo = "true" if request.form.get("hero_activo") == "true" else "false"
 
@@ -2784,6 +2837,8 @@ def admin_configuracion():
     config = {
         "hero_activo": get_config("hero_activo") or "false",
         "hero_imagen_url": get_config("hero_imagen_url") or "",
+        "anuncios_activo": get_config("anuncios_activo") or "false",
+        "anuncios_lateral_activo": get_config("anuncios_lateral_activo") or "false",
     }
 
     auspiciantes = query("SELECT * FROM auspiciantes ORDER BY activo DESC, nombre")

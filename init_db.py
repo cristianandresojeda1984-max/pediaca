@@ -104,6 +104,7 @@ def _tablas_sql(postgres):
             direccion_entrega           TEXT,
             estado                      TEXT NOT NULL DEFAULT 'nuevo' CHECK(estado IN ('nuevo','confirmado','en_camino','entregado','cancelado')),
             total                       REAL NOT NULL DEFAULT 0,
+            costo_envio                 REAL NOT NULL DEFAULT 0,
             notas                       TEXT,
             enviado_whatsapp            INTEGER NOT NULL DEFAULT 0,
             fecha_pedido                TIMESTAMP NOT NULL DEFAULT {ts_now},

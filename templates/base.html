@@ -234,6 +234,47 @@ a { color: inherit; }
   .footer-inner { grid-template-columns: 1fr; gap: 24px; text-align: left; }
 }
 
+/* ── BANNERS LATERALES (publicidad, a los costados) ───────── */
+.anuncios-lateral {
+  position: fixed;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 160px;
+  z-index: 150;
+  display: none;
+}
+@media (min-width: 1320px) {
+  .anuncios-lateral { display: block; }
+}
+.anuncios-lateral-izq { left: 18px; }
+.anuncios-lateral-der { right: 18px; }
+.anuncios-lateral-slide {
+  display: none;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  text-align: center;
+  text-decoration: none;
+  background: var(--blanco);
+  border: 1px solid var(--gris-2);
+  border-radius: var(--radio);
+  box-shadow: var(--sombra-m);
+  padding: 14px;
+}
+.anuncios-lateral-slide.activo { display: flex; }
+.anuncios-lateral-slide img { width: 100%; max-height: 130px; object-fit: contain; border-radius: var(--radio-s); }
+.anuncios-lateral-label {
+  font-size: 0.62rem;
+  font-weight: 800;
+  color: var(--texto-s);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+.anuncios-lateral-nombre { font-weight: 800; font-size: 0.85rem; color: var(--texto); }
+.anuncios-lateral-dots { display: flex; justify-content: center; gap: 5px; margin-top: 4px; }
+.anuncios-lateral-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--gris-2); transition: background 0.2s; }
+.anuncios-lateral-dot.activo { background: var(--naranja); }
+
 /* ── UTILITIES ───────────────────────────────────────────── */
 .container { max-width: 1000px; margin: 0 auto; padding: 0 16px; }
 .mt-1 { margin-top: 8px; }
@@ -298,6 +339,63 @@ a { color: inherit; }
     <a href="{{ url_for('registro') }}" class="navbar-btn navbar-btn-filled">Registrarse</a>
   {% endif %}
 </nav>
+
+<!-- BANNERS LATERALES DE PUBLICIDAD (solo pantallas anchas) -->
+{% if anuncios_lateral_activo and anuncios_lateral %}
+  <div class="anuncios-lateral anuncios-lateral-izq" id="anunciosLatIzq">
+    {% for a in anuncios_lateral %}
+      <a href="{{ a.url_destino or '#' }}" class="anuncios-lateral-slide{% if loop.first %} activo{% endif %}" target="_blank" rel="noopener sponsored">
+        {% if a.logo_url %}<img src="{{ url_imagen(a.logo_url) }}" alt="{{ a.nombre }}">{% endif %}
+        <div class="anuncios-lateral-label">Publicidad</div>
+        <div class="anuncios-lateral-nombre">{{ a.nombre }}</div>
+      </a>
+    {% endfor %}
+    {% if anuncios_lateral|length > 1 %}<div class="anuncios-lateral-dots" id="anunciosLatIzqDots"></div>{% endif %}
+  </div>
+  <div class="anuncios-lateral anuncios-lateral-der" id="anunciosLatDer">
+    {% for a in anuncios_lateral %}
+      <a href="{{ a.url_destino or '#' }}" class="anuncios-lateral-slide{% if loop.first %} activo{% endif %}" target="_blank" rel="noopener sponsored">
+        {% if a.logo_url %}<img src="{{ url_imagen(a.logo_url) }}" alt="{{ a.nombre }}">{% endif %}
+        <div class="anuncios-lateral-label">Publicidad</div>
+        <div class="anuncios-lateral-nombre">{{ a.nombre }}</div>
+      </a>
+    {% endfor %}
+    {% if anuncios_lateral|length > 1 %}<div class="anuncios-lateral-dots" id="anunciosLatDerDots"></div>{% endif %}
+  </div>
+  <script>
+  (function(){
+    var izq = document.querySelectorAll('#anunciosLatIzq .anuncios-lateral-slide');
+    var der = document.querySelectorAll('#anunciosLatDer .anuncios-lateral-slide');
+    if (izq.length <= 1) return;
+    function buildDots(wrapId, n){
+      var wrap = document.getElementById(wrapId);
+      var dots = [];
+      if (!wrap) return dots;
+      for (var i = 0; i < n; i++){
+        var d = document.createElement('span');
+        d.className = 'anuncios-lateral-dot' + (i === 0 ? ' activo' : '');
+        wrap.appendChild(d);
+        dots.push(d);
+      }
+      return dots;
+    }
+    var dotsIzq = buildDots('anunciosLatIzqDots', izq.length);
+    var dotsDer = buildDots('anunciosLatDerDots', der.length);
+    var actual = 0;
+    setInterval(function(){
+      izq[actual].classList.remove('activo');
+      der[actual].classList.remove('activo');
+      if (dotsIzq[actual]) dotsIzq[actual].classList.remove('activo');
+      if (dotsDer[actual]) dotsDer[actual].classList.remove('activo');
+      actual = (actual + 1) % izq.length;
+      izq[actual].classList.add('activo');
+      der[actual].classList.add('activo');
+      if (dotsIzq[actual]) dotsIzq[actual].classList.add('activo');
+      if (dotsDer[actual]) dotsDer[actual].classList.add('activo');
+    }, 5000);
+  })();
+  </script>
+{% endif %}
 
 <!-- ALERTAS -->
 {% with msgs = get_flashed_messages(with_categories=true) %}

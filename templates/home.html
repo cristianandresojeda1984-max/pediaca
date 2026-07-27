@@ -247,18 +247,28 @@
 .empty-icon { font-size: 3.5rem; margin-bottom: 12px; }
 .empty-titulo { font-weight: 800; font-size: 1.1rem; margin-bottom: 6px; color: var(--texto); }
 
-/* ── BANNER AUSPICIANTE ──────────────────────────────────── */
-.auspiciante-wrap {
+/* ── CARRUSEL DE PUBLICIDAD (home) ──────────────────────── */
+.anuncios-carousel {
+  position: relative;
+  min-height: 84px;
+  margin-bottom: 20px;
+}
+.anuncios-slide {
+  position: absolute;
+  inset: 0;
   background: linear-gradient(90deg, var(--naranja-l), var(--azul-l));
   border-radius: var(--radio);
   padding: 14px 20px;
   display: flex;
   align-items: center;
   gap: 14px;
-  margin-bottom: 20px;
   text-decoration: none;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.5s ease;
 }
-.auspiciante-wrap img { height: 40px; object-fit: contain; }
+.anuncios-slide.activo { opacity: 1; pointer-events: auto; }
+.anuncios-slide img { height: 40px; width: 40px; object-fit: contain; border-radius: var(--radio-s); background: var(--blanco); flex-shrink: 0; }
 .auspiciante-label {
   font-size: 0.7rem;
   font-weight: 800;
@@ -267,6 +277,9 @@
   letter-spacing: 0.5px;
   margin-bottom: 2px;
 }
+.anuncios-dots { display: flex; justify-content: center; gap: 6px; margin-top: 8px; position: relative; z-index: 2; }
+.anuncios-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--gris-2); transition: background 0.2s; }
+.anuncios-dot.activo { background: var(--naranja); }
 
 /* ── CTA LOCALES ─────────────────────────────────────────── */
 .cta-band {
@@ -416,17 +429,46 @@
     {% endfor %}
   </div>
 
-  <!-- AUSPICIANTES -->
-  {% for a in auspiciantes %}
-    {% if a.posicion == 'home' %}
-      <a href="{{ a.url_destino or '#' }}" class="auspiciante-wrap" target="_blank">
-        <div>
-          <div class="auspiciante-label">Auspiciante</div>
-          <strong>{{ a.nombre }}</strong>
-        </div>
-      </a>
+  <!-- CARRUSEL DE PUBLICIDAD -->
+  {% set anuncios_home = auspiciantes | selectattr('posicion', 'equalto', 'home') | list %}
+  {% if anuncios_activo and anuncios_home %}
+    <div class="anuncios-carousel" id="anunciosCarousel">
+      {% for a in anuncios_home %}
+        <a href="{{ a.url_destino or '#' }}" class="anuncios-slide{% if loop.first %} activo{% endif %}" target="_blank" rel="noopener sponsored">
+          {% if a.logo_url %}<img src="{{ url_imagen(a.logo_url) }}" alt="{{ a.nombre }}">{% endif %}
+          <div>
+            <div class="auspiciante-label">Publicidad</div>
+            <strong>{{ a.nombre }}</strong>
+          </div>
+        </a>
+      {% endfor %}
+    </div>
+    {% if anuncios_home|length > 1 %}
+      <div class="anuncios-dots" id="anunciosDots"></div>
     {% endif %}
-  {% endfor %}
+    <script>
+    (function(){
+      var slides = document.querySelectorAll('#anunciosCarousel .anuncios-slide');
+      if (slides.length <= 1) return;
+      var dotsWrap = document.getElementById('anunciosDots');
+      var dots = [];
+      slides.forEach(function(_, i){
+        var d = document.createElement('span');
+        d.className = 'anuncios-dot' + (i === 0 ? ' activo' : '');
+        if (dotsWrap) dotsWrap.appendChild(d);
+        dots.push(d);
+      });
+      var actual = 0;
+      setInterval(function(){
+        slides[actual].classList.remove('activo');
+        dots[actual].classList.remove('activo');
+        actual = (actual + 1) % slides.length;
+        slides[actual].classList.add('activo');
+        dots[actual].classList.add('activo');
+      }, 4500);
+    })();
+    </script>
+  {% endif %}
 
   <!-- LOCALES -->
   <h2 class="seccion-titulo">
