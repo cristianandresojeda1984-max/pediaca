@@ -362,6 +362,31 @@
                   {% endfor %}
                 </div>
                 <input type="hidden" name="estrellas" id="inp-star-{{ p.id }}" value="5">
+
+                {% if p.items_valorables %}
+                  <div style="margin-bottom:10px;">
+                    <div style="font-size:0.75rem;font-weight:800;color:var(--texto-s);text-transform:uppercase;letter-spacing:0.3px;margin-bottom:6px;">Calificá los platos (opcional)</div>
+                    {% for it in p.items_valorables %}
+                      <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;padding:6px 0;border-bottom:1px solid var(--gris-1);">
+                        <span style="font-size:0.82rem;flex:1;">{{ it.nombre_producto }}</span>
+                        {% if it.ya_valorado %}
+                          <span style="font-size:0.74rem;color:var(--texto-s);font-weight:700;">✓ Ya calificado</span>
+                        {% else %}
+                          <div style="display:flex;gap:1px;" id="pstars-{{ p.id }}-{{ it.producto_id }}">
+                            {% for i in [1,2,3,4,5] %}
+                              <button type="button" onclick="setProductStar({{ p.id }}, {{ it.producto_id }}, {{ i }})"
+                                      id="pstar-{{ p.id }}-{{ it.producto_id }}-{{ i }}"
+                                      style="font-size:1.05rem;background:none;border:none;cursor:pointer;opacity:0.25;transition:all 0.1s;padding:2px;">⭐</button>
+                            {% endfor %}
+                          </div>
+                          <input type="hidden" name="estrellas_producto_{{ it.producto_id }}"
+                                 id="inp-pstar-{{ p.id }}-{{ it.producto_id }}" value="0">
+                        {% endif %}
+                      </div>
+                    {% endfor %}
+                  </div>
+                {% endif %}
+
                 <textarea name="comentario" placeholder="Comentario opcional..."
                           style="width:100%;padding:8px 12px;border:2px solid var(--gris-2);border-radius:8px;font-family:Nunito,sans-serif;font-size:0.85rem;resize:none;height:52px;outline:none;margin-bottom:8px;"></textarea>
                 <button type="submit" style="width:100%;background:var(--naranja);color:#fff;border:none;border-radius:99px;padding:10px;font-family:Nunito,sans-serif;font-weight:800;font-size:0.85rem;cursor:pointer;">
@@ -538,6 +563,15 @@ function setStar(pedidoId, val) {
   for (let i = 1; i <= 5; i++) {
     const btn = document.getElementById('star-' + pedidoId + '-' + i);
     btn.style.opacity = i <= val ? '1' : '0.3';
+  }
+}
+
+function setProductStar(pedidoId, productoId, val) {
+  const key = pedidoId + '-' + productoId;
+  document.getElementById('inp-pstar-' + key).value = val;
+  for (let i = 1; i <= 5; i++) {
+    const btn = document.getElementById('pstar-' + key + '-' + i);
+    btn.style.opacity = i <= val ? '1' : '0.25';
   }
 }
 // Inicializar todas con 5 estrellas

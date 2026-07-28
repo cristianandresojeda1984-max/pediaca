@@ -146,6 +146,68 @@
   transform: translateY(-4px);
   box-shadow: var(--sombra-m);
 }
+.local-card-link { display: block; color: inherit; text-decoration: none; }
+
+/* ── CARRUSEL DE PLATOS DESTACADOS (por local, debajo de la tarjeta) ─── */
+.platos-carrusel {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  scroll-snap-type: x proximity;
+  -webkit-overflow-scrolling: touch;
+  padding: 0 12px 12px;
+  scrollbar-width: none;
+}
+.platos-carrusel::-webkit-scrollbar { display: none; }
+.platos-carrusel-label {
+  font-size: 0.7rem;
+  font-weight: 800;
+  color: var(--texto-s);
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  padding: 0 12px 6px;
+}
+.plato-mini {
+  flex: 0 0 auto;
+  width: 92px;
+  scroll-snap-align: start;
+  text-decoration: none;
+  color: inherit;
+  display: block;
+}
+.plato-mini-foto {
+  width: 92px;
+  height: 68px;
+  border-radius: 10px;
+  object-fit: cover;
+  background: var(--gris-1);
+  display: block;
+}
+.plato-mini-sin-foto {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.4rem;
+}
+.plato-mini-nombre {
+  font-size: 0.72rem;
+  font-weight: 700;
+  margin-top: 4px;
+  line-height: 1.25;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.plato-mini-meta {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 3px;
+}
+.plato-mini-estrella { font-size: 0.68rem; color: #F39C12; font-weight: 800; }
+.plato-mini-precio { font-size: 0.74rem; font-weight: 800; }
+
 .local-banner {
   height: 130px;
   background: linear-gradient(135deg, var(--naranja-l), #d5f5e3);
@@ -479,10 +541,10 @@
   {% if restaurantes %}
     <div class="locales-grid" id="grid-locales">
       {% for r in restaurantes %}
-        <a href="{{ url_for('ver_local', restaurante_id=r.id) }}"
-           class="local-card"
-           data-nombre="{{ r.nombre_local | lower }}"
-           data-cat="{{ r.categoria or '' }}">
+        <div class="local-card"
+             data-nombre="{{ r.nombre_local | lower }}"
+             data-cat="{{ r.categoria or '' }}">
+        <a href="{{ url_for('ver_local', restaurante_id=r.id) }}" class="local-card-link">
 
           <div class="local-banner" style="display:flex;align-items:center;justify-content:center;">
             {% if session.get('rol') == 'cliente' %}
@@ -542,6 +604,27 @@
           </div>
 
         </a>
+        {% set platos = platos_destacados.get(r.id) %}
+        {% if platos %}
+          <div class="platos-carrusel-label">🍽️ Platos destacados</div>
+          <div class="platos-carrusel">
+            {% for pl in platos %}
+              <a href="{{ url_for('ver_local', restaurante_id=r.id) }}" class="plato-mini">
+                {% if pl.foto_url %}
+                  <img src="{{ url_imagen(pl.foto_url) }}" alt="{{ pl.nombre }}" class="plato-mini-foto" loading="lazy">
+                {% else %}
+                  <div class="plato-mini-foto plato-mini-sin-foto">🍽️</div>
+                {% endif %}
+                <div class="plato-mini-nombre">{{ pl.nombre }}</div>
+                <div class="plato-mini-meta">
+                  <span class="plato-mini-estrella">★ {{ "%.1f"|format(pl.rating) }}</span>
+                  <span class="plato-mini-precio">${{ pl.precio|int }}</span>
+                </div>
+              </a>
+            {% endfor %}
+          </div>
+        {% endif %}
+        </div>
       {% endfor %}
     </div>
 

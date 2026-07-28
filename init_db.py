@@ -167,6 +167,15 @@ def _tablas_sql(postgres):
             vista          INTEGER NOT NULL DEFAULT 0,
             fecha          TIMESTAMP NOT NULL DEFAULT {ts_now}
         )""",
+        f"""CREATE TABLE IF NOT EXISTS valoraciones_producto (
+            id          {id_col},
+            pedido_id   INTEGER NOT NULL REFERENCES pedidos(id),
+            producto_id INTEGER NOT NULL REFERENCES productos(id),
+            cliente_id  INTEGER REFERENCES usuarios(id),
+            estrellas   INTEGER NOT NULL CHECK(estrellas BETWEEN 1 AND 5),
+            fecha       TIMESTAMP NOT NULL DEFAULT {ts_now},
+            UNIQUE(pedido_id, producto_id)
+        )""",
         f"""CREATE TABLE IF NOT EXISTS password_reset_tokens (
             id         {id_col},
             usuario_id INTEGER NOT NULL REFERENCES usuarios(id),

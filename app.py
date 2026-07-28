@@ -381,6 +381,35 @@ def _init_favoritos():
 _init_favoritos()
 
 
+def _init_valoraciones_producto():
+    """Crea la tabla valoraciones_producto si no existe. Es una calificación
+    aparte de la del pedido/local (tabla valoraciones): acá el cliente puede
+    puntuar cada plato que pidió por separado, al mismo tiempo que califica
+    el pedido en general. UNIQUE(pedido_id, producto_id) para que no se
+    pueda calificar dos veces el mismo plato dentro del mismo pedido."""
+    id_col = "id SERIAL PRIMARY KEY" if USE_POSTGRES else "id INTEGER PRIMARY KEY AUTOINCREMENT"
+    ts_now = "NOW()" if USE_POSTGRES else "CURRENT_TIMESTAMP"
+    try:
+        with app.app_context():
+            execute(f"""
+                CREATE TABLE IF NOT EXISTS valoraciones_producto (
+                    {id_col},
+                    pedido_id   INTEGER NOT NULL REFERENCES pedidos(id),
+                    producto_id INTEGER NOT NULL REFERENCES productos(id),
+                    cliente_id  INTEGER REFERENCES usuarios(id),
+                    estrellas   INTEGER NOT NULL CHECK(estrellas BETWEEN 1 AND 5),
+                    fecha       TIMESTAMP NOT NULL DEFAULT {ts_now},
+                    UNIQUE(pedido_id, producto_id)
+                )
+            """)
+            print("✅ Tabla valoraciones_producto verificada/creada")
+    except Exception as e:
+        print(f"⚠️ Error al crear tabla valoraciones_producto: {e}")
+
+
+_init_valoraciones_producto()
+
+
 def _init_migrar_columnas():
     """Agrega columnas nuevas a tablas que ya existen, sin depender de que
     alguien se acuerde de correr migrate_db.py a mano antes de levantar la
@@ -529,6 +558,24 @@ def home():
         GROUP BY r.id, u.telefono
         ORDER BY r.abierto DESC, r.nombre_local
     """, (ciudad,))
+    # Platos destacados por local para el carrusel debajo de cada tarjeta:
+    # cualquier plato con al menos 1 valoración (calificación por producto,
+    # separada de la del local de arriba), ordenados de mejor a peor
+    # promedio. Solo de los locales de la ciudad actual, para no traer de más.
+    platos_rows = query("""
+        SELECT pr.id AS producto_id, pr.restaurante_id, pr.nombre, pr.precio, pr.foto_url,
+               AVG(vp.estrellas) AS rating, COUNT(vp.id) AS cant_valoraciones
+        FROM productos pr
+        JOIN valoraciones_producto vp ON vp.producto_id = pr.id
+        JOIN restaurantes r ON r.id = pr.restaurante_id
+        WHERE r.estado = 'aprobado' AND r.ciudad = ? AND pr.disponible = 1
+        GROUP BY pr.id, pr.restaurante_id, pr.nombre, pr.precio, pr.foto_url
+        ORDER BY rating DESC
+    """, (ciudad,))
+    platos_destacados = {}
+    for pl in platos_rows:
+        platos_destacados.setdefault(pl["restaurante_id"], []).append(pl)
+
     anuncios_activo = get_config("anuncios_activo") == "true"
     auspiciantes = query("""
         SELECT * FROM auspiciantes
@@ -556,7 +603,8 @@ def home():
     return render_template("home.html", restaurantes=restaurantes, auspiciantes=auspiciantes,
                            anuncios_activo=anuncios_activo,
                            promociones_destacadas=promociones_destacadas,
-                           favoritos_ids=favoritos_ids)
+                           favoritos_ids=favoritos_ids,
+                           platos_destacados=platos_destacados)
 
 
 @app.route("/local/<int:restaurante_id>")
@@ -1419,6 +1467,30 @@ def cliente_panel():
         WHERE p.cliente_id = ?
         ORDER BY p.fecha_pedido DESC LIMIT 30
     """, (session["user_id"],))
+
+    # Para los pedidos entregados, traemos qué platos se pidieron y cuáles
+    # ya tienen valoración de producto — así el template arma el selector
+    # de estrellas por plato en el formulario de "Valorar" (ver /valorar/<id>).
+    pedidos_entregados_ids = [p["id"] for p in pedidos if p["estado"] == "entregado"]
+    if pedidos_entregados_ids:
+        ids_str = ",".join(str(i) for i in pedidos_entregados_ids)
+        items_todos = query(f"""
+            SELECT DISTINCT ip.pedido_id, ip.producto_id, ip.nombre_producto
+            FROM items_pedido ip
+            WHERE ip.pedido_id IN ({ids_str}) AND ip.producto_id IS NOT NULL
+            ORDER BY ip.nombre_producto
+        """)
+        ya_valorados = query(f"""
+            SELECT pedido_id, producto_id FROM valoraciones_producto
+            WHERE pedido_id IN ({ids_str})
+        """)
+        ya_valorados_set = {(v["pedido_id"], v["producto_id"]) for v in ya_valorados}
+        items_por_pedido = {}
+        for it in items_todos:
+            it["ya_valorado"] = (it["pedido_id"], it["producto_id"]) in ya_valorados_set
+            items_por_pedido.setdefault(it["pedido_id"], []).append(it)
+        for p in pedidos:
+            p["items_valorables"] = items_por_pedido.get(p["id"], [])
 
     locales_frecuentes = query("""
         SELECT r.*, COUNT(p.id) as veces
@@ -2493,15 +2565,40 @@ def valorar_pedido(pedido_id):
         return redirect(url_for("cliente_panel"))
 
     ya_valorado = query("SELECT id FROM valoraciones WHERE pedido_id=?", (pedido_id,), one=True)
-    if ya_valorado:
-        flash("Ya valoraste este pedido.", "warning")
-        return redirect(url_for("cliente_panel"))
+    if not ya_valorado:
+        execute("""
+            INSERT INTO valoraciones (pedido_id, restaurante_id, cliente_id, estrellas, comentario)
+            VALUES (?,?,?,?,?)
+        """, (pedido_id, pedido["restaurante_id"], session["user_id"], estrellas, comentario))
 
-    execute("""
-        INSERT INTO valoraciones (pedido_id, restaurante_id, cliente_id, estrellas, comentario)
-        VALUES (?,?,?,?,?)
-    """, (pedido_id, pedido["restaurante_id"], session["user_id"], estrellas, comentario))
-    flash("¡Gracias por tu valoración!", "success")
+    # Valoración por plato — independiente de la del pedido/local de arriba.
+    # Es opcional por plato: el cliente puede calificar solo algunos (o
+    # ninguno) de los que pidió. Cada input viene como "estrellas_producto_<id>"
+    # con valor 0 si no lo tocó (el JS del template arranca todo en 0).
+    items = query("SELECT DISTINCT producto_id FROM items_pedido WHERE pedido_id=? AND producto_id IS NOT NULL",
+                   (pedido_id,))
+    productos_del_pedido = {it["producto_id"] for it in items}
+    for producto_id in productos_del_pedido:
+        raw = request.form.get(f"estrellas_producto_{producto_id}", "0")
+        try:
+            estrellas_prod = int(raw)
+        except ValueError:
+            estrellas_prod = 0
+        if not 1 <= estrellas_prod <= 5:
+            continue  # no calificó este plato en particular, se salta
+        ya = query("SELECT id FROM valoraciones_producto WHERE pedido_id=? AND producto_id=?",
+                    (pedido_id, producto_id), one=True)
+        if ya:
+            continue
+        execute("""
+            INSERT INTO valoraciones_producto (pedido_id, producto_id, cliente_id, estrellas)
+            VALUES (?,?,?,?)
+        """, (pedido_id, producto_id, session["user_id"], estrellas_prod))
+
+    if ya_valorado:
+        flash("Gracias — ya habías valorado el pedido en general, pero guardamos las nuevas calificaciones de platos.", "success")
+    else:
+        flash("¡Gracias por tu valoración!", "success")
     return redirect(url_for("cliente_panel"))
 
 
