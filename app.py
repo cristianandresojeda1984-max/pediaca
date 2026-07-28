@@ -11,6 +11,7 @@ except ImportError:
     psycopg2 = None
 import re
 import io
+import random
 from functools import wraps
 from flask import (Flask, render_template, request, redirect,
                    url_for, session, flash, jsonify, g)
@@ -159,6 +160,29 @@ def notificar_cliente_push(pedido_id, estado, nombre_local):
     """, (pedido["cliente_id"],))
     titulo, cuerpo = textos[estado]
     payload = {"titulo": titulo, "cuerpo": cuerpo, "url": f"/pedido/{pedido_id}"}
+    for sub in subs:
+        _enviar_push({
+            "endpoint": sub["endpoint"],
+            "keys": {"p256dh": sub["p256dh"], "auth": sub["auth"]}
+        }, payload)
+
+
+def notificar_cadete_pedido_cancelado(pedido_id, cadete_id, nombre_local):
+    """Avisa al cadete que ya tenía asignado un pedido (lo estaba yendo a
+    entregar) que el local lo canceló — para que no siga viaje al pedo."""
+    if not cadete_id:
+        return
+    cadete = query("SELECT usuario_id FROM cadetes WHERE id = ?", (cadete_id,), one=True)
+    if not cadete:
+        return
+    subs = query("""
+        SELECT endpoint, p256dh, auth FROM push_subscriptions WHERE usuario_id = ?
+    """, (cadete["usuario_id"],))
+    payload = {
+        "titulo": "✕ Pedido cancelado",
+        "cuerpo": f"{nombre_local} canceló el pedido #{pedido_id}. No hace falta que sigas viaje.",
+        "url":    "/mi-panel-cadete",
+    }
     for sub in subs:
         _enviar_push({
             "endpoint": sub["endpoint"],
@@ -371,6 +395,7 @@ def _init_migrar_columnas():
         ("cadetes",      "ciudad",               "TEXT NOT NULL DEFAULT 'Rosario'"),
         ("valoraciones", "vista",                "INTEGER NOT NULL DEFAULT 0"),
         ("pedidos",      "costo_envio",          "REAL NOT NULL DEFAULT 0"),
+        ("pedidos",      "codigo_entrega",       "TEXT"),
     ]
     try:
         with app.app_context():
@@ -1338,7 +1363,8 @@ def cadete_panel():
         # empieza a mandar su ubicación GPS (ver JS) para que el comprador y
         # el local la vean en el mapa de seguimiento.
         entrega_en_curso = query("""
-            SELECT p.id, p.total, p.costo_envio, r.nombre_local
+            SELECT p.id, p.total, p.costo_envio, p.direccion_entrega,
+                   r.nombre_local, r.direccion AS local_direccion
             FROM pedidos p JOIN restaurantes r ON r.id = p.restaurante_id
             WHERE p.cadete_id = ? AND p.estado = 'en_camino'
             ORDER BY p.fecha_pedido DESC LIMIT 1
@@ -1726,13 +1752,19 @@ def whatsapp_link():
     nom_anon   = nombre_cliente if not cliente_id else None
     tel_anon   = tel_cliente    if not cliente_id else None
 
+    # Código de 4 dígitos que el cliente le va a dar al cadete al recibir el
+    # pedido, para que el cadete confirme la entrega correcta (ver
+    # /cadete/pedido/<id>/entregar). Sólo aplica a delivery, pero se genera
+    # siempre por simplicidad — en retiro nadie lo usa.
+    codigo_entrega = f"{random.randint(0, 9999):04d}"
+
     pedido_id = execute("""
         INSERT INTO pedidos
             (restaurante_id, cliente_id, nombre_cliente_anonimo, telefono_cliente_anonimo,
-             tipo_entrega, direccion_entrega, total, costo_envio, notas, enviado_whatsapp)
-        VALUES (?,?,?,?,?,?,?,?,?,1)
+             tipo_entrega, direccion_entrega, total, costo_envio, notas, codigo_entrega, enviado_whatsapp)
+        VALUES (?,?,?,?,?,?,?,?,?,?,1)
     """, (restaurante_id, cliente_id, nom_anon, tel_anon,
-          tipo_entrega, direccion, total, envio, notas))
+          tipo_entrega, direccion, total, envio, notas, codigo_entrega))
 
     for item in items:
         execute("""
@@ -1752,7 +1784,7 @@ def seguimiento_pedido(pedido_id):
     # Página pública (hay pedidos de clientes anónimos) — por eso no expone
     # dirección de entrega ni teléfonos, sólo lo necesario para trackear.
     pedido = query("""
-        SELECT p.id, p.estado, p.tipo_entrega, p.total, p.fecha_pedido,
+        SELECT p.id, p.estado, p.tipo_entrega, p.total, p.fecha_pedido, p.codigo_entrega,
                r.nombre_local, r.logo_url,
                u.nombre AS cadete_nombre, c.vehiculo AS cadete_vehiculo
         FROM pedidos p
@@ -1998,6 +2030,12 @@ def restaurante_cambiar_estado(pedido_id, nuevo_estado):
                 pedido["total"],
                 pedido["direccion_entrega"]
             )
+
+    if nuevo_estado == "cancelado":
+        pedido = query("SELECT cadete_id FROM pedidos WHERE id=? AND restaurante_id=?",
+                        (pedido_id, restaurante["id"]), one=True)
+        if pedido and pedido["cadete_id"]:
+            notificar_cadete_pedido_cancelado(pedido_id, pedido["cadete_id"], restaurante["nombre_local"])
 
     notificar_cliente_push(pedido_id, nuevo_estado, restaurante["nombre_local"])
 
@@ -2483,6 +2521,45 @@ def cadete_rechazar_pedido(pedido_id):
         WHERE id=? AND cadete_id=?
     """, (pedido_id, cadete["id"]))
     return jsonify({"ok": True})
+
+
+# ── CADETE: MARCAR ENTREGADO (con código de seguridad) ───────────────────────
+
+@app.route("/cadete/pedido/<int:pedido_id>/entregar", methods=["POST"])
+@login_required
+@rol_required("cadete")
+def cadete_marcar_entregado(pedido_id):
+    """El cadete confirma la entrega ingresando el código de 4 dígitos que
+    le mostró el cliente (pantalla de seguimiento). Evita el caso de tocar
+    'entregado' por error o entregarle el pedido a la persona equivocada.
+    Pedidos viejos (creados antes de este feature) no tienen código
+    guardado — para esos se permite confirmar sin pedirlo."""
+    cadete = query("SELECT * FROM cadetes WHERE usuario_id=? AND estado='aprobado'",
+                   (session["user_id"],), one=True)
+    if not cadete:
+        return jsonify({"ok": False, "msg": "No autorizado"}), 403
+
+    pedido = query("""
+        SELECT p.*, r.nombre_local FROM pedidos p
+        JOIN restaurantes r ON r.id = p.restaurante_id
+        WHERE p.id=? AND p.cadete_id=?
+    """, (pedido_id, cadete["id"]), one=True)
+    if not pedido:
+        return jsonify({"ok": False, "msg": "Pedido no encontrado"}), 404
+    if pedido["estado"] != "en_camino":
+        return jsonify({"ok": False, "msg": "Este pedido no está en camino."}), 400
+
+    codigo_ingresado = (request.get_json(silent=True) or {}).get("codigo", "").strip()
+    if pedido["codigo_entrega"]:
+        if codigo_ingresado != pedido["codigo_entrega"]:
+            return jsonify({"ok": False, "msg": "Código incorrecto. Pedile al cliente que te muestre el código de 4 dígitos de su pantalla de seguimiento."}), 400
+
+    execute("""
+        UPDATE pedidos SET estado='entregado', fecha_actualizado=CURRENT_TIMESTAMP
+        WHERE id=?
+    """, (pedido_id,))
+    notificar_cliente_push(pedido_id, "entregado", pedido["nombre_local"])
+    return jsonify({"ok": True, "msg": "¡Entrega confirmada!"})
 
 
 # ── PÁGINAS LEGALES ───────────────────────────────────────────────────────────

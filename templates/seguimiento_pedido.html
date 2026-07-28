@@ -84,6 +84,24 @@
   color: var(--azul-d);
 }
 
+.segui-codigo-entrega {
+  text-align: center;
+  background: var(--gris-1);
+  border: 2px dashed var(--naranja);
+  border-radius: 12px;
+  padding: 14px;
+  margin-top: 14px;
+}
+.segui-codigo-titulo { font-size: 0.8rem; font-weight: 800; color: var(--texto-s); }
+.segui-codigo-num {
+  font-family: 'Paytone One', sans-serif;
+  font-size: 1.9rem;
+  letter-spacing: 6px;
+  color: var(--naranja-d);
+  margin: 4px 0;
+}
+.segui-codigo-sub { font-size: 0.74rem; color: var(--texto-s); }
+
 .segui-items { margin-top: 4px; }
 .segui-item-row {
   display: flex; justify-content: space-between;
@@ -189,6 +207,13 @@
       </div>
       <div class="segui-estado-actual" id="estadoActual"></div>
       <div id="cadeteInfo"></div>
+      {% if pedido.tipo_entrega == 'delivery' and pedido.codigo_entrega and pedido.estado not in ('entregado', 'cancelado') %}
+        <div class="segui-codigo-entrega">
+          <div class="segui-codigo-titulo">🔒 Tu código de entrega</div>
+          <div class="segui-codigo-num">{{ pedido.codigo_entrega }}</div>
+          <div class="segui-codigo-sub">Dáselo al cadete cuando te entregue el pedido, para confirmar que es el tuyo.</div>
+        </div>
+      {% endif %}
       {% if session.get('rol') == 'cliente' %}
         <button id="btnActivarPush" onclick="activarNotificaciones(this)"
                 style="display:block;width:100%;margin-top:14px;background:var(--gris-1);color:var(--texto);border:none;border-radius:99px;padding:10px;font-weight:800;font-size:0.82rem;cursor:pointer;font-family:'Nunito',sans-serif;">

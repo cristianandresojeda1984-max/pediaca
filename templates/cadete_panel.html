@@ -315,6 +315,56 @@ input:checked + .disp-track::after { transform: translateX(24px); }
 .gps-info { flex: 1; }
 .gps-titulo { font-weight: 800; font-size: 0.9rem; }
 .gps-sub { font-size: 0.76rem; color: rgba(255,255,255,0.65); margin-top: 2px; }
+
+.entrega-direcciones { margin-bottom: 16px; display: flex; flex-direction: column; gap: 8px; }
+.entrega-dir-row {
+  display: flex; align-items: center; gap: 10px;
+  background: var(--blanco);
+  box-shadow: var(--sombra-s);
+  border-radius: 12px;
+  padding: 12px 14px;
+  text-decoration: none;
+  color: var(--texto);
+}
+.entrega-dir-icon { font-size: 1.2rem; flex-shrink: 0; }
+.entrega-dir-text { flex: 1; font-size: 0.82rem; line-height: 1.35; }
+.entrega-dir-text b { font-weight: 800; }
+.entrega-dir-go { font-size: 1.1rem; flex-shrink: 0; opacity: 0.6; }
+
+.entregar-card {
+  background: var(--blanco);
+  box-shadow: var(--sombra-s);
+  border: 2px solid var(--verde);
+  border-radius: 14px;
+  padding: 16px;
+  margin-bottom: 16px;
+}
+.entregar-titulo { font-weight: 800; font-size: 0.92rem; }
+.entregar-sub { font-size: 0.78rem; color: var(--texto-s); margin: 4px 0 12px; }
+.entregar-form { display: flex; gap: 8px; }
+.entregar-form input {
+  flex: 1;
+  border: 2px solid var(--gris-2);
+  border-radius: 10px;
+  padding: 10px 12px;
+  font-family: 'Paytone One', sans-serif;
+  font-size: 1.1rem;
+  letter-spacing: 4px;
+  text-align: center;
+  width: 0;
+}
+.entregar-form button {
+  background: var(--verde);
+  color: #fff;
+  border: none;
+  border-radius: 10px;
+  padding: 0 16px;
+  font-weight: 800;
+  font-size: 0.82rem;
+  cursor: pointer;
+  font-family: 'Nunito', sans-serif;
+}
+.entregar-form button:disabled { opacity: 0.6; }
 {% endblock %}
 
 {% block content %}
@@ -397,6 +447,33 @@ input:checked + .disp-track::after { transform: translateX(24px); }
             {% if entrega_en_curso.costo_envio and entrega_en_curso.costo_envio > 0 %}
               <div class="gps-sub" style="color:#1E8449;font-weight:800;">💵 Envío a cobrarle al local: ${{ entrega_en_curso.costo_envio|int }}</div>
             {% endif %}
+          </div>
+        </div>
+
+        <div class="entrega-direcciones">
+          {% if entrega_en_curso.local_direccion %}
+            <a class="entrega-dir-row" href="https://www.google.com/maps/search/?api=1&amp;query={{ entrega_en_curso.local_direccion|urlencode }}" target="_blank" rel="noopener">
+              <span class="entrega-dir-icon">🏪</span>
+              <span class="entrega-dir-text"><b>Retirar en:</b> {{ entrega_en_curso.local_direccion }}</span>
+              <span class="entrega-dir-go">🧭</span>
+            </a>
+          {% endif %}
+          {% if entrega_en_curso.direccion_entrega %}
+            <a class="entrega-dir-row" href="https://www.google.com/maps/search/?api=1&amp;query={{ entrega_en_curso.direccion_entrega|urlencode }}" target="_blank" rel="noopener">
+              <span class="entrega-dir-icon">🏠</span>
+              <span class="entrega-dir-text"><b>Entregar en:</b> {{ entrega_en_curso.direccion_entrega }}</span>
+              <span class="entrega-dir-go">🧭</span>
+            </a>
+          {% endif %}
+        </div>
+
+        <div class="entregar-card">
+          <div class="entregar-titulo">✅ ¿Ya entregaste el pedido?</div>
+          <div class="entregar-sub">Pedile al cliente el código de 4 dígitos de su pantalla de seguimiento y confirmá acá.</div>
+          <div class="entregar-form">
+            <input type="text" id="codigoEntrega" maxlength="4" inputmode="numeric" pattern="[0-9]*" placeholder="0000"
+                   onkeydown="if(event.key==='Enter'){event.preventDefault();confirmarEntrega({{ entrega_en_curso.id }});}">
+            <button id="btnConfirmarEntrega" onclick="confirmarEntrega({{ entrega_en_curso.id }})">Confirmar entrega</button>
           </div>
         </div>
       {% endif %}
@@ -560,7 +637,8 @@ async function actualizarPedidos() {
               <div class="pedido-local-avatar">🏪</div>
               <div>
                 <div class="pedido-local-nombre">${escapeHtml(p.nombre_local)}</div>
-                <div class="pedido-local-dir">📍 ${escapeHtml(p.direccion_entrega || 'Sin dirección')}</div>
+                <div class="pedido-local-dir">🏪 Retirar: ${escapeHtml(p.local_direccion || 'Sin dirección')}</div>
+                <div class="pedido-local-dir">🏠 Entregar: ${escapeHtml(p.direccion_entrega || 'Sin dirección')}</div>
               </div>
               <div class="pedido-total">$${Math.round(p.total)}</div>
             </div>
@@ -593,6 +671,36 @@ async function actualizarPedidos() {
     console.error('Polling error:', err);
   } finally {
     isFetching = false;
+  }
+}
+
+async function confirmarEntrega(pedidoId) {
+  const input = document.getElementById('codigoEntrega');
+  const btn = document.getElementById('btnConfirmarEntrega');
+  const codigo = (input.value || '').trim();
+  btn.disabled = true;
+  const originalText = btn.innerHTML;
+  btn.innerHTML = '⏳...';
+  try {
+    const res = await fetch(`/cadete/pedido/${pedidoId}/entregar`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ codigo })
+    });
+    const data = await res.json();
+    if (data.ok) {
+      mostrarToast('✅ ' + data.msg, '#27AE60');
+      setTimeout(() => window.location.reload(), 600);
+    } else {
+      mostrarToast(data.msg || 'No se pudo confirmar la entrega.', '#E74C3C');
+      input.value = '';
+      input.focus();
+    }
+  } catch (e) {
+    mostrarToast('Error de conexión. Intentalo de nuevo.', '#E74C3C');
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = originalText;
   }
 }
 
