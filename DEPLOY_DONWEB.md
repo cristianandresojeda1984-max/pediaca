@@ -46,6 +46,20 @@ SSL/TLS de Cloudflare configurado en modo **Flexible** (visitante ↔ Cloudflare
 
 El teclado remoto de la consola VNC de DonWeb no transmite bien mayúsculas ni símbolos con Shift (`: { } $ | > < &`, etc.) — es una limitación conocida de esa consola, confirmada por el soporte de DonWeb. Para sortearlo: los archivos con símbolos especiales (config de nginx, servicio systemd) se subieron por GitHub y se bajaron con `git pull`; para escribir `/etc/pediaca.env` (con la `:` de la URL de Postgres) se usó un script chico (`deploy/write_hex.py`) que decodifica contenido pasado en hexadecimal, evitando escribir símbolos prohibidos directamente en la consola.
 
+## Acceso al servidor y credenciales (actualizado 27/07/2026)
+
+**Incidente:** entre el 25 y el 27/07/2026 se perdió el acceso root al servidor (nunca se había guardado la contraseña original en un lugar seguro, y el botón de reset de contraseña del panel de DonWeb + la consola VNC tuvieron fallas simultáneas que extendieron la salida de servicio varias horas). Detalle completo conversado por chat. Se resolvió el 27/07 reseteando la contraseña desde el panel de DonWeb.
+
+**Estado actual de los accesos:**
+
+- **Usuario:** `root`
+- **Host:** `149.50.156.88` (o `vps-6198875-x.dattaweb.com`), **puerto SSH: `5859`** (no es el 22 por defecto)
+- **Contraseña root:** rotada el 27/07/2026 — guardada en el password manager personal de Cristian. No está escrita en ningún archivo del proyecto ni en ningún otro lado.
+- **Clave SSH (acceso alternativo, agregado 27/07/2026):** par de claves ed25519 generado en la PC de Cristian (`C:\Users\Julirina\.ssh\pediaca_key` / `pediaca_key.pub`). La pública ya está instalada en `~/.ssh/authorized_keys` del servidor. Login sin contraseña: `ssh -p 5859 -i $HOME\.ssh\pediaca_key root@149.50.156.88`. **Recomendado:** hacer una copia de `pediaca_key` (la privada) en el password manager de Cristian, por si se pierde o se formatea esa PC — hoy es la única copia.
+- **Consola VNC del panel DonWeb:** sigue teniendo un bug conocido (no transmite bien Shift/mayúsculas/símbolos — ver nota técnica más abajo). Usarla solo como último recurso si SSH no está disponible; para escribir algo con símbolos ahí, mejor bajarlo por `git pull` o pegarlo generado por script, no tipearlo a mano.
+
+**Si se vuelve a perder el acceso:** con la clave SSH ya instalada, no debería depender más pura y exclusivamente de la contraseña + la consola VNC. Si aun así se pierde todo acceso, el camino es: panel DonWeb → Cloud Servers → Gestionar → Software y Accesos → resetear contraseña (requiere apagar el servidor un momento) → Consola VNC solo si SSH no conecta.
+
 ## Comandos de referencia (se van a ir ejecutando a medida que avancemos)
 
 ```bash
