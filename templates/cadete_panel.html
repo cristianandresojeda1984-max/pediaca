@@ -616,14 +616,15 @@ async function aceptarPedido(pedidoId, whatsapp) {
     const data = await res.json();
     if (data.ok) {
       mostrarToast('✅ Pedido aceptado. Contactá al local.', '#27AE60');
-      const card = document.querySelector(`.pedido-card[data-pedido-id="${pedidoId}"]`);
-      if (card) card.remove();
-      const disponibles = document.querySelectorAll('.pedido-card').length;
-      document.getElementById('stats-disponibles').innerText = disponibles;
       if (whatsapp) {
         const waLink = `https://wa.me/549${whatsapp.replace(/[^0-9]/g, '')}?text=${encodeURIComponent('Hola! Soy cadete de PediAcá. Quiero tomar el pedido #' + pedidoId)}`;
         window.open(waLink, '_blank');
       }
+      // El pedido ya queda "en_camino" apenas se acepta, así que hay que
+      // recargar la página: es la única forma de que arranque el envío de
+      // GPS (entrega_en_curso se calcula server-side al renderizar).
+      setTimeout(() => window.location.reload(), whatsapp ? 600 : 0);
+      return;
     } else {
       mostrarToast(data.msg || 'El pedido ya fue tomado por otro cadete.', '#E74C3C');
       actualizarPedidos();
