@@ -289,7 +289,10 @@ function _iconoEmoji(emoji) {
 function pintarMapa(data) {
   const card = document.getElementById('mapaCard');
   if (!data.restaurante && !data.entrega) { card.style.display = 'none'; return; }
-  card.style.display = '';
+  // OJO: la tarjeta arranca oculta por regla CSS (.segui-mapa-card{display:none}),
+  // no por un style inline — por eso hace falta un valor explícito acá ('block')
+  // y no '' (que solo borra un override inline y dejaría ganar a la regla CSS).
+  card.style.display = 'block';
 
   const puntoVivo = document.getElementById('puntoVivo');
   const titulo = document.getElementById('mapaTitulo');
